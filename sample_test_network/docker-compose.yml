@@ -1,0 +1,112 @@
+services:
+  val0:
+    image: rippleci/rippled:develop
+    container_name: val0
+    hostname: val0
+    entrypoint: [
+      "rippled",
+      "--ledgerfile", "/root/ledger.json",
+      # "-a",
+      # "--start",
+      ]
+    volumes:
+      - ./ledger.json:/root/ledger.json
+      - ./val0:/etc/opt/ripple
+      # - batch_network_database_val0:/var/lib/rippled/db/
+    networks:
+      rippled_net:
+        ipv4_address: 10.0.0.2
+    ports:
+      - 0.0.0.0:5006:5005
+      - 0.0.0.0:6007:6006
+  val1:
+    image: rippleci/rippled:develop
+    container_name: val1
+    hostname: val1
+    entrypoint: [
+      "rippled",
+      "--net",
+      # "--ledgerfile", "/root/ledger.json"
+    ]
+    volumes:
+      # - ./ledger.json:/root/ledger.json
+      - ./val1:/etc/opt/ripple
+    networks:
+      rippled_net:
+        ipv4_address: 10.0.0.3
+
+  val2:
+    image: rippleci/rippled:develop
+    container_name: val2
+    hostname: val2
+    entrypoint: [
+      "rippled",
+      "--net",
+      # "--ledgerfile", "/root/ledger.json"
+    ]
+    volumes:
+      # - ./ledger.json:/root/ledger.json
+      - ./val2:/etc/opt/ripple
+    networks:
+      rippled_net:
+        ipv4_address: 10.0.0.4
+
+  val3:
+    image: rippleci/rippled:develop
+    container_name: val3
+    hostname: val3
+    entrypoint: [
+      "rippled",
+      "--net",
+      # "--ledgerfile", "/root/ledger.json"
+    ]
+    volumes:
+      - ./ledger.json:/root/ledger.json
+      - ./val3:/etc/opt/ripple
+    networks:
+      rippled_net:
+        ipv4_address: 10.0.0.5
+
+  val4:
+    image: rippleci/rippled:develop
+    container_name: val4
+    hostname: val4
+    entrypoint: [
+      "rippled",
+      "--net",
+      # "--ledgerfile", "/root/ledger.json"
+    ]
+    volumes:
+      - ./ledger.json:/root/ledger.json
+      - ./val4:/etc/opt/ripple
+    networks:
+      rippled_net:
+        ipv4_address: 10.0.0.6
+
+  rippled:
+    image: rippleci/rippled:develop
+    container_name: rippled
+    hostname: rippled
+    entrypoint: ["rippled"]
+    volumes:
+      - ./rippled:/etc/opt/ripple
+      # - batch_network_database_rippled:/var/lib/rippled/db/
+    networks:
+      rippled_net:
+        ipv4_address: 10.0.0.7
+    ports:
+      - 0.0.0.0:5005:5005
+      - 0.0.0.0:6006:6006
+
+volumes:
+  batch_network_database_val0:
+  batch_network_database_rippled:
+
+networks:
+  rippled_net:
+    name: "rippled_net"
+    #driver: bridge # Should be the default?
+    ipam:
+      config:
+        - subnet: "10.0.0.0/24"
+          gateway: 10.0.0.1
