@@ -143,10 +143,10 @@ def generate_ledger_file():
                 },
                 {
                     "LedgerEntryType": "FeeSettings",
-                    "BaseFeeDrops": 666,
+                    "BaseFeeDrops": 333,
                     "Flags": 0,
-                    "ReserveBaseDrops": 7000000,
-                    "ReserveIncrementDrops": 300000,
+                    "ReserveBaseDrops": 2000000,
+                    "ReserveIncrementDrops": 123456,
                     "index": "4BC50C9B0D8515D3EAAE1E74B29A95804346C491EE1A95BF25E4AAB854A6A651"
                 },
                 {
@@ -231,27 +231,26 @@ def generate_ledger_file():
                     "index": "7DB0788C020F02780A673DC74757F23823FA3014C1866E72CC4CD8B226CD6EF4"
                 },
             ],
-            "account_hash": "5DF3A98772FB73E782B8740E87885C6BAD9BA486422E3626DEF968AD2CB2C514",
-            "close_flags": 0,
-            "close_time": 733708800,
-            "close_time_human": "2023-Apr-02 00:00:00.000000",
+            # "account_hash": "5DF3A98772FB73E782B8740E87885C6BAD9BA486422E3626DEF968AD2CB2C514",
+            # "close_flags": 0,
+            # "close_time": 733708800,
+            # "close_time_human": "2023-Apr-02 00:00:00.000000",
             "close_time_resolution": 10,
             "closed": True,
-            "hash": "56DA0940767AC2F17F0E384F04816002403D0756432B9D503DDA20128A2AAF11",
-            "ledger_hash": "56DA0940767AC2F17F0E384F04816002403D0756432B9D503DDA20128A2AAF11",
+            # "hash": "56DA0940767AC2F17F0E384F04816002403D0756432B9D503DDA20128A2AAF11",
+            # "ledger_hash": "56DA0940767AC2F17F0E384F04816002403D0756432B9D503DDA20128A2AAF11",
             "ledger_index": "1",
-            "parent_close_time": 733708800,
-            "parent_hash": "56DA0940767AC2F17F0E384F04816002403D0756432B9D503DDA20128A2AAF11",
+            # "parent_close_time": 733708800,
+            # "parent_hash": "56DA0940767AC2F17F0E384F04816002403D0756432B9D503DDA20128A2AAF11",
             "seqNum": "1",
             "totalCoins": "100000000000000000",
             "total_coins": "100000000000000000",
-            "transaction_hash": "9A77D1D1A4B36DA77B9C4DC63FDEB8F821741D157802F9C42A6ED86003D8B4A0",
-            "transactions": []
-
+            # "transaction_hash": "9A77D1D1A4B36DA77B9C4DC63FDEB8F821741D157802F9C42A6ED86003D8B4A0",
+            # "transactions": []
         },
-        "ledger_current_index": 1,
-        "status": "success",
-        "validated": True,
+        # "ledger_current_index": 1,
+        # "status": "success",
+        # "validated": True,
     }
     # for a in accounts:
     #     new_account_state.append(a)
