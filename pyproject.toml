@@ -1,0 +1,21 @@
+[project]
+name = "generate-ledger"
+version = "0.0.1"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Michael Legleux", email = "mlegleux@ripple.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "base58>=2.1.1",
+    "httpx>=0.28.1",
+    "xrpl-py>=4.2.0",
+]
+
+[project.scripts]
+ledger = "generate_ledger:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
