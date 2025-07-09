@@ -124,15 +124,18 @@ def generate_accounts_list(accounts):
 #           "ReserveIncrement": 3000000,
 #           "index": "4BC50C9B0D8515D3EAAE1E74B29A95804346C491EE1A95BF25E4AAB854A6A651"
 #         },
-
+xrp = 100e9
+drops_per_xrp = 1e6
+genesis_account_id = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh"
+genesis_account_balance = str(int(xrp * drops_per_xrp))
 def generate_ledger_file():
     ledger = {
         "ledger": {
             "accepted": True,
             "accountState": [
                 {
-                    "Account": "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh",
-                    "Balance": "999999999910",
+                    "Account": genesis_account_id,
+                    "Balance": genesis_account_balance,
                     "Flags": 0,
                     "LedgerEntryType": "AccountRoot",
                     "OwnerCount": 0,
@@ -237,18 +240,18 @@ def generate_ledger_file():
             # "close_time_human": "2023-Apr-02 00:00:00.000000",
             "close_time_resolution": 10,
             "closed": True,
-            # "hash": "56DA0940767AC2F17F0E384F04816002403D0756432B9D503DDA20128A2AAF11",
-            # "ledger_hash": "56DA0940767AC2F17F0E384F04816002403D0756432B9D503DDA20128A2AAF11",
+            "hash": "56DA0940767AC2F17F0E384F04816002403D0756432B9D503DDA20128A2AAF11",
+            "ledger_hash": "56DA0940767AC2F17F0E384F04816002403D0756432B9D503DDA20128A2AAF11",
             "ledger_index": "1",
-            # "parent_close_time": 733708800,
-            # "parent_hash": "56DA0940767AC2F17F0E384F04816002403D0756432B9D503DDA20128A2AAF11",
+            "parent_close_time": 733708800,
+            "parent_hash": "56DA0940767AC2F17F0E384F04816002403D0756432B9D503DDA20128A2AAF11",
             "seqNum": "1",
             "totalCoins": "100000000000000000",
             "total_coins": "100000000000000000",
             # "transaction_hash": "9A77D1D1A4B36DA77B9C4DC63FDEB8F821741D157802F9C42A6ED86003D8B4A0",
             # "transactions": []
         },
-        # "ledger_current_index": 1,
+        "ledger_current_index": 1,
         # "status": "success",
         # "validated": True,
     }
