@@ -18,4 +18,5 @@ jobs:
         working-directory: generate_ledger
         run: |
           uv version --bump alpha
+          uv build
           uv publish --index testpypi
