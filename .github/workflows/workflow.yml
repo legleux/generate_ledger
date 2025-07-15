@@ -18,7 +18,7 @@ jobs:
     container: ghcr.io/astral-sh/uv:python3.13-bookworm
     permissions:
       id-token: write
-    #   contents: read
+      contents: read
     steps:
       - name: checkout
         uses: actions/checkout@v4
