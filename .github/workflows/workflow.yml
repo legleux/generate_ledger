@@ -1,0 +1,21 @@
+name: Build and upload
+
+on:
+  push:
+
+jobs:
+  build_package:
+    runs-on: ubuntu-latest
+    container: ghcr.io/astral-sh/uv:python3.13-bookworm
+    # permissions:
+    #   id-token: write
+    #   contents: read
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: build package
+        working-directory: generate_ledger
+        run: |
+          uv version --bump alpha
+          uv publish --index testpypi
