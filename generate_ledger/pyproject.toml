@@ -1,6 +1,6 @@
 [project]
 name = "generate-ledger"
-version = "0.0.4a1"
+version = "0.0.4a2"
 description = "Add your description here"
 readme = "README.md"
 authors = [
