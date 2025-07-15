@@ -10,11 +10,14 @@ requires-python = ">=3.13"
 dependencies = [
     "base58>=2.1.1",
     "httpx>=0.28.1",
+    "ruamel-yaml>=0.18.14",
     "xrpl-py>=4.2.0",
 ]
 
 [project.scripts]
-ledger = "generate_ledger:main"
+# generate = "generate_ledger:main"
+compose = "generate_ledger:compose"
+ledger = "generate_ledger:ledger"
 
 [build-system]
 requires = ["hatchling"]

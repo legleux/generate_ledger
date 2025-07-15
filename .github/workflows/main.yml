@@ -1,0 +1,56 @@
+name: Build and upload
+
+on:
+  push:
+
+jobs:
+  build_package:
+    runs-on: ubuntu-latest
+    # permissions:
+    #   id-token: write
+    #   contents: read
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: build image 1
+        run: |
+          docker build . -f Dockerfile.1 -t image_1
+
+  upload:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: build image 2
+        run: |
+          docker build . -f Dockerfile.1 -t image_2
+
+  build_3:
+    runs-on: [self-hosted, heavy]
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: build image 3
+        run: |
+          docker build . -f Dockerfile.3 -t image_3
+
+  run_all:
+    runs-on: [self-hosted, heavy]
+    needs: [build_1, build_2, build_3]
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: Run them all
+        run: |
+          docker run image_1
+          docker run image_2
+          docker run image_3
