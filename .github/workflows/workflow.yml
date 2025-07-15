@@ -2,7 +2,16 @@ name: Build and upload
 
 on:
   push:
-
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: 'Environment'
+        required: false
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - release
 jobs:
   build_package:
     runs-on: ubuntu-latest
