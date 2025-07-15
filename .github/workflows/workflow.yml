@@ -16,8 +16,8 @@ jobs:
   build_package:
     runs-on: ubuntu-latest
     container: ghcr.io/astral-sh/uv:python3.13-bookworm
-    # permissions:
-    #   id-token: write
+    permissions:
+      id-token: write
     #   contents: read
     steps:
       - name: checkout
