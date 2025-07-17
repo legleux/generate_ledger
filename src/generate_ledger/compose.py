@@ -24,7 +24,7 @@ healthcheck = {
       "interval": 5,
 }
 depends_on = {
-    "depends_on": "{val}"
+    "depends_on": f"{validator_name}0"
 }
 port = {
     "rpc": 5005,
