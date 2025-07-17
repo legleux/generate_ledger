@@ -19,10 +19,9 @@ jobs:
     strategy:
       matrix:
         version: [11, 12, 13]
-        os: [ubuntu-latest, windows-latest, macos]
 
-    runs-on: ${{ matrix.os }}
-    container: ghcr.io/astral-sh/uv:python3.13-bookworm
+    runs-on: ubuntu-latest
+    container: ghcr.io/astral-sh/uv:python3.${{ matrix.version }}-bookworm
     steps:
       - name: checkout
         uses: actions/checkout@v4

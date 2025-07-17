@@ -14,14 +14,17 @@ rippled_name = os.environ.get("RIPPLED_NAME", "rippled")
 network_name = "antithesis_net"
 ledger_file = "ledger.json"
 image = "rippled:latest"
-name = "val"
 entrypoint = "rippled"
 load_command = {"command": ["--ledgerfile", ledger_file]}
+net_command = {"command": ["--net"]}
 start_command = "--start"
 init = True
 healthcheck = {
       "test": ["CMD", "/usr/bin/curl", "--insecure", "https://localhost:51235/health"],
       "interval": 5,
+}
+depends_on = {
+    "depends_on": "{val}"
 }
 port = {
     "rpc": 5005,
@@ -37,7 +40,8 @@ compose_data = {
             "hostname": f"{name}",
             "entrypoint": [entrypoint],  # ✅ use the variable here
             **({"ports": [f'{port["ws"]}:{port["ws"]}']} if i >= num_validators else {}),
-            **(load_command if i == 0 else {}),
+            **(load_command if i == 0 else net_command),
+            **(healthcheck if i == 0 else depends_on),
             "volumes": [
                 f"./volumes/{name}:/etc/opt/ripple",
                 *([f"./{ledger_file}:/{ledger_file}"] if i == 0 else [])
