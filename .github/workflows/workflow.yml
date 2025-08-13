@@ -30,7 +30,7 @@ jobs:
 
       - name: Get version
         id: version
-        run: echo "version=$(uv version | tr ' ' '-')" >> $GITHUB_OUTPUT
+        run: echo "version=$(uv version | tr '-' '_' | tr ' ' '-')" >> $GITHUB_OUTPUT
 
       - name: build package
         run: |
