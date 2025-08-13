@@ -4,6 +4,7 @@ from ruamel.yaml import YAML
 from pathlib import Path
 import os
 
+import click
 from ruamel.yaml.comments import CommentedSeq
 from ruamel.yaml.scalarstring import DoubleQuotedScalarString as dq
 
@@ -17,14 +18,15 @@ def make_flow_list(items):
     seq.fa.set_flow_style()
     return seq
 
-num_validators = int(os.environ.get("NUM_VALIDATORS", 5))
-validator_name = os.environ.get("VALIDATOR_NAME", "val")
-rippled_name = os.environ.get("RIPPLED_NAME", "rippled")
-first_validator = f"{validator_name}0"
+DEFAULT_NUM_VALIDATORS = 5
+DEFAULT_NUM_VALIDATORS = os.environ.get("NUM_VALIDATORS", DEFAULT_NUM_VALIDATORS)
+validator_name   = os.environ.get("VALIDATOR_NAME", "val")
+rippled_name     = os.environ.get("RIPPLED_NAME", "rippled")
+image            = os.environ.get("RIPPLED_IMAGE", "rippled:latest")
+network_name     = os.environ.get("NETWORK_NAME", "xrpld_net")
+first_validator  = f"{validator_name}0"
 
-network_name = "antithesis_net"
 ledger_file = "ledger.json"
-image = "rippled:latest"
 entrypoint_cmd = "rippled"
 load_command = {"command": make_flow_list([dq("--ledgerfile"), dq(ledger_file)])}
 net_command = {"command": make_flow_list([dq("--net")])}
@@ -49,48 +51,41 @@ depends_on = {
 }
 depends_on = {"depends_on": make_flow_list([dq(f"{first_validator}")])}
 
-port = {
-    "rpc": 5005,
-    "ws": 6006,
-}
+def gen_compose_data(num_validators, include_services=None):
 
-compose_data = {
-    "services": {
-        (name:=rippled_name if i >= num_validators else f"{validator_name}{i}"): {
-        # f"val{i}": {
-            "image": image,
-            "container_name": f"{name}",
-            "hostname": f"{name}",
-            **(entrypoint),
-            **({"ports": [f'{port["ws"]}:{port["ws"]}']} if i >= num_validators else {}),
-            **(load_command if name == first_validator else net_command),
-            **(healthcheck if name == first_validator else depends_on),
-            "volumes": [
-                f"./volumes/{name}:/etc/opt/ripple",
-                *([f"./{ledger_file}:/{ledger_file}"] if i == 0 else [])
-                # "./ledger.json:/ledger.json" if i == 0 else None,
-            ],
-            "networks": [network_name]
-        }
-        for i in range(num_validators + 1 )
-    },
-    "networks": {
-        network_name : {
-            "name": network_name
+    port = {
+        "rpc": 5005, # TODO: Configurable/template
+        "ws": 6006, # TODO: Configurable/template
+    }
+
+    compose_data = {
+        "services": {
+            (name := rippled_name if i >= num_validators else f"{validator_name}{i}"): {
+                "image": image,
+                "container_name": f"{name}",
+                "hostname": f"{name}",
+                **(entrypoint),
+                **({"ports": [f'{port["ws"]}:{port["ws"]}']} if i >= num_validators else {}),
+                **(load_command if name == first_validator else net_command),
+                **(healthcheck if name == first_validator else depends_on),
+                "volumes": [
+                    f"./volumes/{name}:/etc/opt/ripple",
+                    *([f"./{ledger_file}:/{ledger_file}"] if i == 0 else [])
+                    # "./ledger.json:/ledger.json" if i == 0 else None,
+                ],
+                "networks": [network_name]
+            } for i in range(num_validators + 1)
         },
-    },
-}
+        "networks": {
+            network_name : {
+                "name": network_name
+            },
+        },
+    }
 
-def main():
-    test_net_dir = Path("test_network")
-    compose_yml = test_net_dir / "docker-compose.yml"
-    test_net_dir.mkdir(exist_ok=True, parents=True)
-    print(f"writing {compose_yml.resolve()}")
-    with compose_yml.open("w") as f:
-        yaml.dump(compose_data, f)
-
-if __name__ == "__main__":
-    main()
+    if include_services is not None:
+        compose_data["include"] = include_services
+    return compose_data
 
 @dataclass
 class Config(StrEnum):
@@ -103,3 +98,34 @@ def generate_rippled_config():
     pass
 def generate_config():
     pass
+
+@click.command()
+@click.option("-v",
+              "--num_validators",
+              default=DEFAULT_NUM_VALIDATORS,
+              help="Number of validators.",
+              type=int
+)
+
+# @click.option("-x", "--x", multiple=True, help="List of values for x")
+@click.option("-s",
+              "--include_services",
+              multiple=True,
+              help="Additional compose files to include ",
+)
+# @click.option("--name", prompt="Your name",
+#             help="The person to greet.")
+def main(num_validators, include_services):
+    test_net_dir = Path("test_network")
+    compose_yml = test_net_dir / "docker-compose.yml"
+    test_net_dir.mkdir(exist_ok=True, parents=True)
+    print(f"writing {compose_yml.resolve()}")
+    print(f"{num_validators=}")
+    # print(f"{name=}")
+    compose_data = gen_compose_data(num_validators, include_services)
+    with compose_yml.open("w") as f:
+        yaml.dump(compose_data, f)
+
+
+if __name__ == "__main__":
+    main()
