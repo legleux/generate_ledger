@@ -30,17 +30,17 @@ jobs:
 
       - name: Get version
         id: version
-        run: echo version=$(uv version --short) >> $GITHUB_OUTPUT
+        run: echo "version=$(uv version | tr ' ' '-')" >> $GITHUB_OUTPUT
 
       - name: build package
         run: |
-          echo Building ${{ steps.version.outputs.version }}
+          echo "Building [${{ steps.version.outputs.version }}]"
           uv build
       - name: save wheel
         uses: actions/upload-artifact@v4
         with:
           name: package-${{ matrix.version }}
-          path: dist/legleux-generate-ledger${{ steps.version.outputs.version }}-py3-none-any.whl
+          path: dist/legleux-generate-ledger-${{ steps.version.outputs.version }}-py3-none-any.whl
   # pypi-publish:
   #   name: Upload release to PyPI
   #   needs: build_package
