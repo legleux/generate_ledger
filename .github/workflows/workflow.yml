@@ -39,7 +39,7 @@ jobs:
       - name: save wheel
         uses: actions/upload-artifact@v4
         with:
-          name: package-${{ matrix.version }}
+          name: ${{ steps.version.outputs.version }}-3.${{ matrix.version }}
           path: dist/${{ steps.version.outputs.version }}-py3-none-any.whl
   # pypi-publish:
   #   name: Upload release to PyPI
