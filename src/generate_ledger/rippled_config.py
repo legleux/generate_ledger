@@ -7,10 +7,10 @@ peer_port = 51235
 validator_name = "val"
 rippled_name = "rippled"
 config_template = Path(__file__).parent.resolve() / "rippled.cfg"
-
-reference_fee = 456
-account_reserve = 3000000
-owner_reserve = 50
+testnet_path = "testnet"
+reference_fee = 10               # 10 drops
+account_reserve = int(0.2 * 1e6) # 0.2 XRP
+owner_reserve = int(1 * 1e6)     # 1 XRP
 
 def generate_public_key():
     seed = xrpl.core.keypairs.generate_seed(algorithm=xrpl.CryptoAlgorithm.SECP256K1)
@@ -35,8 +35,8 @@ def gen_voting():
     )
     return voting_cfg
 
-def generate_config():
-    print(f"Looking for config template at: {config_template}")
+def generate_config(num_validators):
+    # print(f"Looking for config template at: {config_template}")
     rippled_cfg_template_str = Path(config_template).read_text()
     validators = [ generate_public_key() for _ in range(num_validators)]
     validator_public_keys = (
@@ -46,7 +46,7 @@ def generate_config():
     )
     for i in range(num_validators + 1):
         config_dir = f"{validator_name}{i}" if i < num_validators else rippled_name
-        config_path = Path(f"test_network/volumes/{config_dir}")
+        config_path = Path(f"{testnet_path}/volumes/{config_dir}")
         config_path.mkdir(exist_ok=True, parents=True)
         config_file_path = config_path / "rippled.cfg"
 

@@ -2,7 +2,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
-
+import os
 import base58
 import httpx
 import xrpl
@@ -34,11 +34,12 @@ total_coins = int(100e9 * 1e6)
 genesis_account_address = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh"
 genesis_account_balance = total_coins
 default_balance = 100_000_000000  # 100k XRP
-NUM_ACCOUNTS = 100
+NUM_ACCOUNTS = 40
 
+testnet_dir = "testnet"
 ledger_file_json = Path("ledger.json")
 amendments = Path("amendments.json")
-
+accounts_json_path = "accounts.json"
 
 @dataclass
 class Amendment:
@@ -79,11 +80,7 @@ def compute_index(input_data, space_key: LedgerNamespace) -> LedgerIndex:
     account_id = base58.b58decode_check(input_data, alphabet=base58.XRP_ALPHABET)[1:]  # remove version byte
 
     data1 = space_key_ + account_id
-    object_index = data.digest()[:32].hex().upper()
     newobject_index = hashlib.sha512(data1).digest()[:32].hex().upper()
-    print(f"input_data: {input_data}")
-    print(f"Old: {object_index}")
-    print(f"New: {newobject_index}")
     return newobject_index
 
 account_root_json_template = {
@@ -234,23 +231,34 @@ def generate_ledger_json(accounts, genesis_account_balance):
     }
     return ledger
 
-def generate_accounts(num_acccount: int=NUM_ACCOUNTS):
+def generate_accounts(num_acccounts: int=NUM_ACCOUNTS) -> list[tuple[str, str]]:
 
-    accounts_file = Path("accounts.json")
     accounts = []
     algorithm = xrpl.constants.CryptoAlgorithm.SECP256K1
-    for i in range(num_acccount):
+    for i in range(num_acccounts):
         algo = xrpl.constants.CryptoAlgorithm.SECP256K1
         seed = generate_seed(algorithm=algorithm)
         wallet = Wallet.from_seed(seed, algorithm=algorithm)
         accounts.append((wallet.address, wallet.seed))
-    accounts_file.write_text(json.dumps(accounts, indent=2))
+
+    # write_accounts_json(accounts_json_path)
+    # accounts_file = Path("accounts.json")
+    # accounts_file.write_text(json.dumps(accounts, indent=2))
     return accounts
 
-def write_ledger_file(genesis_account_balance=genesis_account_balance):
-    output_path = Path("test_network")
+def write_accounts_json(accounts: list, path: os.PathLike) -> None:
+    # accounts = generate_accounts(accounts)
+    accounts_json_path = Path(path)
+    accounts_json_path.write_text(json.dumps(accounts, indent=2))
+    print(f"Wrote {accounts_json_path.resolve()}")
+
+
+def write_ledger_file(num_accounts, genesis_account_balance=genesis_account_balance):
+    output_path = Path(testnet_dir)
     output_path.mkdir(parents=True, exist_ok=True)
-    accounts = generate_accounts()
+    accounts = generate_accounts(num_acccounts=num_accounts)
+    # write_accounts_json(accounts, f"{output_path}/{accounts_json_path}" )
+    write_accounts_json(accounts, output_path / accounts_json_path )
     accounts_state = []
     for address, _ in accounts:
         account_index = compute_account_index(address)
@@ -263,12 +271,14 @@ def write_ledger_file(genesis_account_balance=genesis_account_balance):
 
     ledger = generate_ledger_json(accounts_state, genesis_account_balance)
     ledger_file = output_path / "ledger.json"
+
+    print(f"Creating {num_accounts} accounts in {ledger_file.resolve()}")
     ledger_file.write_text(json.dumps(ledger, indent=2))
 
 amendments = [a.index for a in read_amendments_from_network() if a.enabled]
 
-if __name__ == "__main__":
-    write_ledger_file()
+# if __name__ == "__main__":
+    # write_ledger_file()
 
 # for a in amendments:
     # print(a)
