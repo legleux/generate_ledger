@@ -1,2 +1,7 @@
 .venv
-test_network/
+*_cache
+dist/
+build/
+htmlcov/
+*.egg-info/
+src/generate_ledger/_version.py
