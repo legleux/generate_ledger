@@ -213,12 +213,15 @@ def generate_ledger_json():
     return ledger
 
 
-def write_ledger_file(file_path: None):
+def write_ledger_file(file_path: Path | None = None):
+    if file_path is None:
+        file_path = Path().cwd() / "test_network"
     w = Wallet.from_seed(generate_seed())
     account_index = compute_account_index(w.address)
     print(account_index)
     ledger = generate_ledger_json()
-    ledger_file = Path("ledger.json")
+    Path.mkdir(file_path, parents=True, exist_ok=True)
+    ledger_file = file_path / "ledger.json"
     ledger_file.write_text(json.dumps(ledger, indent=2))
 
 
