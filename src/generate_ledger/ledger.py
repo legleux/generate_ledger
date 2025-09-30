@@ -1,45 +1,98 @@
-from collections import UserString
-from enum import Enum
+from pathlib import Path
+import json
+from pydantic import Field, computed_field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from generate_ledger import ledger_builder
+from gl.accounts import AccountConfig, generate_accounts, write_accounts_json
+from gl.amendments import get_enabled_amendment_hashes
+from gl.trustlines import TrustlineConfig, Trustline
+from gl import data_dir
 
-
-class LedgerIndex(UserString):
-    __slots__ = ()
-
-
-class LedgerNamespace(Enum):
-    ACCOUNT                        = b"a"
-    AMENDMENTS                     = b"f"
-    AMM                            = b"A"
-    BOOK_DIR                       = b"B"
-    BRIDGE                         = b"H"
-    CHECK                          = b"C"
-    CREDENTIAL                     = b"D"
-    DELEGATE                       = b"E"
-    DEPOSIT_PREAUTH                = b"p"
-    DEPOSIT_PREAUTH_CREDENTIALS    = b"P"
-    DID                            = b"I"
-    DIR_NODE                       = b"d"
-    ESCROW                         = b"u"
-    FEE_SETTINGS                   = b"e"
-    MPTOKEN                        = b"t"
-    MPTOKEN_ISSUANCE               = b"~"
-    NEGATIVE_UNL                   = b"N"
-    NFTOKEN_BUY_OFFERS             = b"h"
-    NFTOKEN_OFFER                  = b"q"
-    NFTOKEN_SELL_OFFERS            = b"i"
-    OFFER                          = b"o"
-    ORACLE                         = b"R"
-    OWNER_DIR                      = b"O"
-    PERMISSIONED_DOMAIN            = b"m"
-    SIGNER_LIST                    = b"S"
-    SKIP_LIST                      = b"s"
-    TICKET                         = b"T"
-    TRUST_LINE                     = b"r"
-    VAULT                          = b"V"
-    XCHAIN_CLAIM_ID                = b"Q"
-    XCHAIN_CREATE_ACCOUNT_CLAIM_ID = b"K"
-    XRP_PAYMENT_CHANNEL            = b"x"
+class FeeConfig(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="GL_", env_file=".env")
+    base_fee_drops: int = 121
+    reserve_base_drops: int = 2_000_000  # 2 XRP
+    reserve_increment_drops: int = 666
 
     @property
-    def hex(self):
-        return self.encode("utf-8").hex()
+    def xrpl(self) -> dict[str, str|int]:
+        return {
+            "LedgerEntryType": "FeeSettings",
+            "BaseFeeDrops": self.base_fee_drops,
+            "Flags": 0,
+            "ReserveBaseDrops": self.reserve_base_drops,
+            "ReserveIncrementDrops": self.reserve_increment_drops,
+            "index": "4BC50C9B0D8515D3EAAE1E74B29A95804346C491EE1A95BF25E4AAB854A6A651",
+        }
+
+class LedgerConfig(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="GL_",              # Use GL_* variables to set defaults from environment
+        env_file=".env",
+        env_nested_delimiter="__",     # Format to set individual components from env GL_ACCOUNT__NUM_ACCOUNTS, etc.
+        extra="ignore",
+    )
+    account_cfg: AccountConfig = Field(default_factory=AccountConfig)
+    fee_cfg: FeeConfig = Field(default_factory=FeeConfig)
+    trustlines: TrustlineConfig = Field(default_factory=TrustlineConfig)
+
+    base_dir: Path = Field(default=Path("testnet")) # Override with env var GL_BASE_DIR
+    ledger_state_json_file: str = "ledger_state.json"
+    ledger_json_file: str = "ledger.json"
+    amendment_source: str = f"{data_dir / 'amendment_list_dev_20250907.json'}"
+
+    @computed_field
+    @property
+    def ledger_json(self) -> Path:
+        return self.base_dir / self.ledger_json_file
+
+    @computed_field
+    @property
+    def ledger_state_json(self) -> Path:
+        return self.base_dir / self.ledger_state_json_file
+
+def gen_fees_state(config: FeeConfig | None = None) -> dict[str, str|int]:
+    cfg = config or FeeConfig()
+    return cfg.to_xrpl()
+
+def gen_trustlines_state(trustlines: list[Trustline], config: TrustlineConfig | None = None):
+    cfg = config or TrustlineConfig()
+
+def gen_ledger_state(config: LedgerConfig | None = None):
+    cfg = config or LedgerConfig()
+    # 1. Account generation
+    #   a. Normal User accounts
+    accounts = generate_accounts(cfg.account_cfg)
+    write_accounts_json(accounts, cfg.base_dir / "accounts.json")
+    #   b. Gateway accounts
+
+    # 2. Generate the TrustLines
+    # trustlines = generate_trustlines(cfg.trust_line)
+    # 3. Offers
+    # 4. Generate the AMMs
+    # amms = generate_amms(cfg.amm)
+    # 5. Set Network Options
+    # fee_cfg = gen_fees_state(cfg.fee_cfg)
+    # fees =
+    # amendment_hashes =   # or leave empty if fully offline
+
+    # 6) assemble + write
+    ledger = ledger_builder.assemble_ledger_json(
+        accounts=accounts,
+        fees=cfg.fee_cfg.xrpl,
+        amendment_hashes=get_enabled_amendment_hashes(source=cfg.amendment_source),
+    )
+    return ledger
+    # ledger_json = generate_ledger_json_data(config: LedgerConfig | None = None)
+    # ledger_builder.write_ledger_json(ledger, LEDGER_JSON)
+
+def write_ledger_file(output_file: Path | None = None, config: LedgerConfig | None = None) -> Path:
+    cfg = config or LedgerConfig()
+    output_file = Path(output_file or cfg.ledger_json)
+    output_file.parent.mkdir(exist_ok=True, parents=True)
+    print(f"Writing {cfg.ledger_json.name} to {output_file.resolve()}")
+    ledger_data = gen_ledger_state(cfg)
+    if output_file is not None:
+        with cfg.ledger_json.open("w", encoding="UTF-8") as ld:
+            json.dump(ledger_data, ld)
+    return output_file.resolve()

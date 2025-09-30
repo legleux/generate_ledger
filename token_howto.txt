@@ -1,0 +1,14 @@
+TOKEN=<token> # obtained from your pypi project
+
+using  uv, export the variable
+
+  UV_PUBLISH_TOKEN=$TOKEN
+
+uv will automatically set the username to `__token__`
+
+
+for twine you can put in
+$HOME/.pypirc
+[pypi]
+  username = __token__
+  password = pypi-<token>

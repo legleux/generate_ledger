@@ -1,0 +1,14 @@
+{
+  "seed": 123,
+  "name": "MyStar",
+  "num_central_hubs": 5,
+  "num_subnets": 4,
+  "validators_per_subnet": [7, 6, 6, 6],
+  "hub_ring_radius": 200,
+  "subnet_hub_ring_radius": 750,
+  "validator_ring_radius": 280,
+  "subnet_twist_degrees": 12,
+  "intra_min_degree": 1,
+  "intra_max_degree": 3,
+  "hub_connect_fraction": 1.0
+}

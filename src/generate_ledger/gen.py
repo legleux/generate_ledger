@@ -9,7 +9,7 @@ import xrpl
 import xrpl.constants
 
 from generate_ledger import Wallet, generate_seed
-from generate_ledger.ledger import LedgerIndex, LedgerNamespace
+from generate_ledger.models.ledger import LedgerIndex, LedgerNamespace
 
 # from xrpl.core.keypairs import generate_seed
 # from xrpl.wallet import Wallet

@@ -1,10 +1,8 @@
-from dataclasses import dataclass
-from enum import StrEnum
-from ruamel.yaml import YAML
 from pathlib import Path
-import os
 
-import click
+from pydantic import PositiveInt, Field, computed_field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedSeq
 from ruamel.yaml.scalarstring import DoubleQuotedScalarString as dq
 
@@ -18,117 +16,164 @@ def make_flow_list(items):
     seq.fa.set_flow_style()
     return seq
 
-DEFAULT_NUM_VALIDATORS = 5
-DEFAULT_NUM_VALIDATORS = os.environ.get("NUM_VALIDATORS", DEFAULT_NUM_VALIDATORS)
-validator_name     = os.environ.get("VALIDATOR_NAME", "val")
-rippled_name       = os.environ.get("RIPPLED_NAME", "rippled")
-image              = os.environ.get("RIPPLED_IMAGE", "rippled:latest")
-# NETWORK_NAME       = os.environ.get("NETWORK_NAME", "xrpld_net")
-test_net_dir_name  = os.environ.get("TESTNET_DIR", "testnet")
-docker_compose_yml = "docker-compose.yml"
-first_validator    = f"{validator_name}0"
+class ComposeConfig(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="GL_", env_file=".env")
+    default_output_dir: str = "testnet"
+    docker_compose_yml: str = "docker-compose.yml"
+    base_dir: Path = Field(default=Path(default_output_dir)) # Override with env var GL_BASE_DIR
+    num_validators: PositiveInt = 5
+    validator_name: str = "val"
+    validator_image_tag: str = "latest" # latest _Major Release_
+    validator_image: str = "rippleci/rippled" # REVIEW: Required?
+    num_hubs: PositiveInt = 1
+    hub_name: str = "rippled"
+    hub_image: str = "rippleci/rippled"
+    hub_image_tag: str = "latest"
+    # where outputs land by default (env var GL_BASE_DIR overrides)
+    # base_dir: Path = Field(default=Path(".gl"))
 
-ledger_file = "ledger.json"
-entrypoint_cmd = "rippled"
-load_command = {"command": make_flow_list([dq("--ledgerfile"), dq(ledger_file)])}
-net_command = {"command": make_flow_list([dq("--net")])}
-entrypoint = {"entrypoint": make_flow_list([dq(f"{entrypoint_cmd}")])}
-init = True
-healthcheck_data = {
-    "host": "localhost",
-    "peer_port": "51235",
-    "interval": "10s",
-    "start_period": "45s"
-}
-healthcheck_url = f"https://{healthcheck_data['host']}:{healthcheck_data['peer_port']}/health"
-healthcheck = {
-    "healthcheck": {
-        "test": make_flow_list([dq("CMD"), dq("/usr/bin/curl"), dq("--insecure"), dq(healthcheck_url)]),
-        "start_period": healthcheck_data["start_period"],
-        "interval": healthcheck_data["interval"],
+    @computed_field
+    @property
+    def compose_yml(self) -> Path:
+        return self.base_dir / self.docker_compose_yml
+
+    network_name: str = "xrpl_net"
+    rpc_port: int = 5005
+    ws_port: int = 6006
+    standalone: bool = False
+
+    ledger_file: str = "/ledger.json" # REVIEW: Should this live here? What is the path?
+    first_validator: str  = f"{validator_name}0"
+
+def gen_compose_data(config: ComposeConfig | None = None):
+    cfg = config or ComposeConfig()
+    # debug log
+    # print(f"generating {cfg.num_validators} validators")
+    entrypoint_cmd = "rippled"
+
+    load_command = {
+        "command": make_flow_list([dq("--ledgerfile"), dq(cfg.ledger_file)])}
+    net_command = {"command": make_flow_list([dq("--net")])}
+    entrypoint = {"entrypoint": make_flow_list([dq(f"{entrypoint_cmd}")])}
+    # TODO: Image default entrypoint should already be "rippled"
+    hub_entrypoint = validator_entrypoint = entrypoint
+    init = True # TODO: Do we need this?
+    expose_hub_ports = True
+    expose_val_ports = False
+    healthcheck_data = {
+        "host": "localhost",
+        "peer_port": "51235",
+        "interval": "10s",
+        "start_period": "10s"
     }
-}
-depends_on = {
-    "depends_on": [f"{first_validator}0"]
-}
-depends_on = {"depends_on": make_flow_list([dq(f"{first_validator}")])}
+    healthcheck_url = f"https://{healthcheck_data['host']}:{healthcheck_data['peer_port']}/health"
+    ### Try a simpler healthcheck
+    # healthcheck = {
+    #     "healthcheck": {
+    #         "test": make_flow_list([dq("CMD"), dq("/usr/bin/curl"), dq("--insecure"), dq(healthcheck_url)]),
+    #         "start_period": healthcheck_data["start_period"],
+    #         "interval": healthcheck_data["interval"],
+    #     }
+    # }
+    healthcheck = {
+        "healthcheck": {
+            "test": make_flow_list([dq("CMD"), dq("rippled"), dq("--silent"), dq("ping")]),
+            "start_period": healthcheck_data["start_period"],
+            "interval": healthcheck_data["interval"],
+        }
+    }
+    # hub_healthcheck = {
+    #     "healthcheck": {
+    #         "test": make_flow_list([dq("CMD"), dq("/usr/bin/curl"), dq("--insecure"), dq(healthcheck_url)]),
+    #         "start_period": healthcheck_data["start_period"],
+    #         "interval": healthcheck_data["interval"],
+    #     }
+    # }
+    depends_on = {
+        "depends_on": {
+            f"{cfg.first_validator}": {
+                "condition": "service_healthy"
+            }
+            }
+    }
+    # depends_on = {"depends_on": make_flow_list([dq(f"{cfg.first_validator}")])}
+    # depends_on = {
+    #     "depends_on": "val0"}
 
-
-def gen_compose_data(num_validators, network_name, include_services):
-    print(f"generating {num_validators} validators")
     compose_data = {}
 
-    if include_services is not None:
-        compose_data.update(include=include_services)
-
-    port = {
-        "rpc": 5005, # TODO: Configurable/template
-        "ws": 6006, # TODO: Configurable/template
-    }
-
-    services = {
-        (name := rippled_name if i >= num_validators else f"{validator_name}{i}"): {
-            "image": image,
+    # TODO: What to do about this?
+    # if include_services is not None:
+    #     compose_data.update(include=include_services)
+    """ FIXME: This is just a mess. We may want to expose ports of multiple nodes not just the first one.
+        It might be worth it to break hubs/vals into separate compose files from templates then just
+        include them together.
+    """
+    validators = {
+        (name := f"{cfg.validator_name}{i}"): {
+            "image": f"{cfg.validator_image}:{cfg.validator_image_tag}",
             "container_name": f"{name}",
             "hostname": f"{name}",
-            **(entrypoint),
+            **(validator_entrypoint),
             **({"ports": [
-                f'{port["rpc"]}:{port["rpc"]}',
-                f'{port["ws"]}:{port["ws"]}',
-                ]} if i >= num_validators else {}),
-            **(load_command if name == first_validator else net_command),
-            **(healthcheck if name == first_validator else depends_on),
+                f'{cfg.rpc_port + i + cfg.num_hubs}:{cfg.rpc_port}',
+                f'{cfg.ws_port + i + cfg.num_hubs}:{cfg.ws_port}',
+                ]} if name == cfg.first_validator else {}),
+            # **(load_command),
+            **(load_command if name == cfg.first_validator else net_command),
+            **(healthcheck if name == cfg.first_validator else depends_on),
+            # FIXME: volume mount kind of ugly...
             "volumes": [
                 f"./volumes/{name}:/etc/opt/ripple",
-                *([f"./{ledger_file}:/{ledger_file}"] if i == 0 else [])
+                # TODO: Only loading the ledger file if it's the first validator? Test with
+                # *([f"./{cfg.ledger_file}:/{cfg.ledger_file}"] if i == 0 else [])
+                *([f".{cfg.ledger_file}:{cfg.ledger_file}"])
                 # "./ledger.json:/ledger.json" if i == 0 else None,
             ],
-            "networks": [network_name]
-        } for i in range(num_validators + 1)
+            "networks": [cfg.network_name]
+        } for i in range(cfg.num_validators)
+    }
+
+    hubs = {
+        (name := f"{cfg.hub_name}{(i if cfg.num_hubs > 1 else '')}"): {
+            "image": f"{cfg.hub_image}:{cfg.hub_image_tag}",
+            "container_name": f"{name}",
+            "hostname": f"{name}",
+            **(hub_entrypoint),
+            **({"ports": [
+                f'{(cfg.rpc_port + i)}:{cfg.rpc_port}',
+                f'{cfg.ws_port + i}:{cfg.ws_port}',
+                ]} if expose_hub_ports else {}),
+            **(depends_on),
+            # FIXME: volume mount kind of ugly...
+            "volumes": [
+                f"./volumes/{name}:/etc/opt/ripple",
+                # TODO: Only loading the ledger file if it's the first hub? Test with
+                # *([f"./{cfg.ledger_file}:/{cfg.ledger_file}"] if i == 0 else [])
+                # "./ledger.json:/ledger.json" if i == 0 else None,
+            ],
+            "networks": [cfg.network_name]
+        } for i in range(cfg.num_hubs)
     }
 
     networks = {
-        network_name : {
-            "name": network_name
+        cfg.network_name : {
+            "name": cfg.network_name
         },
     }
 
-    compose_data.update(services=services)
+    compose_data.update(services={**validators, **hubs})
     compose_data.update(networks=networks)
 
     return compose_data
 
-@dataclass
-class Config(StrEnum):
-    pass
-
-def generate_validator_config():
-    services = {
-    }
-def generate_rippled_config():
-    pass
-def generate_config():
-    pass
-
-def generate_compose_file(num_validators, network_name, include_services=None):
-    test_net_dir = Path(test_net_dir_name)
-    compose_yml = test_net_dir / docker_compose_yml
-    test_net_dir.mkdir(exist_ok=True, parents=True)
-    print(f"writing {compose_yml.resolve()}")
-    # print(f"{num_validators=}")
-    # print(f"{name=}")
-    compose_data = gen_compose_data(num_validators, network_name, include_services)
-    with compose_yml.open("w") as f:
-        yaml.dump(compose_data, f)
-
-CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
-DEFAULT_NETWORK_NAME="rippled_net"
-@click.command(context_settings=CONTEXT_SETTINGS)
-@click.option("-n", "--network_name", default=DEFAULT_NETWORK_NAME, type=str)
-@click.option("-v", "--num_validators", default=DEFAULT_NUM_VALIDATORS, type=int)
-@click.option("-s", "--include_services", multiple=True)
-def gen_compose(num_validators, network_name, include_services):
-    generate_compose_file(num_validators, network_name, include_services)
-
-if __name__ == "__main__":
-    gen_compose()
+def write_compose_file(output_file: Path | None = None, config: ComposeConfig | None = None) -> Path:
+    cfg = config or ComposeConfig()
+    output_file = output_file or cfg.compose_yml
+    output_file.parent.mkdir(exist_ok=True, parents=True)
+    print(f"Writing {cfg.compose_yml.name} to {output_file.resolve()}")
+    # yaml.dump(gen_compose_data(cfg), output_file.open("w"))
+    # return output_file
+    with output_file.open("w") as f:
+        yaml.dump(gen_compose_data(cfg), f)
+    return output_file
