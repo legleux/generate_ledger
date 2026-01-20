@@ -58,14 +58,21 @@ def assemble_ledger_json(
     genesis_address: str = GENESIS_ADDRESS,
     fees: dict | None = None,
     amendment_hashes: list[str],
+    trustline_objects: list | None = None,
     ledger_index: int = 5,
 ) -> dict:
     """
     Build a minimal 'ledger' object with accountState suitable for bootstrapping a network.
     Genesis account takes remaining XRP after generating other accounts.
+
+    Args:
+        trustline_objects: List of TrustlineObjects (from generate_trustlines)
     """
     balances_total = 0
     state: list[dict] = []
+
+    #  Track which accounts have trustlines for OwnerCount
+    account_owner_counts = {}
 
     for a in accounts:
         state.append(
@@ -74,10 +81,45 @@ def assemble_ledger_json(
                 balance_drops=default_acct_balance,
                 prev_txn_id="0" * 64,
                 prev_txn_lgr_seq=0,
-                sequence=2
+                sequence=2,
+                owner_count=0  # Will update below if trustlines exist
             )
         )
         balances_total += default_acct_balance
+        account_owner_counts[a.address] = 0
+
+    # Add trustlines and consolidate directory nodes
+    directory_nodes = {}  # owner -> DirectoryNode dict
+
+    if trustline_objects:
+        for tl_obj in trustline_objects:
+            # Add RippleState
+            state.append(tl_obj.ripple_state)
+
+            # Consolidate DirectoryNodes by owner
+            for dn in [tl_obj.directory_node_a, tl_obj.directory_node_b]:
+                owner = dn["Owner"]
+                if owner in directory_nodes:
+                    # Merge Indexes arrays
+                    directory_nodes[owner]["Indexes"].extend(dn["Indexes"])
+                else:
+                    directory_nodes[owner] = dn.copy()
+
+            # Update owner counts
+            owner_a = tl_obj.directory_node_a["Owner"]
+            owner_b = tl_obj.directory_node_b["Owner"]
+            account_owner_counts[owner_a] = account_owner_counts.get(owner_a, 0) + 1
+            account_owner_counts[owner_b] = account_owner_counts.get(owner_b, 0) + 1
+
+    # Add consolidated DirectoryNodes to state
+    state.extend(directory_nodes.values())
+
+    # Update OwnerCount in AccountRoot entries
+    for entry in state:
+        if entry.get("LedgerEntryType") == "AccountRoot":
+            address = entry["Account"]
+            if address in account_owner_counts:
+                entry["OwnerCount"] = account_owner_counts[address]
 
     genesis_balance = max(total_coins_drops - balances_total, 0)
     state.insert(
@@ -88,7 +130,6 @@ def assemble_ledger_json(
             prev_txn_id="0" * 64,
             prev_txn_lgr_seq=0,
             sequence=1,
-            # index="2B6AC232AA4C4BE41BF49D2459FA4A0347E1B543A4C92FCEE0821C0201E2E9A8",
         ),
     )
 
@@ -101,13 +142,6 @@ def assemble_ledger_json(
             "accepted": True,
             "accountState": state,
             "close_time_resolution": 10,
-            # "closed": True,
-            # "hash": "56DA0940767AC2F17F0E384F04816002403D0756432B9D503DDA20128A2AAF11",
-            # "ledger_hash": "56DA0940767AC2F17F0E384F04816002403D0756432B9D503DDA20128A2AAF11",
-            # "ledger_index": "2",
-            # "parent_close_time": 733708800,
-            # "parent_hash": "56DA0940767AC2F17F0E384F04816002403D0756432B9D503DDA20128A2AAF11",
-            # "seqNum": "2",
             "totalCoins": str(total_coins_drops),
             "total_coins": str(total_coins_drops),
         }

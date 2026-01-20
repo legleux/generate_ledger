@@ -11,6 +11,7 @@ from generate_ledger.cli_defaults import (
 )
 # ⬇️ import the generated Click command object itself
 from .compose import app as compose_app, write_cmd
+from .rippled_cfg import app as rippled_app
 
 app = typer.Typer(help="generate_ledger CLI", no_args_is_help=False)
 
@@ -39,5 +40,6 @@ def _root(
         # IMPORTANT: ctx.invoke works with any Click command, it doesn't need to be on the same group instance
         return ctx.invoke(write_cmd, **kwargs)
 
-# keep the explicit sub-app
+# keep the explicit sub-apps
 app.add_typer(compose_app, name="compose")
+app.add_typer(rippled_app, name="rippled")

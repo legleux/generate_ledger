@@ -22,6 +22,7 @@ fund_account = test_fund_account
 
 initial_amount = str(99_999_999_990_000000)  # All of it minus the reserve for account 0
 initial_amount = str(900_000_000_000000)
+initial_amount = str(1000_000000)
 # 99999999900000000
 # 999999990
 # 1000000000
@@ -42,7 +43,7 @@ devnet_host = "s.devnet.rippletest.net"
 devnet_url = f"https://{devnet_host}:{devnet_port}"
 local_port = default_rippled_rpc_port
 
-local_host = "172.17.0.2"
+local_host = "172.22.0.7"
 local_url = f"http://{local_host}:{local_port}"
 url = devnet_url
 url = local_url

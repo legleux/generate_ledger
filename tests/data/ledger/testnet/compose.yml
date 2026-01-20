@@ -1,0 +1,45 @@
+services:
+  val0:
+    image: rippleci/rippled:latest
+    container_name: val0
+    hostname: val0
+    command: [
+      "--start",
+      # "--ledgerfile", "/srv/ledger.json",
+      ]
+    ports:
+      - 5005:5005
+      - 6006:6006
+    healthcheck:
+      test: ["CMD", "rippled", "--silent", "ping"]
+      start_period: 10s
+      interval: 10s
+    volumes:
+      - ./volumes/val0:/opt/ripple/etc
+      - ./volumes/ledger.json:/srv/ledger.json
+      - ./volumes/accounts.json:/ledger.json
+  val1:
+    image: rippleci/rippled:latest
+    container_name: val1
+    hostname: val1
+    command: [
+      "--start",
+      # "--ledgerfile", "/srv/ledger.json",
+      ]
+    # ports:
+    #   - 5006:5005
+    #   - 6007:6006
+    healthcheck:
+      test: ["CMD", "rippled", "--silent", "ping"]
+      start_period: 10s
+      interval: 10s
+    volumes:
+      - ./volumes/val1:/opt/ripple/etc
+      - ./volumes/ledger.json:/srv/ledger.json
+      - ./volumes/accounts.json:/ledger.json
+#     networks:
+#       - xrpl_net
+
+# networks:
+#   xrpl_net:
+#     name: xrpl_net

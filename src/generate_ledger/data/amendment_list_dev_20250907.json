@@ -340,7 +340,7 @@
     "supported": true
   },
   "AE6AB9028EEB7299EBB03C7CBCC3F2A4F5FBE00EA28B8223AA3118A0B436C1C5": {
-    "enabled": true,
+    "enabled": false,
     "name": "PermissionDelegation",
     "supported": true
   },

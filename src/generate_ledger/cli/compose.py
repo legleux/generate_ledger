@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional
 import click
 import typer
 from typer.main import get_command
@@ -29,3 +30,31 @@ write_cmd = build_command_from_defaults(
 
 # After the callback is defined, this now works:
 get_command(app).add_command(write_cmd)
+
+# Also add a Typer command wrapper for when this app is nested in another Typer app
+@app.command("write")
+def write_typer(
+    ctx: typer.Context,
+    output_file: Optional[Path] = typer.Option(None, "-o", "--output-file"),
+    validators: Optional[int] = typer.Option(None, "--validators"),
+    base_dir: Optional[Path] = typer.Option(None, "--base-dir"),
+):
+    """
+    Generate docker-compose.yml for XRPL validator network.
+    """
+    # Get config from context
+    if ctx.obj is None:
+        from types import SimpleNamespace
+        from generate_ledger.config import LedgerConfig
+        ctx.obj = SimpleNamespace(compose=ComposeConfig(), ledger=LedgerConfig())
+
+    base_cfg = ctx.obj.compose
+
+    # Build overrides
+    overrides = {}
+    if validators is not None:
+        overrides["num_validators"] = validators
+    if base_dir is not None:
+        overrides["base_dir"] = base_dir
+
+    _runner(base_cfg, overrides, output_file)

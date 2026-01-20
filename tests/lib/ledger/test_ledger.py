@@ -2,13 +2,11 @@ from generate_ledger.ledger import LedgerConfig, write_ledger_file, gen_ledger_s
 from pathlib import Path
 from gl.amendments import get_amendments
 
-
 def test_read_amendments_from_default_file(amendments):
     cfg = LedgerConfig()
     am_s = cfg.amendment_source
     a = get_amendments()
     pass
-
 
 def test_read_amendments_from_network():
     pass

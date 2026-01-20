@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from generate_ledger import ledger_builder
 from gl.accounts import AccountConfig, generate_accounts, write_accounts_json
 from gl.amendments import get_enabled_amendment_hashes
-from gl.trustlines import TrustlineConfig, Trustline
+from gl.trustlines import TrustlineConfig, generate_trustlines
 from gl import data_dir
 
 class FeeConfig(BaseSettings):
@@ -55,36 +55,24 @@ def gen_fees_state(config: FeeConfig | None = None) -> dict[str, str|int]:
     cfg = config or FeeConfig()
     return cfg.to_xrpl()
 
-def gen_trustlines_state(trustlines: list[Trustline], config: TrustlineConfig | None = None):
-    cfg = config or TrustlineConfig()
-
 def gen_ledger_state(config: LedgerConfig | None = None):
     cfg = config or LedgerConfig()
-    # 1. Account generation
-    #   a. Normal User accounts
+
+    # 1. Generate accounts
     accounts = generate_accounts(cfg.account_cfg)
     write_accounts_json(accounts, cfg.base_dir / "accounts.json")
-    #   b. Gateway accounts
 
-    # 2. Generate the TrustLines
-    # trustlines = generate_trustlines(cfg.trust_line)
-    # 3. Offers
-    # 4. Generate the AMMs
-    # amms = generate_amms(cfg.amm)
-    # 5. Set Network Options
-    # fee_cfg = gen_fees_state(cfg.fee_cfg)
-    # fees =
-    # amendment_hashes =   # or leave empty if fully offline
+    # 2. Generate trustlines
+    trustline_objects = generate_trustlines(accounts, cfg.trustlines)
 
-    # 6) assemble + write
+    # 3. Assemble ledger with trustlines
     ledger = ledger_builder.assemble_ledger_json(
         accounts=accounts,
         fees=cfg.fee_cfg.xrpl,
         amendment_hashes=get_enabled_amendment_hashes(source=cfg.amendment_source),
+        trustline_objects=trustline_objects,
     )
     return ledger
-    # ledger_json = generate_ledger_json_data(config: LedgerConfig | None = None)
-    # ledger_builder.write_ledger_json(ledger, LEDGER_JSON)
 
 def write_ledger_file(output_file: Path | None = None, config: LedgerConfig | None = None) -> Path:
     cfg = config or LedgerConfig()
@@ -92,7 +80,6 @@ def write_ledger_file(output_file: Path | None = None, config: LedgerConfig | No
     output_file.parent.mkdir(exist_ok=True, parents=True)
     print(f"Writing {cfg.ledger_json.name} to {output_file.resolve()}")
     ledger_data = gen_ledger_state(cfg)
-    if output_file is not None:
-        with cfg.ledger_json.open("w", encoding="UTF-8") as ld:
-            json.dump(ledger_data, ld)
+    with output_file.open("w", encoding="UTF-8") as ld:
+        json.dump(ledger_data, ld)
     return output_file.resolve()

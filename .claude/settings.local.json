@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(mkdir:*)",
+      "Bash(.specify/scripts/bash/setup-plan.sh:*)",
+      "Bash(uv --version:*)",
+      "Bash(source .venv/bin/activate)",
+      "Bash(gen --help:*)",
+      "Bash(gen typer --help:*)",
+      "Bash(gen compose --help:*)",
+      "Bash(pytest:*)",
+      "Bash(ruff:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(uv run gen typer --help:*)",
+      "Bash(uv run gen --help:*)",
+      "Bash(uv run gen compose --help:*)",
+      "Bash(uv run:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
