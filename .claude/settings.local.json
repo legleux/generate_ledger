@@ -15,7 +15,10 @@
       "Bash(uv run gen typer --help:*)",
       "Bash(uv run gen --help:*)",
       "Bash(uv run gen compose --help:*)",
-      "Bash(uv run:*)"
+      "Bash(uv run:*)",
+      "Bash(.specify/scripts/bash/check-prerequisites.sh:*)",
+      "SlashCommand(/speckit.tasks)",
+      "SlashCommand(/speckit.analyze)"
     ],
     "deny": [],
     "ask": []

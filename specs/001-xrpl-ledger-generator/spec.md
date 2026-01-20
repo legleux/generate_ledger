@@ -2,7 +2,7 @@
 
 **Feature Branch**: `001-xrpl-ledger-generator`
 **Created**: 2025-12-10
-**Status**: Draft
+**Status**: In Progress - MVP Complete (US1-3), Advanced Features Pending (US4-6)
 **Input**: User description: "This package in incharge of preparing a custom XRPL environment capable of pre-generating a ledger such that sufficient state doesn't have to be established over time naturally but scenarios can be pre-generated. 3 Main modules the depend on each other such that some centralized context needs to be established in a certain order e.g. user input number variables, names, etc, can configure the ledger state, which might in turn affect the required rippled, validator config files which then might require docker file settings to correctly establish"
 
 ## User Scenarios & Testing *(mandatory)*
@@ -68,6 +68,11 @@ A developer wants to run the complete custom XRPL network in isolated containers
 ### Session 2025-12-11
 
 - Q: Which ledger object types will be supported in the initial release vs. future phases? → A: All ledger objects (Accounts, Trustlines, MPT, AMM, Vault/Lending) supported in initial release - full FR-010 scope
+
+### Session 2026-01-19
+
+- **Implementation Status Update**: MVP (v1.0) completed with Accounts and Trustlines (US1-3). MPT, AMM, and Vault support (US4-6) planned for v2.0 release based on user demand and validation of core functionality.
+- **Rationale**: Core value proposition (rapid test environment setup) is fully delivered by Accounts + Trustlines. Advanced ledger objects add significant complexity and require additional research (AMM initialization, Vault object specifications).
 - Q: What specific ledger objects does "Lending Protocol primitives" refer to? → A: Vault objects (single-asset vaults specifically)
 - Q: What are the maximum scalability limits the tool should support? → A: Medium scale (1000 accounts, 5000 trustlines, 10 validators)
 - Q: What security approach should be used for storing account credentials? → A: Plain JSON files (acceptable for test networks, with security warnings in documentation)
@@ -86,7 +91,7 @@ A developer wants to run the complete custom XRPL network in isolated containers
 - **FR-007**: System MUST maintain dependency ordering where ledger state configuration informs validator config generation, which in turn informs docker deployment settings
 - **FR-008**: System MUST provide access to generated account credentials (addresses, secrets) for testing purposes
 - **FR-009**: System MUST generate configurations that enable validator consensus on the custom ledger
-- **FR-010**: System MUST support pre-generation of ledger objects in the initial release, including: Accounts (AccountRoot), Trustlines (RippleState), MPT (Multi-Purpose Tokens via MPTokenIssuance and MPToken objects), AMM (Automated Market Maker via AMM objects and special AccountRoot), and Vault objects (single-asset vaults for lending/deposit functionality)
+- **FR-010**: System MUST support pre-generation of ledger objects, including: Accounts (AccountRoot) ✅ COMPLETE, Trustlines (RippleState) ✅ COMPLETE, MPT (Multi-Purpose Tokens via MPTokenIssuance and MPToken objects) 🔴 PLANNED v2.0, AMM (Automated Market Maker via AMM objects and special AccountRoot) 🔴 PLANNED v2.0, and Vault objects (single-asset vaults for lending/deposit functionality) 🔴 PLANNED v2.0
 - **FR-011**: System MUST support generation of up to 1000 accounts, 5000 trustlines/ledger objects, and 10 validators (medium-scale test environments)
 - **FR-012**: System MUST store generated account credentials (addresses and seeds) in plain JSON format with clear security warnings that these are for test networks only and should never be used in production environments
 

@@ -23,12 +23,12 @@ This feature enables developers to generate complete custom XRPL test environmen
 
 ### Key Technical Decisions Requiring Research
 
-1. **XRPL Genesis Ledger Format**: [NEEDS CLARIFICATION: What is the exact JSON structure and validation requirements for an XRPL genesis ledger that rippled will accept?]
-2. **MPT Creation**: [NEEDS CLARIFICATION: How are Multi-Purpose Tokens (MPT) represented in genesis ledger vs created via transactions?]
-3. **AMM Initialization**: [NEEDS CLARIFICATION: Can AMM pools be pre-generated in genesis ledger or must they be created via AMM creation transactions after network start?]
-4. **Lending Protocol Primitives**: [NEEDS CLARIFICATION: What ledger objects are required for lending protocol functionality, and can they be pre-generated?]
-5. **Validator Identity Generation**: [NEEDS CLARIFICATION: Best practices for generating validator keys, node identities, and UNL configuration?]
-6. **Docker Network Topology**: [NEEDS CLARIFICATION: Optimal container networking setup for validator consensus with custom genesis ledger?]
+1. **XRPL Genesis Ledger Format**: ✅ RESOLVED - See research.md. Structure implemented in src/generate_ledger/ledger_builder.py with AccountRoot, RippleState, FeeSettings, and Amendments objects.
+2. **MPT Creation**: 🔴 DEFERRED to v2.0 - Requires additional research on MPTokenIssuance and MPToken ledger object specifications.
+3. **AMM Initialization**: 🔴 DEFERRED to v2.0 - Research indicates AMM pools may require transaction-based initialization post-genesis. See tasks.md T042.
+4. **Lending Protocol Primitives**: 🔴 DEFERRED to v2.0 - Vault object specifications require further research. See tasks.md T050.
+5. **Validator Identity Generation**: ✅ RESOLVED - Implemented using xrpl-py Wallet generation with secp256k1. See src/generate_ledger/rippled_cfg.py.
+6. **Docker Network Topology**: ✅ RESOLVED - Bridge networking with fixed peer connections (ips_fixed). Bootstrap validator (val0) dependency pattern. See src/generate_ledger/compose.py.
 
 ## Constitution Check
 
