@@ -1,6 +1,6 @@
 # generate_ledger Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-01-20
+Auto-generated from all feature plans. Last updated: 2026-01-21
 
 ## Active Technologies
 
@@ -18,9 +18,10 @@ src/generate_ledger/
 ├── topo/                # Network topology
 ├── accounts.py          # Account generation
 ├── trustlines.py        # Trustline generation (✅ COMPLETE - commit 955aae3)
+├── amm.py               # AMM pool generation (✅ COMPLETE - 2026-01-21)
 ├── amendments.py        # XRPL amendments
-├── indices.py           # Ledger index calculations
-├── ledger_builder.py    # Ledger assembly
+├── indices.py           # Ledger index calculations (includes AMM index, account, LP token)
+├── ledger_builder.py    # Ledger assembly (supports trustlines + AMM)
 ├── rippled_cfg.py       # Validator config generation
 └── compose.py           # Docker compose generation
 
@@ -92,9 +93,18 @@ Python 3.12+ (currently 3.13): Follow standard conventions
   - Validator dependency ordering (val0 bootstrap)
   - CLI: `gen compose` and `gen auto` commands
 
+### ✅ AMM Support Complete (v2.0 Feature)
+- **User Story 5 (P5)**: AMM (Automated Market Maker) support ✅
+  - AMM ledger object generation with proper index calculation
+  - AMM pseudo-account (AccountRoot) with AMMID link
+  - LP token currency derivation (0x03 + hash)
+  - LP token trustline (RippleState) for liquidity providers
+  - DirectoryNode consolidation for all AMM-related objects
+  - Auction slot and vote slot initialization
+  - Integration with LedgerConfig via AMMPoolConfig
+
 ### 🔴 Planned for v2.0
 - **User Story 4 (P4)**: MPT (Multi-Purpose Tokens) support
-- **User Story 5 (P5)**: AMM (Automated Market Maker) support
 - **User Story 6 (P6)**: Vault/Lending protocol support
 
 ### 🟡 In Progress
@@ -103,6 +113,15 @@ Python 3.12+ (currently 3.13): Follow standard conventions
 - Phase 11: Performance validation (tasks T086-T090)
 
 ## Recent Changes
+
+- 2026-01-21: AMM (Automated Market Maker) implementation completed
+  - Added `amm.py` with full AMM pool generation
+  - AMM index calculation: `SHA512Half(0x0041 + asset1 + asset2)`
+  - AMM account derivation: `RIPESHA(SHA512Half(0 + parentHash + ammIndex))`
+  - LP token currency: `0x03 + first_19_bytes(SHA512Half(min(cur1), max(cur2)))`
+  - LP token accounting with RippleState trustlines
+  - Integration with `ledger_builder.py` and `LedgerConfig`
+  - Tasks T042-T049 completed
 
 - 2026-01-20: Trustlines implementation completed (commit 955aae3)
   - Full RippleState object generation with DirectoryNode consolidation
@@ -145,10 +164,7 @@ Implement extended ledger object support:
    - Research MPT ledger object structure
    - Implement MPTokenIssuance and MPToken generation
    - Add CLI options for MPT
-2. Phase 7: AMM Support (tasks T042-T049)
-   - Research AMM initialization (may require post-genesis transactions)
-   - Implement AMM object generation
-   - Handle LP token accounting
+2. ~~Phase 7: AMM Support (tasks T042-T049)~~ ✅ COMPLETE
 3. Phase 8: Vault Support (tasks T050-T057)
    - Research Vault ledger object structure
    - Implement single-asset vault generation

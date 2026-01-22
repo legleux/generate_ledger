@@ -59,6 +59,7 @@ def assemble_ledger_json(
     fees: dict | None = None,
     amendment_hashes: list[str],
     trustline_objects: list | None = None,
+    amm_objects: list | None = None,
     ledger_index: int = 5,
 ) -> dict:
     """
@@ -67,6 +68,7 @@ def assemble_ledger_json(
 
     Args:
         trustline_objects: List of TrustlineObjects (from generate_trustlines)
+        amm_objects: List of AMMObjects (from generate_amm_objects)
     """
     balances_total = 0
     state: list[dict] = []
@@ -110,6 +112,38 @@ def assemble_ledger_json(
             owner_b = tl_obj.directory_node_b["Owner"]
             account_owner_counts[owner_a] = account_owner_counts.get(owner_a, 0) + 1
             account_owner_counts[owner_b] = account_owner_counts.get(owner_b, 0) + 1
+
+    # Add AMM objects
+    if amm_objects:
+        for amm_obj in amm_objects:
+            # Add AMM ledger object
+            state.append(amm_obj.amm)
+
+            # Add AMM pseudo-account
+            state.append(amm_obj.amm_account)
+
+            # Consolidate DirectoryNode for AMM account
+            dn = amm_obj.directory_node
+            owner = dn["Owner"]
+            if owner in directory_nodes:
+                directory_nodes[owner]["Indexes"].extend(dn["Indexes"])
+            else:
+                directory_nodes[owner] = dn.copy()
+
+            # Add LP token trustline if present
+            if amm_obj.lp_token_trustline:
+                state.append(amm_obj.lp_token_trustline)
+
+            # Consolidate creator's LP token directory if present
+            if amm_obj.creator_lp_directory:
+                creator_dn = amm_obj.creator_lp_directory
+                creator_owner = creator_dn["Owner"]
+                if creator_owner in directory_nodes:
+                    directory_nodes[creator_owner]["Indexes"].extend(creator_dn["Indexes"])
+                else:
+                    directory_nodes[creator_owner] = creator_dn.copy()
+                # Update creator's owner count
+                account_owner_counts[creator_owner] = account_owner_counts.get(creator_owner, 0) + 1
 
     # Add consolidated DirectoryNodes to state
     state.extend(directory_nodes.values())

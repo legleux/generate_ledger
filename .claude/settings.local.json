@@ -18,7 +18,8 @@
       "Bash(uv run:*)",
       "Bash(.specify/scripts/bash/check-prerequisites.sh:*)",
       "SlashCommand(/speckit.tasks)",
-      "SlashCommand(/speckit.analyze)"
+      "SlashCommand(/speckit.analyze)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []
