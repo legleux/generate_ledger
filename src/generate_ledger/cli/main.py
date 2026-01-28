@@ -12,6 +12,7 @@ from generate_ledger.cli_defaults import (
 )
 from .compose_click import compose, write_cmd    # generated Click group + command
 from . import app as typer_root_app              # your Typer root (for other features)
+from .ledger import app as ledger_typer_app      # ledger generation commands
 
 @click.group(invoke_without_command=True, no_args_is_help=False)
 @click.option("-o", "--output-file", type=click.Path(path_type=Path), default=None)
@@ -39,6 +40,9 @@ def cli(ctx: click.Context, output_file: Path | None):
 
 # mount the generated Click "compose" group
 cli.add_command(compose, name="compose")
+
+# mount the ledger group directly at root level
+cli.add_command(get_command(ledger_typer_app), name="ledger")
 
 # mount your Typer app (converted to Click) under its own namespace if you have others
 cli.add_command(get_command(typer_root_app), name="typer")  # optional; or mount specific sub-apps

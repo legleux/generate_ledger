@@ -50,6 +50,9 @@ def account_root_entry(
         entry["PreviousTxnLgrSeq"] = prev_txn_lgr_seq
     return entry
 
+LSF_DEFAULT_RIPPLE = 0x00800000  # Required for token issuers in AMM pools
+
+
 def assemble_ledger_json(
     *,
     accounts: Iterable[tuple[str, str]],
@@ -60,6 +63,7 @@ def assemble_ledger_json(
     amendment_hashes: list[str],
     trustline_objects: list | None = None,
     amm_objects: list | None = None,
+    amm_issuers: set[str] | None = None,
     ledger_index: int = 5,
 ) -> dict:
     """
@@ -69,18 +73,24 @@ def assemble_ledger_json(
     Args:
         trustline_objects: List of TrustlineObjects (from generate_trustlines)
         amm_objects: List of AMMObjects (from generate_amm_objects)
+        amm_issuers: Set of issuer addresses that need lsfDefaultRipple flag
     """
     balances_total = 0
     state: list[dict] = []
+    amm_issuers = amm_issuers or set()
 
     #  Track which accounts have trustlines for OwnerCount
     account_owner_counts = {}
 
     for a in accounts:
+        # Set lsfDefaultRipple flag for AMM token issuers
+        flags = LSF_DEFAULT_RIPPLE if a.address in amm_issuers else 0
+
         state.append(
             account_root_entry(
                 address=a.address,
                 balance_drops=default_acct_balance,
+                flags=flags,
                 prev_txn_id="0" * 64,
                 prev_txn_lgr_seq=0,
                 sequence=2,
@@ -133,6 +143,21 @@ def assemble_ledger_json(
             # Add LP token trustline if present
             if amm_obj.lp_token_trustline:
                 state.append(amm_obj.lp_token_trustline)
+
+            # Add asset trustlines (deposited tokens held by AMM)
+            if amm_obj.asset_trustlines:
+                for asset_tl in amm_obj.asset_trustlines:
+                    state.append(asset_tl)
+
+            # Consolidate issuer directories for asset trustlines
+            # (RippleState must be in BOTH parties' directories)
+            if amm_obj.issuer_directories:
+                for issuer_dn in amm_obj.issuer_directories:
+                    issuer_owner = issuer_dn["Owner"]
+                    if issuer_owner in directory_nodes:
+                        directory_nodes[issuer_owner]["Indexes"].extend(issuer_dn["Indexes"])
+                    else:
+                        directory_nodes[issuer_owner] = issuer_dn.copy()
 
             # Consolidate creator's LP token directory if present
             if amm_obj.creator_lp_directory:

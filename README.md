@@ -13,6 +13,8 @@ owner_reserve = 200000
 
 ## TODO
 - [ ] Unify configuration variables between modules.
+- [ ] Update to require Python 3.13+ (remove/update anything 3.12 and lower compliant)
+- [ ] GitHub actions to push git pypi
 - [ ] Ability to copy the settings (e.g. fee settings) from one of the live networks.
 - [ ] Use a templated config for easier observation/modification.
 - [ ] Pre-generate other ledger objects besides accounts.

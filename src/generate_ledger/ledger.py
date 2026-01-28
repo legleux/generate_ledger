@@ -1,13 +1,25 @@
-from pathlib import Path
 import json
-from pydantic import Field, computed_field
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from generate_ledger import ledger_builder
+from dataclasses import dataclass
+from pathlib import Path
+
 from gl.accounts import Account, AccountConfig, generate_accounts, write_accounts_json
 from gl.amendments import get_enabled_amendment_hashes
-from gl.trustlines import TrustlineConfig, generate_trustlines
-from gl.amm import AMMConfig, AMMSpec, Asset, generate_amm_objects
+from gl.amm import AMMSpec, Asset, generate_amm_objects
+from gl.trustlines import TrustlineConfig, TrustlineObjects, generate_trustline_objects, generate_trustlines
+from pydantic import Field, computed_field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from generate_ledger import ledger_builder
 from gl import data_dir
+
+
+@dataclass
+class ExplicitTrustline:
+    """Explicit trustline specification for LedgerConfig."""
+    account1: str  # Account index or rAddress
+    account2: str  # Account index or rAddress
+    currency: str  # Currency code
+    limit: int     # Trust limit
 
 class FeeConfig(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="GL_", env_file=".env")
@@ -55,6 +67,7 @@ class LedgerConfig(BaseSettings):
     account_cfg: AccountConfig = Field(default_factory=AccountConfig)
     fee_cfg: FeeConfig = Field(default_factory=FeeConfig)
     trustlines: TrustlineConfig = Field(default_factory=TrustlineConfig)
+    explicit_trustlines: list[ExplicitTrustline] = Field(default_factory=list)
     amm_pools: list[AMMPoolConfig] = Field(default_factory=list)
 
     base_dir: Path = Field(default=Path("testnet")) # Override with env var GL_BASE_DIR
@@ -92,6 +105,48 @@ def _resolve_account_ref(ref: str | None, accounts: list[Account]) -> str | None
             return accounts[idx].address
         raise ValueError(f"Account index {idx} out of range (have {len(accounts)} accounts)")
     return ref
+
+
+def _resolve_account_to_object(ref: str, accounts: list[Account]) -> Account:
+    """
+    Resolve an account reference to an Account object.
+
+    If ref is a digit string (e.g., "0", "1"), treat it as an index into accounts.
+    Otherwise, search by address.
+    """
+    if ref.isdigit():
+        idx = int(ref)
+        if 0 <= idx < len(accounts):
+            return accounts[idx]
+        raise ValueError(f"Account index {idx} out of range (have {len(accounts)} accounts)")
+
+    # Search by address
+    for acct in accounts:
+        if acct.address == ref:
+            return acct
+    raise ValueError(f"Account with address '{ref}' not found in accounts list")
+
+
+def _build_explicit_trustlines(
+    parsed_trustlines: list[ExplicitTrustline],
+    accounts: list[Account],
+    ledger_seq: int = 2,
+) -> list[TrustlineObjects]:
+    """Build TrustlineObjects from parsed trustline specifications."""
+    result = []
+    for spec in parsed_trustlines:
+        account_a = _resolve_account_to_object(spec.account1, accounts)
+        account_b = _resolve_account_to_object(spec.account2, accounts)
+
+        tl_objects = generate_trustline_objects(
+            account_a=account_a,
+            account_b=account_b,
+            currency=spec.currency,
+            limit=spec.limit,
+            ledger_seq=ledger_seq,
+        )
+        result.append(tl_objects)
+    return result
 
 
 def _build_amm_specs(pool_configs: list[AMMPoolConfig], accounts: list[Account]) -> list[AMMSpec]:
@@ -137,20 +192,35 @@ def gen_ledger_state(config: LedgerConfig | None = None):
     accounts = generate_accounts(cfg.account_cfg)
     write_accounts_json(accounts, cfg.base_dir / "accounts.json")
 
-    # 2. Generate trustlines
+    # 2. Generate random trustlines
     trustline_objects = generate_trustlines(accounts, cfg.trustlines)
 
-    # 3. Generate AMM pools
+    # 3. Generate explicit trustlines
+    explicit_tl_objects = _build_explicit_trustlines(
+        cfg.explicit_trustlines, accounts, cfg.trustlines.ledger_seq
+    )
+    trustline_objects.extend(explicit_tl_objects)
+
+    # 4. Generate AMM pools and collect issuer addresses
     amm_specs = _build_amm_specs(cfg.amm_pools, accounts)
     amm_objects = [generate_amm_objects(spec) for spec in amm_specs] if amm_specs else None
 
-    # 4. Assemble ledger with trustlines and AMMs
+    # Collect issuers from AMM specs - they need lsfDefaultRipple flag
+    amm_issuers: set[str] = set()
+    for spec in amm_specs:
+        if spec.asset1.issuer:
+            amm_issuers.add(spec.asset1.issuer)
+        if spec.asset2.issuer:
+            amm_issuers.add(spec.asset2.issuer)
+
+    # 5. Assemble ledger with trustlines and AMMs
     ledger = ledger_builder.assemble_ledger_json(
         accounts=accounts,
         fees=cfg.fee_cfg.xrpl,
         amendment_hashes=get_enabled_amendment_hashes(source=cfg.amendment_source),
         trustline_objects=trustline_objects,
         amm_objects=amm_objects,
+        amm_issuers=amm_issuers,
     )
     return ledger
 

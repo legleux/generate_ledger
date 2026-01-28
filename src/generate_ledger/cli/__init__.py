@@ -12,6 +12,7 @@ from generate_ledger.cli_defaults import (
 # ⬇️ import the generated Click command object itself
 from .compose import app as compose_app, write_cmd
 from .rippled_cfg import app as rippled_app
+from .ledger import app as ledger_app
 
 app = typer.Typer(help="generate_ledger CLI", no_args_is_help=False)
 
@@ -43,3 +44,4 @@ def _root(
 # keep the explicit sub-apps
 app.add_typer(compose_app, name="compose")
 app.add_typer(rippled_app, name="rippled")
+app.add_typer(ledger_app, name="ledger")

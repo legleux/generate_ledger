@@ -142,15 +142,15 @@ def amm_account_id(
     For genesis ledger, parent_hash is 32 zero bytes.
     Returns the classic address (r...) of the AMM account.
 
-    Formula: RIPESHA(SHA512Half(i_u16 + parentHash + ammIndex))
-    where i=0 for genesis (no collisions possible).
+    Formula: RIPESHA(i_u16 + parentHash + ammIndex)
+    where i=0 for genesis (no collisions expected).
     """
     amm_index_bytes = bytes.fromhex(amm_index_hex)
-    # i=0 as uint16 little-endian (matching C++ behavior)
-    i_bytes = struct.pack('<H', 0)
+    # i=0 as uint16 big-endian (network byte order, matching rippled hash_append)
+    i_bytes = struct.pack('>H', 0)
     preimage = i_bytes + parent_hash + amm_index_bytes
-    hash_result = _sha512_half(preimage)
-    account_id = _ripesha(hash_result)
+    # Direct RIPESHA - no SHA512Half (matches rippled's ammAccountID)
+    account_id = _ripesha(preimage)
     return encode_classic_address(account_id)
 
 
@@ -160,6 +160,8 @@ def amm_lpt_currency(currency1: str | None, currency2: str | None) -> str:
 
     Formula: 0x03 + first_19_bytes_of(SHA512Half(min(cur1, cur2), max(cur1, cur2)))
 
+    This uses ONLY the currency codes (not issuers), matching rippled's ammLPTCurrency().
+
     For XRP, pass currency=None (will use 20 zero bytes).
     Returns the 40-character hex string of the LP token currency.
     """
@@ -167,7 +169,7 @@ def amm_lpt_currency(currency1: str | None, currency2: str | None) -> str:
     cur1_bytes = bytes(20) if currency1 is None else _currency_to_160(currency1)
     cur2_bytes = bytes(20) if currency2 is None else _currency_to_160(currency2)
 
-    # Order by minmax
+    # Order by minmax (lexicographic comparison, matching C++ std::minmax)
     min_cur, max_cur = (cur1_bytes, cur2_bytes) if cur1_bytes < cur2_bytes else (cur2_bytes, cur1_bytes)
 
     # SHA512Half of concatenated currencies

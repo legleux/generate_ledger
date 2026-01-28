@@ -19,7 +19,19 @@
       "Bash(.specify/scripts/bash/check-prerequisites.sh:*)",
       "SlashCommand(/speckit.tasks)",
       "SlashCommand(/speckit.analyze)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(chmod:*)",
+      "Bash(for mode in seq mp thread hybrid)",
+      "Bash(do uv run python scripts/bench_accounts.py -n 500 --mode $mode --workers 8 --quiet)",
+      "Bash(done)",
+      "WebSearch",
+      "Bash(do echo:*)",
+      "Bash(xxd:*)",
+      "Bash(find:*)",
+      "Bash(gen typer:*)",
+      "Bash(gen ledger:*)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ],
     "deny": [],
     "ask": []
