@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(mkdir:*)",
+      "Bash(.specify/scripts/bash/setup-plan.sh:*)",
+      "Bash(uv --version:*)",
+      "Bash(source .venv/bin/activate)",
+      "Bash(gen --help:*)",
+      "Bash(gen typer --help:*)",
+      "Bash(gen compose --help:*)",
+      "Bash(pytest:*)",
+      "Bash(ruff:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(uv run gen typer --help:*)",
+      "Bash(uv run gen --help:*)",
+      "Bash(uv run gen compose --help:*)",
+      "Bash(uv run:*)",
+      "Bash(.specify/scripts/bash/check-prerequisites.sh:*)",
+      "SlashCommand(/speckit.tasks)",
+      "SlashCommand(/speckit.analyze)",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(chmod:*)",
+      "Bash(for mode in seq mp thread hybrid)",
+      "Bash(do uv run python scripts/bench_accounts.py -n 500 --mode $mode --workers 8 --quiet)",
+      "Bash(done)",
+      "WebSearch",
+      "Bash(do echo:*)",
+      "Bash(xxd:*)",
+      "Bash(find:*)",
+      "Bash(gen typer:*)",
+      "Bash(gen ledger:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(wc:*)",
+      "Bash(sort -k2 -nr)",
+      "Bash(grep:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

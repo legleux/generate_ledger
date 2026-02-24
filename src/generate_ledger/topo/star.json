@@ -1,0 +1,586 @@
+{
+  "directed": false,
+  "strict": true,
+  "name": "MyStar",
+  "graph": {
+    "layout": "neato",
+    "splines": "line",
+    "overlap": "false",
+    "pack": "true",
+    "packmode": "cluster",
+    "concentrate": true
+  },
+  "node": {
+    "shape": "circle"
+  },
+  "edge": {
+    "color": "gray60"
+  },
+  "subgraphs": [
+    {
+      "name": "hubs",
+      "cluster": true,
+      "label": "Hubs",
+      "node": {
+        "shape": "octagon",
+        "style": "filled",
+        "fillcolor": "#eeeeee"
+      },
+      "nodes": [
+        {
+          "id": "Hub1_c",
+          "label": "Hub1",
+          "pos": "0.0,-200.0!",
+          "pin": true
+        },
+        {
+          "id": "Hub2_c",
+          "label": "Hub2",
+          "pos": "190.2,-61.8!",
+          "pin": true
+        },
+        {
+          "id": "Hub3_c",
+          "label": "Hub3",
+          "pos": "117.6,161.8!",
+          "pin": true
+        },
+        {
+          "id": "Hub4_c",
+          "label": "Hub4",
+          "pos": "-117.6,161.8!",
+          "pin": true
+        },
+        {
+          "id": "Hub5_c",
+          "label": "Hub5",
+          "pos": "-190.2,-61.8!",
+          "pin": true
+        }
+      ],
+      "edges": [
+        [
+          "Hub1_c",
+          "Hub2_c"
+        ],
+        [
+          "Hub1_c",
+          "Hub3_c"
+        ],
+        [
+          "Hub1_c",
+          "Hub4_c"
+        ],
+        [
+          "Hub1_c",
+          "Hub5_c"
+        ],
+        [
+          "Hub2_c",
+          "Hub3_c"
+        ],
+        [
+          "Hub2_c",
+          "Hub4_c"
+        ],
+        [
+          "Hub2_c",
+          "Hub5_c"
+        ],
+        [
+          "Hub3_c",
+          "Hub4_c"
+        ],
+        [
+          "Hub3_c",
+          "Hub5_c"
+        ],
+        [
+          "Hub4_c",
+          "Hub5_c"
+        ]
+      ]
+    },
+    {
+      "name": "s1",
+      "cluster": true,
+      "label": "Subnet 1 (7)",
+      "node": {
+        "style": "filled",
+        "fillcolor": "#e8f5e9"
+      },
+      "nodes": [
+        {
+          "id": "s1_hub",
+          "label": "Hub1",
+          "pos": "530.3,-530.3!",
+          "pin": true
+        },
+        {
+          "id": "val01",
+          "pos": "774.1,-499.9!",
+          "pin": true,
+          "style": "filled",
+          "fillcolor": "#e8f5e9"
+        },
+        {
+          "id": "val02",
+          "pos": "649.3,-306.3!",
+          "pin": true,
+          "style": "filled",
+          "fillcolor": "#e8f5e9"
+        },
+        {
+          "id": "val03",
+          "pos": "439.6,-307.3!",
+          "pin": true,
+          "style": "filled",
+          "fillcolor": "#e8f5e9"
+        },
+        {
+          "id": "val04",
+          "pos": "260.7,-475.2!",
+          "pin": true,
+          "style": "filled",
+          "fillcolor": "#e8f5e9"
+        },
+        {
+          "id": "val05",
+          "pos": "332.5,-724.5!",
+          "pin": true,
+          "style": "filled",
+          "fillcolor": "#e8f5e9"
+        },
+        {
+          "id": "val06",
+          "pos": "515.2,-821.5!",
+          "pin": true,
+          "style": "filled",
+          "fillcolor": "#e8f5e9"
+        },
+        {
+          "id": "val07",
+          "pos": "729.5,-741.7!",
+          "pin": true,
+          "style": "filled",
+          "fillcolor": "#e8f5e9"
+        }
+      ],
+      "edges": [
+        [
+          "s1_hub",
+          "val01"
+        ],
+        [
+          "s1_hub",
+          "val02"
+        ],
+        [
+          "s1_hub",
+          "val03"
+        ],
+        [
+          "s1_hub",
+          "val04"
+        ],
+        [
+          "s1_hub",
+          "val05"
+        ],
+        [
+          "s1_hub",
+          "val06"
+        ],
+        [
+          "s1_hub",
+          "val07"
+        ],
+        [
+          "val04",
+          "val06"
+        ],
+        [
+          "val01",
+          "val02"
+        ],
+        [
+          "val01",
+          "val07"
+        ],
+        [
+          "val02",
+          "val04"
+        ],
+        [
+          "val03",
+          "val04"
+        ],
+        [
+          "val05",
+          "val06"
+        ],
+        [
+          "val03",
+          "val07"
+        ],
+        [
+          "val01",
+          "val03"
+        ]
+      ]
+    },
+    {
+      "name": "s2",
+      "cluster": true,
+      "label": "Subnet 2 (6)",
+      "node": {
+        "style": "filled",
+        "fillcolor": "#e3f2fd"
+      },
+      "nodes": [
+        {
+          "id": "s2_hub",
+          "label": "Hub2",
+          "pos": "530.3,530.3!",
+          "pin": true
+        },
+        {
+          "id": "val08",
+          "pos": "439.4,830.6!",
+          "pin": true,
+          "style": "filled",
+          "fillcolor": "#e3f2fd"
+        },
+        {
+          "id": "val09",
+          "pos": "273.9,612.4!",
+          "pin": true,
+          "style": "filled",
+          "fillcolor": "#e3f2fd"
+        },
+        {
+          "id": "val10",
+          "pos": "324.8,362.9!",
+          "pin": true,
+          "style": "filled",
+          "fillcolor": "#e3f2fd"
+        },
+        {
+          "id": "val11",
+          "pos": "595.0,278.9!",
+          "pin": true,
+          "style": "filled",
+          "fillcolor": "#e3f2fd"
+        },
+        {
+          "id": "val12",
+          "pos": "798.0,438.4!",
+          "pin": true,
+          "style": "filled",
+          "fillcolor": "#e3f2fd"
+        },
+        {
+          "id": "val13",
+          "pos": "739.1,741.0!",
+          "pin": true,
+          "style": "filled",
+          "fillcolor": "#e3f2fd"
+        }
+      ],
+      "edges": [
+        [
+          "s2_hub",
+          "val08"
+        ],
+        [
+          "s2_hub",
+          "val09"
+        ],
+        [
+          "s2_hub",
+          "val10"
+        ],
+        [
+          "s2_hub",
+          "val11"
+        ],
+        [
+          "s2_hub",
+          "val12"
+        ],
+        [
+          "s2_hub",
+          "val13"
+        ],
+        [
+          "val09",
+          "val10"
+        ],
+        [
+          "val10",
+          "val11"
+        ],
+        [
+          "val08",
+          "val13"
+        ],
+        [
+          "val11",
+          "val13"
+        ],
+        [
+          "val08",
+          "val12"
+        ],
+        [
+          "val10",
+          "val13"
+        ],
+        [
+          "val08",
+          "val11"
+        ],
+        [
+          "val10",
+          "val12"
+        ]
+      ]
+    },
+    {
+      "name": "s3",
+      "cluster": true,
+      "label": "Subnet 3 (6)",
+      "node": {
+        "style": "filled",
+        "fillcolor": "#fff8e1"
+      },
+      "nodes": [
+        {
+          "id": "s3_hub",
+          "label": "Hub3",
+          "pos": "-530.3,530.3!",
+          "pin": true
+        },
+        {
+          "id": "val14",
+          "pos": "-773.0,480.9!",
+          "pin": true,
+          "style": "filled",
+          "fillcolor": "#fff8e1"
+        },
+        {
+          "id": "val15",
+          "pos": "-634.8,262.9!",
+          "pin": true,
+          "style": "filled",
+          "fillcolor": "#fff8e1"
+        },
+        {
+          "id": "val16",
+          "pos": "-364.6,355.3!",
+          "pin": true,
+          "style": "filled",
+          "fillcolor": "#fff8e1"
+        },
+        {
+          "id": "val17",
+          "pos": "-260.2,605.5!",
+          "pin": true,
+          "style": "filled",
+          "fillcolor": "#fff8e1"
+        },
+        {
+          "id": "val18",
+          "pos": "-474.4,772.1!",
+          "pin": true,
+          "style": "filled",
+          "fillcolor": "#fff8e1"
+        },
+        {
+          "id": "val19",
+          "pos": "-738.3,722.0!",
+          "pin": true,
+          "style": "filled",
+          "fillcolor": "#fff8e1"
+        }
+      ],
+      "edges": [
+        [
+          "s3_hub",
+          "val14"
+        ],
+        [
+          "s3_hub",
+          "val15"
+        ],
+        [
+          "s3_hub",
+          "val16"
+        ],
+        [
+          "s3_hub",
+          "val17"
+        ],
+        [
+          "s3_hub",
+          "val18"
+        ],
+        [
+          "s3_hub",
+          "val19"
+        ],
+        [
+          "val14",
+          "val15"
+        ],
+        [
+          "val14",
+          "val18"
+        ],
+        [
+          "val16",
+          "val19"
+        ],
+        [
+          "val17",
+          "val19"
+        ],
+        [
+          "val15",
+          "val19"
+        ],
+        [
+          "val17",
+          "val18"
+        ]
+      ]
+    },
+    {
+      "name": "s4",
+      "cluster": true,
+      "label": "Subnet 4 (6)",
+      "node": {
+        "style": "filled",
+        "fillcolor": "#f3e5f5"
+      },
+      "nodes": [
+        {
+          "id": "s4_hub",
+          "label": "Hub4",
+          "pos": "-530.3,-530.3!",
+          "pin": true
+        },
+        {
+          "id": "val20",
+          "pos": "-446.3,-809.7!",
+          "pin": true,
+          "style": "filled",
+          "fillcolor": "#f3e5f5"
+        },
+        {
+          "id": "val21",
+          "pos": "-249.4,-604.8!",
+          "pin": true,
+          "style": "filled",
+          "fillcolor": "#f3e5f5"
+        },
+        {
+          "id": "val22",
+          "pos": "-330.8,-360.8!",
+          "pin": true,
+          "style": "filled",
+          "fillcolor": "#f3e5f5"
+        },
+        {
+          "id": "val23",
+          "pos": "-616.9,-231.0!",
+          "pin": true,
+          "style": "filled",
+          "fillcolor": "#f3e5f5"
+        },
+        {
+          "id": "val24",
+          "pos": "-826.4,-442.5!",
+          "pin": true,
+          "style": "filled",
+          "fillcolor": "#f3e5f5"
+        },
+        {
+          "id": "val25",
+          "pos": "-735.9,-741.5!",
+          "pin": true,
+          "style": "filled",
+          "fillcolor": "#f3e5f5"
+        }
+      ],
+      "edges": [
+        [
+          "s4_hub",
+          "val20"
+        ],
+        [
+          "s4_hub",
+          "val21"
+        ],
+        [
+          "s4_hub",
+          "val22"
+        ],
+        [
+          "s4_hub",
+          "val23"
+        ],
+        [
+          "s4_hub",
+          "val24"
+        ],
+        [
+          "s4_hub",
+          "val25"
+        ],
+        [
+          "val22",
+          "val25"
+        ],
+        [
+          "val20",
+          "val22"
+        ],
+        [
+          "val23",
+          "val25"
+        ],
+        [
+          "val20",
+          "val24"
+        ],
+        [
+          "val21",
+          "val24"
+        ],
+        [
+          "val20",
+          "val23"
+        ]
+      ]
+    }
+  ],
+  "edges": [
+    [
+      "s1_hub",
+      "Hub3_c"
+    ],
+    [
+      "s2_hub",
+      "Hub4_c"
+    ],
+    [
+      "s3_hub",
+      "Hub2_c"
+    ],
+    [
+      "s4_hub",
+      "Hub5_c"
+    ]
+  ]
+}

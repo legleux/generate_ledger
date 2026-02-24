@@ -1,0 +1,63 @@
+name: Build and upload
+
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: 'Environment'
+        required: false
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - release
+
+jobs:
+
+  build_package:
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [11, 12, 13]
+
+    runs-on: ubuntu-latest
+    container: ghcr.io/astral-sh/uv:python3.${{ matrix.version }}-bookworm
+    name: Python 3.${{ matrix.version }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: echo "version=$(uv version | tr '-' '_' | tr ' ' '-')" >> $GITHUB_OUTPUT
+
+      - name: build package
+        run: |
+          echo "Building [${{ steps.version.outputs.version }}]"
+          uv build
+      - name: save wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.version.outputs.version }}-3.${{ matrix.version }}
+          path: dist/${{ steps.version.outputs.version }}-py3-none-any.whl
+  # pypi-publish:
+  #   name: Upload release to PyPI
+  #   needs: build_package
+  #   runs-on: ubuntu-latest
+  #   environment:
+  #     name: dev
+  #     url: https://test.pypi.org/p/generate-ledger
+  #   permissions:
+  #     id-token: write
+  #   steps:
+  #   - name: Get wheel
+  #     uses: actions/download-artifact@v4
+  #     with:
+  #       name: package
+  #       path: dist
+
+  #   - name: Publish package distributions to PyPI
+  #     uses: pypa/gh-action-pypi-publish@release/v1
+  #     with:
+  #       repository-url: https://test.pypi.org/legacy/

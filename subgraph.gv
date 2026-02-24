@@ -1,0 +1,54 @@
+digraph G {
+    // rankdir = LR;
+    splines=spline
+    0, 1, 2, 15, 16, 17
+    3, 4, 5, 6     [ group = 1 ];
+    7, 8, 9, 10    [ group = 2 ];
+    11, 12, 13, 14 [ group = 3 ];
+    2 -> 11[ style = invis ];
+
+    subgraph cluster_op1 {
+
+        subgraph cluster_0 {
+            1 -> 2 [ label="a" ];
+        }
+
+        subgraph cluster_1 {
+            3 -> 4 [ label="&epsilon;", weight = 4 ];
+            3 -> 6 [ label="&epsilon;" ];
+            4 -> 5 [ label="b" ];
+            4 -> 5 [ label="&epsilon;", dir = back];
+            5 -> 6 [ label="&epsilon;", weight = 4 ];
+        }
+
+        subgraph cluster_2 {
+            7 -> {8 10} [label="&epsilon;"]
+            8 -> 9 [label="c"]
+            8 -> 9 [ label="&epsilon;", dir = back ];
+            9 -> 10 [label="&epsilon;"]
+        }
+
+        2 -> 3 [ label="&epsilon;", weight = 10 ;]
+        6 -> 7 [ label="&epsilon;" ];
+    }
+
+    subgraph cluster_op2 {
+
+        subgraph cluster_3 {
+            11 -> 12 [ label="&epsilon;", weight = 4 ];
+            11 -> 14 [ label="&epsilon;" ];
+            12 -> 13 [ label="ab" ];
+            12 -> 13 [ label="&epsilon;", dir = back ];
+            13 -> 14 [ label="&epsilon;", weight = 4 ];
+        }
+
+        subgraph cluster_4 {
+            15 -> 16 [label="c"]
+        }
+
+        14->15 [ label="&epsilon;", weight = 10 ];
+    }
+
+    0 -> {1 11} [label="&epsilon;"]
+    {10 16} -> 17 [label="&epsilon;"]
+}

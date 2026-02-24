@@ -1,0 +1,19 @@
+// Minimal features.macro fixture for testing parse_features_macro()
+// Mimics the format of rippled's include/xrpl/protocol/detail/features.macro
+
+// Active features
+XRPL_FEATURE(AMM,                   Supported::yes,  VoteBehavior::DefaultYes)
+XRPL_FEATURE(Clawback,              Supported::yes,  VoteBehavior::DefaultNo)
+XRPL_FEATURE(DID,                   Supported::yes,  VoteBehavior::DefaultYes)
+XRPL_FEATURE(MPTokensV1,            Supported::no,   VoteBehavior::DefaultNo)
+
+// Active fixes (get "fix" prefix)
+XRPL_FIX(AMMOverflowOffer,          Supported::yes,  VoteBehavior::DefaultYes)
+XRPL_FIX(InnerObjTemplate2,         Supported::yes,  VoteBehavior::DefaultNo)
+
+// Obsolete (supported but never activated on mainnet)
+XRPL_FEATURE(CryptoConditionsSuite, Supported::yes,  VoteBehavior::Obsolete)
+
+// Retired amendments (active for years, pre-amendment code removed)
+XRPL_RETIRE(MultiSign)
+XRPL_RETIRE(fix1368)

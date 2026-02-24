@@ -1,0 +1,24 @@
+[{
+  "Balance": {
+    "currency": "USD",
+    "issuer": "rrrrrrrrrrrrrrrrrrrrBZbvji",
+    "value": "1000"
+  },
+  "Flags": 65536,
+  "HighLimit": {
+    "currency": "USD",
+    "issuer": "rLgKpfNbtPu4PhRZrj7oBtamAEyx6FFgjf",
+    "value": "0"
+  },
+  "HighNode": "0",
+  "LedgerEntryType": "RippleState",
+  "LowLimit": {
+    "currency": "USD",
+    "issuer": "rsTtCJfwCTgrAkNcLH22g7TdMTKFGpi9QU",
+    "value": "1000000000000000e-1"
+  },
+  "LowNode": "0",
+  "PreviousTxnID": "0000000000000000000000000000000000000000000000000000000000000000",
+  "PreviousTxnLgrSeq": 0,
+  "index": "56DF4E345380CD7EFF6A79F29B9413845A42263079CB74AC18E2AEB9414510E3"
+}]

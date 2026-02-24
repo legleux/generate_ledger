@@ -1,0 +1,128 @@
+{
+  "directed": false,
+  "strict": true,
+  "name": "StarClustersDualHubs",
+  "graph": {
+    "layout": "neato",
+    "splines": "line",
+    "overlap": "false",
+    "pack": "true",
+    "packmode": "cluster",
+    "concentrate": true
+  },
+  "node": { "shape": "circle" },
+  "edge": { "color": "gray60" },
+
+  "subgraphs": [
+    {
+      "name": "hubs",
+      "cluster": true,
+      "label": "Hubs",
+      "node": { "shape": "octagon", "style": "filled", "fillcolor": "#eeeeee" },
+      "nodes": [
+        { "id": "Hub1_c", "label": "Hub1", "pos": "0,200!",   "pin": true },
+        { "id": "Hub2_c", "label": "Hub2", "pos": "190,62!",  "pin": true },
+        { "id": "Hub3_c", "label": "Hub3", "pos": "117,-170!","pin": true },
+        { "id": "Hub4_c", "label": "Hub4", "pos": "-117,-170!","pin": true },
+        { "id": "Hub5_c", "label": "Hub5", "pos": "-190,62!", "pin": true }
+      ],
+      "edges": [
+        ["Hub1_c","Hub2_c"], ["Hub1_c","Hub3_c"], ["Hub1_c","Hub4_c"], ["Hub1_c","Hub5_c"],
+        ["Hub2_c","Hub3_c"], ["Hub2_c","Hub4_c"], ["Hub2_c","Hub5_c"],
+        ["Hub3_c","Hub4_c"], ["Hub3_c","Hub5_c"],
+        ["Hub4_c","Hub5_c"]
+      ]
+    },
+
+    {
+      "name": "s1",
+      "cluster": true,
+      "label": "Subnet 1 (7)",
+      "node": { "style": "filled", "fillcolor": "#e8f5e9" },
+      "nodes": [
+        { "id": "Hub1_s", "label": "Hub1", "pos": "-700,-450!", "pin": true },
+        { "id": "val01",  "pos": "-1050,-650!", "pin": true },
+        { "id": "val02",  "pos": "-980,-560!",  "pin": true },
+        { "id": "val03",  "pos": "-880,-590!",  "pin": true },
+        { "id": "val04",  "pos": "-1065,-760!","pin": true },
+        { "id": "val05",  "pos": "-930,-820!",  "pin": true },
+        { "id": "val06",  "pos": "-820,-720!",  "pin": true },
+        { "id": "val07",  "pos": "-990,-690!",  "pin": true }
+      ],
+      "edges": [
+        ["Hub1_s","val01"], ["Hub1_s","val02"], ["Hub1_s","val03"],
+        ["Hub1_s","val04"], ["Hub1_s","val05"], ["Hub1_s","val06"], ["Hub1_s","val07"],
+        ["val01","val03"], ["val03","val06"], ["val06","val07"], ["val02","val07"], ["val04","val05"]
+      ]
+    },
+
+    {
+      "name": "s2",
+      "cluster": true,
+      "label": "Subnet 2 (6)",
+      "node": { "style": "filled", "fillcolor": "#e3f2fd" },
+      "nodes": [
+        { "id": "Hub2_s", "label": "Hub2", "pos": "700,450!", "pin": true },
+        { "id": "val08",  "pos": "1050,650!", "pin": true },
+        { "id": "val09",  "pos": "880,590!",  "pin": true },
+        { "id": "val10",  "pos": "780,660!",  "pin": true },
+        { "id": "val11",  "pos": "1065,760!","pin": true },
+        { "id": "val12",  "pos": "930,820!",  "pin": true },
+        { "id": "val13",  "pos": "820,720!",  "pin": true }
+      ],
+      "edges": [
+        ["Hub2_s","val08"], ["Hub2_s","val09"], ["Hub2_s","val10"],
+        ["Hub2_s","val11"], ["Hub2_s","val12"], ["Hub2_s","val13"],
+        ["val08","val10"], ["val09","val12"], ["val12","val13"], ["val11","val12"]
+      ]
+    },
+
+    {
+      "name": "s3",
+      "cluster": true,
+      "label": "Subnet 3 (6)",
+      "node": { "style": "filled", "fillcolor": "#fff8e1" },
+      "nodes": [
+        { "id": "Hub3_s", "label": "Hub3", "pos": "700,-450!", "pin": true },
+        { "id": "val14",  "pos": "1050,-650!", "pin": true },
+        { "id": "val15",  "pos": "900,-560!",  "pin": true },
+        { "id": "val16",  "pos": "800,-620!",  "pin": true },
+        { "id": "val17",  "pos": "1065,-760!","pin": true },
+        { "id": "val18",  "pos": "930,-820!",  "pin": true },
+        { "id": "val19",  "pos": "820,-720!",  "pin": true }
+      ],
+      "edges": [
+        ["Hub3_s","val14"], ["Hub3_s","val15"], ["Hub3_s","val16"],
+        ["Hub3_s","val17"], ["Hub3_s","val18"], ["Hub3_s","val19"],
+        ["val14","val16"], ["val16","val19"], ["val15","val18"]
+      ]
+    },
+
+    {
+      "name": "s4",
+      "cluster": true,
+      "label": "Subnet 4 (6)",
+      "node": { "style": "filled", "fillcolor": "#f3e5f5" },
+      "nodes": [
+        { "id": "Hub4_s", "label": "Hub4", "pos": "-700,450!", "pin": true },
+        { "id": "val20",  "pos": "-1050,650!", "pin": true },
+        { "id": "val21",  "pos": "-900,560!",  "pin": true },
+        { "id": "val22",  "pos": "-780,640!",  "pin": true },
+        { "id": "val23",  "pos": "-1065,760!","pin": true },
+        { "id": "val24",  "pos": "-930,820!",  "pin": true },
+        { "id": "val25",  "pos": "-820,720!",  "pin": true }
+      ],
+      "edges": [
+        ["Hub4_s","val20"], ["Hub4_s","val21"], ["Hub4_s","val22"],
+        ["Hub4_s","val23"], ["Hub4_s","val24"], ["Hub4_s","val25"],
+        ["val20","val22"], ["val21","val23"], ["val23","val24"], ["val24","val25"], ["val25","val22"]
+      ]
+    }
+  ],
+
+  "edges": [
+    ["Hub1_c","Hub1_s"], ["Hub2_c","Hub2_s"], ["Hub3_c","Hub3_s"], ["Hub4_c","Hub4_s"],
+
+    ["Hub5_c","Hub1_c"], ["Hub5_c","Hub2_c"], ["Hub5_c","Hub3_c"], ["Hub5_c","Hub4_c"]
+  ]
+}
