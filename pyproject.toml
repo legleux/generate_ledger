@@ -1,6 +1,6 @@
 [project]
-name = "legleux-generate-ledger"
-version = "0.1.1"
+name = "generate-ledger"
+version = "0.0.4a4"
 description = "Add your description here"
 readme = "README.md"
 authors = [
