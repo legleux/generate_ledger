@@ -1,8 +1,6 @@
 from importlib.metadata import PackageNotFoundError, packages_distributions, metadata, version
 import importlib.resources
 
-from xrpl.wallet import Wallet
-from xrpl.core.keypairs import generate_seed
 fallback_version = "0.0.0+dev"
 _top_pkg = __name__.split(".", 1)[0]
 

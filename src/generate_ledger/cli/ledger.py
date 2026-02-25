@@ -35,6 +35,10 @@ def ledger(
         str(100_000_000000), "--balance", "-b",
         help="Default account balance in drops (default: 100k XRP)."
     ),
+    algo: str = typer.Option(
+        "ed25519", "--algo",
+        help="Key algorithm: ed25519 (fast, default) or secp256k1."
+    ),
 
     # Output options
     outdir: Path = typer.Option(
@@ -154,6 +158,7 @@ def ledger(
         account_cfg=AccountConfig(
             num_accounts=num_accounts,
             balance=balance,
+            algo=algo,
         ),
         fee_cfg=FeeConfig(
             base_fee_drops=base_fee,

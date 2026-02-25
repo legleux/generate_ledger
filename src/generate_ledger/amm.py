@@ -132,7 +132,8 @@ def generate_ammcreate_txn_id(
     This creates a signed AMMCreate transaction and computes its hash,
     which is used as the PreviousTxnID for ledger objects.
     """
-    wallet = Wallet.from_seed(creator.seed, algorithm=CryptoAlgorithm.SECP256K1)
+    algo = CryptoAlgorithm.ED25519 if getattr(creator, "algorithm", "secp256k1") == "ed25519" else CryptoAlgorithm.SECP256K1
+    wallet = Wallet.from_seed(creator.seed, algorithm=algo)
 
     amm_create = AMMCreate(
         account=creator.address,

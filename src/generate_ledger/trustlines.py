@@ -81,7 +81,8 @@ def generate_trustline_objects(
     3. DirectoryNode for account_b
     """
     # Create wallets to generate transaction ID
-    wallet_b = Wallet.from_seed(account_b.seed, algorithm=CryptoAlgorithm.SECP256K1)
+    algo = CryptoAlgorithm.ED25519 if getattr(account_b, "algorithm", "secp256k1") == "ed25519" else CryptoAlgorithm.SECP256K1
+    wallet_b = Wallet.from_seed(account_b.seed, algorithm=algo)
 
     # Prepare the limit amount for the TrustSet transaction
     limit_amount = {
