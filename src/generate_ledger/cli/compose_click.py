@@ -8,10 +8,10 @@ from generate_ledger.config import ComposeConfig
 from generate_ledger.compose import write_compose_file
 from .auto import build_command_from_defaults  # your generator
 
-def _runner(base_cfg: ComposeConfig, overrides: dict[str, Any], output_file: Path | None):
+def _runner(base_cfg: ComposeConfig, overrides: dict[str, Any], output_file: Path | str | None):
     cfg = base_cfg.model_copy(update=overrides) if overrides else base_cfg
-    write_compose_file(output_file=output_file, config=cfg)
-    click.echo(f"Wrote {output_file.resolve() if output_file else 'compose file (default path)'}")
+    result = write_compose_file(output_file=output_file, config=cfg)
+    click.echo(f"Wrote {result.resolve()}")
 
 # Define the group via decorator so the function *is* the group's callback.
 @click.group(name="compose", help="Docker Compose helpers.", invoke_without_command=True)

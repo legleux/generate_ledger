@@ -182,8 +182,8 @@ class TestGetAmendmentsForProfile:
         amendments = get_amendments_for_profile(AmendmentProfile.RELEASE)
         assert len(amendments) > 0
         for a in amendments:
-            if a.obsolete:
-                assert a.enabled is False, f"{a.name} is obsolete and should be disabled"
+            if a.obsolete or not a.supported:
+                assert a.enabled is False, f"{a.name} is obsolete/unsupported and should be disabled"
             else:
                 assert a.enabled is True, f"{a.name} should be enabled in release profile"
 
@@ -299,8 +299,8 @@ class TestReleaseJson:
     def test_all_enabled(self):
         amendments = _load_amendments_from_json(Path(str(DEFAULT_RELEASE_LIST)))
         for a in amendments:
-            if a.obsolete:
-                assert a.enabled is False, f"{a.name} is obsolete and should be disabled"
+            if a.obsolete or not a.supported:
+                assert a.enabled is False, f"{a.name} is obsolete/unsupported and should be disabled"
             else:
                 assert a.enabled is True, f"{a.name} should be enabled in release JSON"
 

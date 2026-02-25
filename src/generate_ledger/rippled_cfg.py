@@ -53,6 +53,12 @@ class RippledConfigSpec:
     # key generation strategy
     keygen: KeygenFn = staticmethod(keygen_xrpl)
 
+    # amendment features to vote for
+    features: List[str] | None = None
+
+    # how long before amendments gain majority (e.g. "2 minutes")
+    amendment_majority_time: str | None = None
+
     def validate(self) -> None:
         if self.num_validators < 0:
             raise ValueError("num_validators must be >= 0")
@@ -68,6 +74,17 @@ class RippledConfigSpec:
             f"account_reserve = {self.account_reserve}\n"
             f"owner_reserve = {self.owner_reserve}\n\n"
         )
+
+    def features_block(self) -> str:
+        if not self.features:
+            return ""
+        lines = "\n".join(self.features)
+        return f"\n[features]\n{lines}\n"
+
+    def amendment_majority_time_block(self) -> str:
+        if not self.amendment_majority_time:
+            return ""
+        return f"\n[amendment_majority_time]\n{self.amendment_majority_time}\n"
 
     def ips_fixed_block(self, who_index: int | None) -> str:
         """
@@ -104,6 +121,8 @@ class RippledConfigSpec:
             cfg += self.ips_fixed_block(who_index=i)
             cfg += validator_pubkeys
             cfg += self.voting_block()
+            cfg += self.features_block()
+            cfg += self.amendment_majority_time_block()
             cfg += vt[i][1]  # token
             cfg += "\n"
 
@@ -119,6 +138,8 @@ class RippledConfigSpec:
         cfg = template_str
         cfg += self.ips_fixed_block(who_index=None)
         cfg += validator_pubkeys
+        cfg += self.features_block()
+        cfg += self.amendment_majority_time_block()
         cfg += "\n"
 
         nodes.append(

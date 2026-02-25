@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Optional
 import typer
 
-# Adjust if you placed the spec somewhere else
 from generate_ledger.rippled_cfg import (
     RippledConfigSpec,
     keygen_xrpl,
@@ -16,13 +15,35 @@ class KeygenMode(str, Enum):
     xrpl = "xrpl"
     docker = "docker"
 
+_BUNDLED_TEMPLATE = Path(__file__).parent.parent / "rippled.cfg"
+
 def _pick_keygen(mode: KeygenMode):
     return keygen_xrpl if mode == KeygenMode.xrpl else keygen_docker
+
+
+def _load_features(features_from: str | None) -> list[str] | None:
+    """Resolve --features-from to a list of amendment names.
+
+    Accepts "release", "develop", a path to a JSON file, or None.
+    """
+    if features_from is None:
+        return None
+    from generate_ledger.amendments import get_amendments_for_profile
+    if features_from in ("release", "develop"):
+        amendments = get_amendments_for_profile(profile=features_from)
+        return [a.name for a in amendments if a.enabled]
+    # Treat as a JSON file path
+    path = Path(features_from)
+    if not path.is_file():
+        raise typer.BadParameter(f"features-from: not a file: {path}")
+    amendments = get_amendments_for_profile(profile="custom", source=path)
+    return [a.name for a in amendments if a.enabled]
+
 
 @app.command("write")
 def write(
     template_path: Path = typer.Option(
-        ...,
+        _BUNDLED_TEMPLATE,
         "--template-path",
         "-t",
         exists=True,
@@ -62,10 +83,20 @@ def write(
     keygen: KeygenMode = typer.Option(
         KeygenMode.xrpl, "--keygen", case_sensitive=False, help="Key generation backend."
     ),
+    features_from: Optional[str] = typer.Option(
+        None, "--features-from",
+        help="Amendment features source: 'release', 'develop', or path to JSON file.",
+    ),
+    amendment_majority_time: Optional[str] = typer.Option(
+        None, "--amendment-majority-time",
+        help="Override amendment majority time (e.g. '2 minutes').",
+    ),
 ):
     """
     Write per-node rippled.cfg files under BASE_DIR/{val0..valN-1,rippled}/rippled.cfg
     """
+    features = _load_features(features_from)
+
     spec = RippledConfigSpec(
         num_validators=validators,
         validator_name=validator_name,
@@ -77,12 +108,13 @@ def write(
         owner_reserve=owner_reserve,
         template_path=template_path,
         keygen=_pick_keygen(keygen),
+        features=features,
+        amendment_majority_time=amendment_majority_time,
     )
 
     try:
         result = spec.write()
     except Exception as e:
-        # nicer UX than a raw traceback
         typer.secho(f"ERROR: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1)
 

@@ -177,6 +177,10 @@ def assemble_ledger_json(
         for obj in extra_objects:
             state.append(obj)
 
+    # Sort Indexes in each DirectoryNode (XRPL serialization requires sorted STVector256)
+    for dn in directory_nodes.values():
+        dn["Indexes"].sort()
+
     # Add consolidated DirectoryNodes to state
     state.extend(directory_nodes.values())
 

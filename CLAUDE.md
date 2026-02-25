@@ -400,4 +400,24 @@ gen ledger -n 10 --algo ed25519                            # Specify algorithm (
 - Migration from existing test fixtures with known keys
 
 <!-- MANUAL ADDITIONS START -->
+
+### 6. Consider renaming package to "ledgen"
+Short, memorable, and sounds like "legend." Would involve renaming `src/generate_ledger/` → `src/ledgen/`, updating pyproject.toml, imports, tests, CLI entry point, etc.
+
+### 7. Pre-created Offers in genesis ledger
+Generate `Offer` ledger objects so the order book is already populated at genesis.
+- CLI: `--offer "buy_account:sell_account:TakerPays:TakerGets:rate"` or similar
+- Objects needed: `Offer` entries + `DirectoryNode` for offer book directories
+- Offer book directory index: `SHA512Half(0x0042 + TakerPaysCurrency + TakerPaysIssuer + TakerGetsCurrency + TakerGetsIssuer)`
+- Each `Offer` also needs an owner directory entry and `OwnerCount` increment
+- Enables testing DEX functionality (OfferCreate crossing, Payment with auto-bridging) immediately on boot
+
+### 8. Sample genesis ledgers
+Maintain ready-to-use sample ledgers in `samples/`:
+- `samples/simple-10/` — 10 accounts, no trustlines or AMM (basic testing)
+- `samples/rich-100/` — 100 accounts, 5 gateways (USD/EUR/GBP/JPY/BTC), 25 trustlines, 5 AMM pools
+- Future: add offers on the books once TODO #7 is implemented
+- Future: add a "kitchen sink" sample with every object type (offers, MPT, vaults)
+- Regenerate samples when the ledger format changes
+
 <!-- MANUAL ADDITIONS END -->

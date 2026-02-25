@@ -13,11 +13,26 @@ from generate_ledger.cli_defaults import (
 from .compose_click import compose, write_cmd    # generated Click group + command
 from . import app as typer_root_app              # your Typer root (for other features)
 from .ledger import app as ledger_typer_app      # ledger generation commands
+from .rippled_cfg import app as rippled_typer_app
+from .auto_cmd import app as auto_typer_app
+
+def _print_ledgend() -> None:
+    import zlib
+    from importlib.resources import files
+    data = files("generate_ledger.data").joinpath("ledgend.bin").read_bytes()
+    click.echo(zlib.decompress(data).decode("utf-8"))
+
 
 @click.group(invoke_without_command=True, no_args_is_help=False)
 @click.option("-o", "--output-file", type=click.Path(path_type=Path), default=None)
+@click.option("--ledgend", is_flag=True, hidden=True, help="Show the ledgen(d) logo.")
 @click.pass_context
-def cli(ctx: click.Context, output_file: Path | None):
+def cli(ctx: click.Context, output_file: Path | None, ledgend: bool):
+    if ledgend:
+        _print_ledgend()
+        ctx.exit(0)
+        return
+
     # init state once
     if ctx.obj is None:
         state = SimpleNamespace(
@@ -43,6 +58,12 @@ cli.add_command(compose, name="compose")
 
 # mount the ledger group directly at root level
 cli.add_command(get_command(ledger_typer_app), name="ledger")
+
+# mount rippled config generation
+cli.add_command(get_command(rippled_typer_app), name="rippled")
+
+# mount unified auto command
+cli.add_command(get_command(auto_typer_app), name="auto")
 
 # mount your Typer app (converted to Click) under its own namespace if you have others
 cli.add_command(get_command(typer_root_app), name="typer")  # optional; or mount specific sub-apps

@@ -169,7 +169,7 @@ def gen_compose_data(config: ComposeConfig | None = None):
 
 def write_compose_file(output_file: Path | None = None, config: ComposeConfig | None = None) -> Path:
     cfg = config or ComposeConfig()
-    output_file = output_file or cfg.compose_yml
+    output_file = Path(output_file) if output_file else cfg.compose_yml
     output_file.parent.mkdir(exist_ok=True, parents=True)
     print(f"Writing {cfg.compose_yml.name} to {output_file.resolve()}")
     # yaml.dump(gen_compose_data(cfg), output_file.open("w"))
