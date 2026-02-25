@@ -1,7 +1,6 @@
 """CLI tests for the 'auto' command using Typer's test runner."""
 
 import json
-from pathlib import Path
 
 from typer.testing import CliRunner
 

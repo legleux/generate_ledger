@@ -1,5 +1,8 @@
 """Tests for gl.trustlines — trustline object generation."""
 import pytest
+from xrpl import CryptoAlgorithm
+from xrpl.wallet import Wallet
+
 from gl.accounts import Account
 from gl.trustlines import (
     TrustlineConfig,
@@ -8,10 +11,10 @@ from gl.trustlines import (
     generate_trustlines,
     generate_trustset_txn_id,
 )
-from xrpl import CryptoAlgorithm
-from xrpl.wallet import Wallet
 from tests.conftest import ALICE_ADDRESS, ALICE_SEED, BOB_ADDRESS, BOB_SEED
 
+# TODO: Constant
+TXN_ID_LEN = 64
 
 @pytest.fixture
 def alice():
@@ -112,7 +115,7 @@ class TestGenerateTrustlineObjects:
     def test_previous_txn_id_set(self, alice, bob):
         tl = generate_trustline_objects(alice, bob, "USD", 1_000_000_000)
         txn_id = tl.ripple_state["PreviousTxnID"]
-        assert len(txn_id) == 64
+        assert len(txn_id) == TXN_ID_LEN
         assert txn_id == tl.directory_node_a["PreviousTxnID"]
         assert txn_id == tl.directory_node_b["PreviousTxnID"]
 

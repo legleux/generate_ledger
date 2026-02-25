@@ -1,9 +1,7 @@
 """Tests for generate_ledger.cli_defaults."""
 
-from pathlib import Path
 
 from generate_ledger.cli_defaults import (
-    CLI_DEFAULTS,
     OptMeta,
     _normalize,
     defaults_leaf_from_cfg,
@@ -94,5 +92,5 @@ class TestMergeDefaultMaps:
 class TestNormalizedMapping:
     def test_returns_optmeta_dict(self):
         result = normalized_mapping("compose-write")
-        for key, meta in result.items():
+        for _key, meta in result.items():
             assert "field" in meta

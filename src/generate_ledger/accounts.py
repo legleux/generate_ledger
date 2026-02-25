@@ -1,12 +1,12 @@
 import json
-from dataclasses import dataclass, field
+from collections.abc import Iterable
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 from pydantic import PositiveInt
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from generate_ledger.crypto_backends import Algorithm, get_backend, backend_info
+from generate_ledger.crypto_backends import Algorithm, backend_info, get_backend
 
 
 @dataclass
@@ -16,10 +16,10 @@ class Account:
     algorithm: str = "secp256k1"  # "ed25519" or "secp256k1"
 
     def __repr__(self):
-        return 'Account(%s, %s)' % (self.address, self.seed)
+        return f'Account({self.address}, {self.seed})'
 
     def __str__(self):
-        return '%s, %s' % (self.address, self.seed)
+        return f'{self.address}, {self.seed}'
 
 class AccountConfig(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="GL_", env_file=".env")

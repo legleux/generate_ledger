@@ -1,7 +1,9 @@
 # src/my_app/commands/config.py
 import click
+
 from gl.services import config_service
 from gl.utils import editor
+
 
 @click.group(name="config")
 def config_group():

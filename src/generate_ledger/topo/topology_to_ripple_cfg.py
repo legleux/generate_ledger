@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
-import argparse, json, os
-from typing import Any, Dict, Iterable, List, Mapping, Set, Tuple
+import argparse
+import json
+import os
+from collections.abc import Iterable, Mapping
+from typing import Any
+
 
 # -------- edge parsing (handles 2-item list, 3-item list-with-attrs, and dict forms)
-def normalize_edge(e: Any) -> Tuple[str, str]:
+def normalize_edge(e: Any) -> tuple[str, str]:
     if isinstance(e, list):
-        if len(e) == 2:
+        EDGE_PAIR = 2
+        EDGE_WITH_ATTRS = 3
+        if len(e) == EDGE_PAIR:
             return str(e[0]), str(e[1])
-        if len(e) == 3 and isinstance(e[2], dict):
+        if len(e) == EDGE_WITH_ATTRS and isinstance(e[2], dict):
             return str(e[0]), str(e[1])
     if isinstance(e, dict):
         if "source" in e and "target" in e:
@@ -17,7 +23,7 @@ def normalize_edge(e: Any) -> Tuple[str, str]:
     raise ValueError(f"Unrecognized edge format: {e!r}")
 
 # -------- walk the JSON spec
-def collect_nodes(spec: Mapping[str, Any], out: Set[str]) -> None:
+def collect_nodes(spec: Mapping[str, Any], out: set[str]) -> None:
     for n in (spec.get("nodes") or []):
         if isinstance(n, str):
             out.add(n)
@@ -27,7 +33,7 @@ def collect_nodes(spec: Mapping[str, Any], out: Set[str]) -> None:
         if isinstance(sg, Mapping):
             collect_nodes(sg, out)
 
-def collect_edges(spec: Mapping[str, Any], out: List[Tuple[str, str]]) -> None:
+def collect_edges(spec: Mapping[str, Any], out: list[tuple[str, str]]) -> None:
     for e in (spec.get("edges") or []):
         u, v = normalize_edge(e)
         out.append((u, v))
@@ -35,18 +41,18 @@ def collect_edges(spec: Mapping[str, Any], out: List[Tuple[str, str]]) -> None:
         if isinstance(sg, Mapping):
             collect_edges(sg, out)
 
-def build_adjacency(spec: Mapping[str, Any], treat_as_directed: bool = False) -> Dict[str, Set[str]]:
-    nodes: Set[str] = set()
+def build_adjacency(spec: Mapping[str, Any], treat_as_directed: bool = False) -> dict[str, set[str]]:
+    nodes: set[str] = set()
     collect_nodes(spec, nodes)
 
-    edges: List[Tuple[str, str]] = []
+    edges: list[tuple[str, str]] = []
     collect_edges(spec, edges)
 
     # Include nodes that only appear in edges
     for u, v in edges:
         nodes.add(u); nodes.add(v)
 
-    adj: Dict[str, Set[str]] = {n: set() for n in nodes}
+    adj: dict[str, set[str]] = {n: set() for n in nodes}
     for u, v in edges:
         adj.setdefault(u, set())
         adj.setdefault(v, set())
@@ -81,7 +87,7 @@ def main():
                     help="Optional: only emit cfgs for nodes whose name starts with this prefix (e.g. 'val').")
     args = ap.parse_args()
 
-    with open(args.topology_json, "r", encoding="utf-8") as f:
+    with open(args.topology_json, encoding="utf-8") as f:
         spec = json.load(f)
 
     adj = build_adjacency(spec, treat_as_directed=args.directed)

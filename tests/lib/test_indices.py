@@ -4,7 +4,6 @@ Every other module depends on correct indices, so these are highest priority.
 Test vectors come from a running rippled node (tests/data/ledger/testnet/volumes/ledger.json).
 """
 import hashlib
-import re
 
 import pytest
 from xrpl.core.addresscodec import decode_classic_address
@@ -87,7 +86,7 @@ class TestDecodeAccount:
         assert our == xrpl
 
     def test_invalid_raises(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             _decode_account("not-a-valid-address")
 
 

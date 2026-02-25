@@ -1,5 +1,7 @@
 from pathlib import Path
+
 from generate_ledger.rippled_cfg import RippledConfigSpec
+
 
 def test_build_includes_all_blocks(tmp_path: Path):
     tpl = tmp_path / "rippled.cfg"

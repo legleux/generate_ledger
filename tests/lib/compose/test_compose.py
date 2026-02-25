@@ -1,6 +1,6 @@
+
 from generate_ledger.compose import ComposeConfig, gen_compose_data, write_compose_file
-import pathlib
-from pathlib import Path
+
 
 def test_gen_compose_data():
     cfg = ComposeConfig()

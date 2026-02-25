@@ -1,7 +1,6 @@
 """Unified ``gen auto`` command — generates ledger, rippled configs, and docker-compose in one step."""
 
 from pathlib import Path
-from typing import Optional
 
 import typer
 
@@ -33,12 +32,12 @@ def auto(
         help="Key algorithm: ed25519 (fast, default) or secp256k1.",
     ),
     # Ledger: trustlines
-    trustline: Optional[list[str]] = typer.Option(
+    trustline: list[str] | None = typer.Option(
         None, "--trustline", "-t",
         help="Explicit trustline spec: 'acct1:acct2:currency:limit'. Repeatable.",
     ),
     # Ledger: AMM
-    amm_pool: Optional[list[str]] = typer.Option(
+    amm_pool: list[str] | None = typer.Option(
         None, "--amm-pool", "-a",
         help="AMM pool spec: 'asset1:asset2:amount1:amount2[:fee[:creator]]'. Repeatable.",
     ),
@@ -47,7 +46,7 @@ def auto(
         "release", "--amendment-profile",
         help="Amendment profile: release, develop, or custom.",
     ),
-    amendment_source: Optional[str] = typer.Option(
+    amendment_source: str | None = typer.Option(
         None, "--amendment-source",
         help="Path to features.macro (develop) or custom JSON file.",
     ),
@@ -56,7 +55,7 @@ def auto(
         51235, "--peer-port",
         help="Port used in [ips_fixed] entries.",
     ),
-    amendment_majority_time: Optional[str] = typer.Option(
+    amendment_majority_time: str | None = typer.Option(
         None, "--amendment-majority-time",
         help="Override amendment majority time (e.g. '2 minutes').",
     ),
@@ -91,16 +90,15 @@ def auto(
     # --- Step 1: Generate ledger.json + accounts.json ---
     typer.echo("=== Step 1/3: Generating ledger.json ===")
 
-    from gl.accounts import AccountConfig
-    from gl.cli.parsers import ParseError, parse_amm_pool, parse_trustline
-    from gl.ledger import (
+    from gl.accounts import AccountConfig  # noqa: PLC0415
+    from gl.cli.parsers import ParseError, parse_amm_pool, parse_trustline  # noqa: PLC0415
+    from gl.ledger import (  # noqa: PLC0415
         AMMPoolConfig,
         ExplicitTrustline,
         FeeConfig,
         LedgerConfig,
         write_ledger_file,
     )
-    from gl.trustlines import TrustlineConfig
 
     # Parse trustline specs
     explicit_trustlines = []
@@ -157,8 +155,8 @@ def auto(
     # --- Step 2: Generate rippled configs ---
     typer.echo("=== Step 2/3: Generating rippled configs ===")
 
-    from gl.amendments import get_amendments_for_profile
-    from generate_ledger.rippled_cfg import RippledConfigSpec
+    from generate_ledger.rippled_cfg import RippledConfigSpec  # noqa: PLC0415
+    from gl.amendments import get_amendments_for_profile  # noqa: PLC0415
 
     # Get amendment names from the same profile used for ledger generation
     amendments = get_amendments_for_profile(
@@ -185,8 +183,8 @@ def auto(
     # --- Step 3: Generate docker-compose.yml ---
     typer.echo("=== Step 3/3: Generating docker-compose.yml ===")
 
-    from generate_ledger.compose import write_compose_file
-    from generate_ledger.config import ComposeConfig
+    from generate_ledger.compose import write_compose_file  # noqa: PLC0415
+    from generate_ledger.config import ComposeConfig  # noqa: PLC0415
 
     compose_cfg = ComposeConfig(
         num_validators=validators,

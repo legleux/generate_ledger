@@ -1,10 +1,13 @@
 # src/my_app/services/config_service.py
-from pathlib import Path
+import json
 import tomllib
+from pathlib import Path
+
 from platformdirs import user_config_dir
+
 from generate_ledger.models.config import Config
-from generate_ledger.utils.paths import ensure_parent_dirs
 from generate_ledger.utils.merging import deep_merge, parse_cli_sets
+from generate_ledger.utils.paths import ensure_parent_dirs
 
 APP_NAME = "generate_ledger"
 APP_AUTHOR = "Michael Legleux"
@@ -72,7 +75,6 @@ def validate(**kwargs) -> None:
 def format_config(cfg: Config, *, redact: bool = True) -> str:
     data = cfg.model_dump()
     if redact:
-        from ..utils.redact import redact_dict
+        from ..utils.redact import redact_dict  # noqa: PLC0415
         data = redact_dict(data)
-    import json
     return json.dumps(data, indent=2)

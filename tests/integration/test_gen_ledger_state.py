@@ -1,5 +1,6 @@
 """Integration tests for gen_ledger_state — full pipeline through ledger generation."""
 import pytest
+
 from gl.accounts import Account, AccountConfig
 from gl.amendments import amendment_hash, get_amendments_for_profile
 from gl.ledger import (

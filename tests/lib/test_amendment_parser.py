@@ -1,20 +1,20 @@
 """Tests for amendment hash computation, features.macro parsing, and profiles."""
 
-import json
-import pytest
 from pathlib import Path
 
+import pytest
+
 from gl.amendments import (
+    DEFAULT_RELEASE_LIST,
     Amendment,
     AmendmentProfile,
+    _apply_overrides,
+    _load_amendments_from_json,
     amendment_hash,
     apply_develop_profile,
     get_amendments_for_profile,
     get_enabled_amendment_hashes,
     parse_features_macro,
-    _apply_overrides,
-    _load_amendments_from_json,
-    DEFAULT_RELEASE_LIST,
 )
 
 
@@ -196,7 +196,7 @@ class TestGetAmendmentsForProfile:
         assert len(enabled) > 0
 
     def test_develop_without_source_raises(self):
-        with pytest.raises(ValueError, match="features.macro"):
+        with pytest.raises(ValueError, match=r"features\.macro"):
             get_amendments_for_profile(AmendmentProfile.DEVELOP)
 
     def test_custom_without_source_raises(self):

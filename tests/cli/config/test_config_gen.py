@@ -1,8 +1,10 @@
+from pathlib import Path
+
+import pytest
+from typer.testing import CliRunner
+
 from generate_ledger import __app_name__
 from generate_ledger.cli import app
-from pathlib import Path
-from typer.testing import CliRunner
-import pytest
 
 runner = CliRunner()
 

@@ -1,24 +1,28 @@
 from __future__ import annotations
+
 from pathlib import Path
 from types import SimpleNamespace
+
 import click
 from typer.main import get_command
 
-from generate_ledger.config import ComposeConfig, LedgerConfig
 from generate_ledger.cli_defaults import (
     defaults_leaf_from_cfg,
-    nest_default_map,
     merge_default_maps,
+    nest_default_map,
 )
-from .compose_click import compose, write_cmd    # generated Click group + command
-from . import app as typer_root_app              # your Typer root (for other features)
-from .ledger import app as ledger_typer_app      # ledger generation commands
-from .rippled_cfg import app as rippled_typer_app
+from generate_ledger.config import ComposeConfig, LedgerConfig
+
+from . import app as typer_root_app  # your Typer root (for other features)
 from .auto_cmd import app as auto_typer_app
+from .compose_click import compose, write_cmd  # generated Click group + command
+from .ledger import app as ledger_typer_app  # ledger generation commands
+from .rippled_cfg import app as rippled_typer_app
+
 
 def _print_ledgend() -> None:
-    import zlib
-    from importlib.resources import files
+    import zlib  # noqa: PLC0415
+    from importlib.resources import files  # noqa: PLC0415
     data = files("generate_ledger.data").joinpath("ledgend.bin").read_bytes()
     click.echo(zlib.decompress(data).decode("utf-8"))
 

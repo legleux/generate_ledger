@@ -1,9 +1,6 @@
 """Tests for generate_ledger.ledger_builder — ledger assembly."""
 import pytest
-from gl.accounts import Account
-from gl.amm import AMMSpec, Asset, generate_amm_objects
-from gl.indices import account_root_index
-from gl.trustlines import generate_trustline_objects
+
 from generate_ledger.ledger_builder import (
     GENESIS_ADDRESS,
     LSF_DEFAULT_RIPPLE,
@@ -12,6 +9,9 @@ from generate_ledger.ledger_builder import (
     amendments_to_ledger_entry,
     assemble_ledger_json,
 )
+from gl.accounts import Account
+from gl.indices import account_root_index
+from gl.trustlines import generate_trustline_objects
 from tests.conftest import (
     ALICE_ADDRESS,
     ALICE_INDEX,
@@ -19,7 +19,6 @@ from tests.conftest import (
     AMENDMENTS_INDEX,
     BOB_ADDRESS,
     BOB_SEED,
-    GENESIS_INDEX,
 )
 
 

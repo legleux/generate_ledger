@@ -1,8 +1,11 @@
-import click
 from types import SimpleNamespace
-from gl.config import ComposeConfig, LedgerConfig
+
+import click
+
 from gl.cli_defaults import build_default_map
 from gl.commands import _register as _register_commands
+from gl.config import ComposeConfig, LedgerConfig
+
 
 @click.group(help="generate_ledger CLI")
 @click.pass_context

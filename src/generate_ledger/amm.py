@@ -7,22 +7,19 @@ Generates AMM pools with:
 - DirectoryNode for the AMM account
 """
 import math
+from binascii import unhexlify
 from dataclasses import dataclass
-from typing import Literal
-from pydantic import Field
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from xrpl import CryptoAlgorithm
+from xrpl.core.binarycodec import encode, encode_for_signing
+from xrpl.core.keypairs import sign
+from xrpl.models.transactions import AMMCreate
+from xrpl.wallet import Wallet
 
 from gl.accounts import Account
-from gl.indices import amm_index, amm_account_id, amm_lpt_currency, owner_dir, ripple_state_index
-
-from xrpl.wallet import Wallet
-from xrpl import CryptoAlgorithm
-from xrpl.models.transactions import AMMCreate
-from xrpl.core.binarycodec import encode_for_signing, encode
-from xrpl.core.keypairs import sign
-from binascii import unhexlify
-
 from gl.crypto import sha512_half
+from gl.indices import amm_account_id, amm_index, amm_lpt_currency, owner_dir, ripple_state_index
 
 
 @dataclass
@@ -113,7 +110,8 @@ def calculate_lp_tokens(asset1: Asset, asset2: Asset) -> str:
 
     # Return as string with appropriate precision
     # For IOU amounts, use scientific notation if very large
-    if lp_tokens >= 1e15:
+    LP_SCIENTIFIC_THRESHOLD = 1e15
+    if lp_tokens >= LP_SCIENTIFIC_THRESHOLD:
         return f"{lp_tokens:.15g}"
     return str(int(lp_tokens)) if lp_tokens == int(lp_tokens) else f"{lp_tokens:.15g}"
 
@@ -132,7 +130,8 @@ def generate_ammcreate_txn_id(
     This creates a signed AMMCreate transaction and computes its hash,
     which is used as the PreviousTxnID for ledger objects.
     """
-    algo = CryptoAlgorithm.ED25519 if getattr(creator, "algorithm", "secp256k1") == "ed25519" else CryptoAlgorithm.SECP256K1
+    is_ed = getattr(creator, "algorithm", "secp256k1") == "ed25519"
+    algo = CryptoAlgorithm.ED25519 if is_ed else CryptoAlgorithm.SECP256K1
     wallet = Wallet.from_seed(creator.seed, algorithm=algo)
 
     amm_create = AMMCreate(
@@ -254,7 +253,7 @@ def generate_amm_objects(
 
     # Build AMM pseudo-account (AccountRoot)
     # For XRP/token pools, the AMM account holds the XRP deposited
-    amm_balance = asset1.amount if asset1.is_xrp() else ("0" if asset2.is_xrp() else "0")
+    amm_balance = asset1.amount if asset1.is_xrp() else "0"
     if asset2.is_xrp():
         amm_balance = asset2.amount
 
@@ -272,7 +271,7 @@ def generate_amm_objects(
     }
 
     # Calculate AccountRoot index for AMM account
-    from gl.indices import account_root_index
+    from gl.indices import account_root_index  # noqa: PLC0415
     amm_account_obj["index"] = account_root_index(amm_account_address)
 
     # Build DirectoryNode for AMM account

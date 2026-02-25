@@ -1,25 +1,27 @@
-from types import SimpleNamespace
 from pathlib import Path
-from typing import Optional
+from types import SimpleNamespace
+
 import typer
 
-from generate_ledger.config import ComposeConfig, LedgerConfig
 from generate_ledger.cli_defaults import (
     defaults_leaf_from_cfg,
-    nest_default_map,
     merge_default_maps,
+    nest_default_map,
 )
+from generate_ledger.config import ComposeConfig, LedgerConfig
+
 # ⬇️ import the generated Click command object itself
-from .compose import app as compose_app, write_cmd
-from .rippled_cfg import app as rippled_app
+from .compose import app as compose_app
+from .compose import write_cmd
 from .ledger import app as ledger_app
+from .rippled_cfg import app as rippled_app
 
 app = typer.Typer(help="generate_ledger CLI", no_args_is_help=False)
 
 @app.callback(invoke_without_command=True)
 def _root(
     ctx: typer.Context,
-    output_file: Optional[Path] = typer.Option(None, "--output-file", "-o"),
+    output_file: Path | None = typer.Option(None, "--output-file", "-o"),
 ):
     if ctx.obj is None:
         state = SimpleNamespace(

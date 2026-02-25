@@ -1,12 +1,12 @@
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+
 import typer
 
 from generate_ledger.rippled_cfg import (
     RippledConfigSpec,
-    keygen_xrpl,
     keygen_docker,
+    keygen_xrpl,
 )
 
 app = typer.Typer(help="Generate rippled.cfg files for validators + a non-validator node.")
@@ -28,7 +28,7 @@ def _load_features(features_from: str | None) -> list[str] | None:
     """
     if features_from is None:
         return None
-    from generate_ledger.amendments import get_amendments_for_profile
+    from generate_ledger.amendments import get_amendments_for_profile  # noqa: PLC0415
     if features_from in ("release", "develop"):
         amendments = get_amendments_for_profile(profile=features_from)
         return [a.name for a in amendments if a.enabled]
@@ -83,11 +83,11 @@ def write(
     keygen: KeygenMode = typer.Option(
         KeygenMode.xrpl, "--keygen", case_sensitive=False, help="Key generation backend."
     ),
-    features_from: Optional[str] = typer.Option(
+    features_from: str | None = typer.Option(
         None, "--features-from",
         help="Amendment features source: 'release', 'develop', or path to JSON file.",
     ),
-    amendment_majority_time: Optional[str] = typer.Option(
+    amendment_majority_time: str | None = typer.Option(
         None, "--amendment-majority-time",
         help="Override amendment majority time (e.g. '2 minutes').",
     ),
@@ -116,7 +116,7 @@ def write(
         result = spec.write()
     except Exception as e:
         typer.secho(f"ERROR: {e}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from e
 
     for p in result.paths:
         typer.echo(f"Wrote {p}")

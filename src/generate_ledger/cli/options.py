@@ -1,7 +1,7 @@
 # src/generate_ledger/cli/options.py
+
 import typer
-from pathlib import Path
-from typing import Optional
+
 
 def opt_output():
     return typer.Option(None, "--output-file", "-o", help="Write to this path.")

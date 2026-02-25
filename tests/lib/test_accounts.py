@@ -1,7 +1,6 @@
 """Tests for gl.accounts — account generation and JSON export."""
 import json
 
-import pytest
 from gl.accounts import Account, AccountConfig, generate_accounts, write_accounts_json
 from tests.conftest import ALICE_ADDRESS, ALICE_SEED
 

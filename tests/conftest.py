@@ -1,8 +1,12 @@
+import json
+from pathlib import Path
+
 import pytest
+
 from generate_ledger.compose import ComposeConfig
 from gl.accounts import Account
-from pathlib import Path
-import json
+from gl.amendments import get_enabled_amendment_hashes
+
 
 @pytest.fixture(autouse=True)
 def _sandbox_base_dir(tmp_path, monkeypatch):
@@ -79,6 +83,5 @@ def genesis_address() -> str:
 @pytest.fixture(scope="session")
 def sample_amendment_hashes(data_dir: Path) -> list[str]:
     """Load enabled amendment hashes from test fixture."""
-    from gl.amendments import get_enabled_amendment_hashes
     amendments_file = str(data_dir / "amendment_list_dev_20250907.json")
     return get_enabled_amendment_hashes(source=amendments_file)

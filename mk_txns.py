@@ -6,13 +6,13 @@
 # ]
 # ///
 import json
-import platform
 import sys
 import time
 from random import randint
+from types import SimpleNamespace as sn
 
 import requests
-from types import SimpleNamespace as sn
+
 default_rippled_rpc_port = "5005"
 rippled_container = "rippled"
 
@@ -47,14 +47,6 @@ local_host = "172.22.0.7"
 local_url = f"http://{local_host}:{local_port}"
 url = devnet_url
 url = local_url
-# import subprocess as s
-# import requests as r
-# pl = {"method": "wallet_propose"}
-# o = s.run("docker exec rippled rippled --silent wallet_propose".split(), capture_output=True, text=True).stdout.strip(\
-# )
-# result = json.loads(o)
-# account = result["result"]
-# alice = sn(address=account["account_id"], seed=account["master_seed"])
 
 def payment_payload(source, dest, seed, amount):
     return {

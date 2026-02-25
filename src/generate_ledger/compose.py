@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pydantic import PositiveInt, Field, computed_field
+from pydantic import Field, PositiveInt, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedSeq
@@ -57,16 +57,7 @@ def gen_compose_data(config: ComposeConfig | None = None):
     entrypoint = {"entrypoint": make_flow_list([dq(f"{entrypoint_cmd}")])}
     # TODO: Image default entrypoint should already be "rippled"
     hub_entrypoint = validator_entrypoint = entrypoint
-    init = True # TODO: Do we need this?
     expose_hub_ports = True
-    expose_val_ports = False
-    healthcheck_data = {
-        "host": "localhost",
-        "peer_port": "51235",
-        "interval": "10s",
-        "start_period": "10s"
-    }
-    healthcheck_url = f"https://{healthcheck_data['host']}:{healthcheck_data['peer_port']}/health"
     ### Try a simpler healthcheck
     # healthcheck = {
     #     "healthcheck": {
@@ -78,8 +69,8 @@ def gen_compose_data(config: ComposeConfig | None = None):
     healthcheck = {
         "healthcheck": {
             "test": make_flow_list([dq("CMD"), dq("rippled"), dq("--silent"), dq("ping")]),
-            "start_period": healthcheck_data["start_period"],
-            "interval": healthcheck_data["interval"],
+            "start_period": "10s",
+            "interval": "10s",
         }
     }
     # hub_healthcheck = {

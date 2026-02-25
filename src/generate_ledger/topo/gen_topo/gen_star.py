@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-import json, math, random, argparse
-from typing import List, Dict, Any
+import argparse
+import json
+import math
+import random
+from typing import Any
+
 
 def circ_mean_radians(angles: list[float]) -> float:
-    import math
     sx = sum(math.cos(a) for a in angles)
     sy = sum(math.sin(a) for a in angles)
     return math.atan2(sy, sx)
@@ -16,14 +19,14 @@ def pt(x: float) -> str:
 def pos(x: float, y: float) -> str:
     return f"{pt(x)},{pt(y)}!"
 
-def clique_edges(ids: List[str]) -> List[List[str]]:
+def clique_edges(ids: list[str]) -> list[list[str]]:
     E = []
     for i in range(len(ids)):
         for j in range(i + 1, len(ids)):
             E.append([ids[i], ids[j]])
     return E
 
-def ensure_undirected_edge(u: str, v: str, Eset: set, Elist: List[List[str]]):
+def ensure_undirected_edge(u: str, v: str, Eset: set, Elist: list[list[str]]):
     if u == v:
         return
     a, b = (u, v) if u < v else (v, u)
@@ -41,7 +44,6 @@ def ensure_undirected_edge(u: str, v: str, Eset: set, Elist: List[List[str]]):
 #     return out
 
 def ring_positions(n: int, radius: float, start_angle_deg: float = -90.0) -> list[tuple[float,float]]:
-    import math
     out = []
     for i in range(max(1, n)):
         ang = math.radians(start_angle_deg + 360.0 * i / n)
@@ -49,7 +51,7 @@ def ring_positions(n: int, radius: float, start_angle_deg: float = -90.0) -> lis
     return out
 
 # --------- generator ---------
-def generate(config: Dict[str, Any]) -> Dict[str, Any]:
+def generate(config: dict[str, Any]) -> dict[str, Any]:
     rnd = random.Random(config.get("seed", 0))
 
     num_central = int(config.get("num_central_hubs", 5))
@@ -82,7 +84,7 @@ def generate(config: Dict[str, Any]) -> Dict[str, Any]:
     # Colors (soft pastels) for subnets
     pastel = ["#e8f5e9", "#e3f2fd", "#fff8e1", "#f3e5f5", "#e0f7fa", "#fce4ec", "#f1f8e9", "#e8eaf6"]
 
-    G: Dict[str, Any] = {
+    G: dict[str, Any] = {
         "directed": False,
         "strict": True,
         "name": config.get("name", "StarClustersGenerated"),
@@ -155,7 +157,7 @@ def generate(config: Dict[str, Any]) -> Dict[str, Any]:
 
         # intra-subnet edges among validators (sparse/random, undirected)
         Eset = set()
-        intra_edges: List[List[str]] = []
+        intra_edges: list[list[str]] = []
         target_deg = {vid: rnd.randint(min_deg, max_deg) for vid in val_ids}
 
         # simple degree-satisfying loop
@@ -230,7 +232,7 @@ def main():
         "hub_connect_fraction": 1.0
     }
     if args.config:
-        with open(args.config, "r", encoding="utf-8") as f:
+        with open(args.config, encoding="utf-8") as f:
             user_cfg = json.load(f)
         cfg.update(user_cfg)
 

@@ -2,15 +2,15 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from gl.accounts import Account, AccountConfig, generate_accounts, write_accounts_json
-from gl.amendments import get_enabled_amendment_hashes
-from gl.amm import AMMSpec, Asset, generate_amm_objects
-from gl.trustlines import TrustlineConfig, TrustlineObjects, generate_trustline_objects, generate_trustlines
 from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from generate_ledger import ledger_builder
 from gl import data_dir
+from gl.accounts import Account, AccountConfig, generate_accounts, write_accounts_json
+from gl.amendments import get_enabled_amendment_hashes
+from gl.amm import AMMSpec, Asset, generate_amm_objects
+from gl.trustlines import TrustlineConfig, TrustlineObjects, generate_trustline_objects, generate_trustlines
 
 
 @dataclass
@@ -233,10 +233,10 @@ def gen_ledger_state(config: LedgerConfig | None = None):
     # 6. Discover and invoke develop object builders (if develop/ is present)
     extra_objects: list[dict] = []
     try:
-        from gl.develop import get_develop_builders
+        from gl.develop import get_develop_builders  # noqa: PLC0415
         builders = get_develop_builders()
         if builders:
-            from gl.amendments import get_amendments_for_profile
+            from gl.amendments import get_amendments_for_profile  # noqa: PLC0415
             enabled_names = {
                 a.name
                 for a in get_amendments_for_profile(

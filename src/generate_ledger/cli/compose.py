@@ -1,11 +1,12 @@
 from pathlib import Path
-from typing import Optional
+
 import click
 import typer
 from typer.main import get_command
 
-from generate_ledger.config import ComposeConfig
 from generate_ledger.compose import write_compose_file
+from generate_ledger.config import ComposeConfig
+
 from .auto import build_command_from_defaults
 
 app = typer.Typer(help="Docker Compose helpers.")
@@ -35,17 +36,18 @@ get_command(app).add_command(write_cmd)
 @app.command("write")
 def write_typer(
     ctx: typer.Context,
-    output_file: Optional[Path] = typer.Option(None, "-o", "--output-file"),
-    validators: Optional[int] = typer.Option(None, "--validators"),
-    base_dir: Optional[Path] = typer.Option(None, "--base-dir"),
+    output_file: Path | None = typer.Option(None, "-o", "--output-file"),
+    validators: int | None = typer.Option(None, "--validators"),
+    base_dir: Path | None = typer.Option(None, "--base-dir"),
 ):
     """
     Generate docker-compose.yml for XRPL validator network.
     """
     # Get config from context
     if ctx.obj is None:
-        from types import SimpleNamespace
-        from generate_ledger.config import LedgerConfig
+        from types import SimpleNamespace  # noqa: PLC0415
+
+        from generate_ledger.config import LedgerConfig  # noqa: PLC0415
         ctx.obj = SimpleNamespace(compose=ComposeConfig(), ledger=LedgerConfig())
 
     base_cfg = ctx.obj.compose

@@ -2,6 +2,7 @@ import json
 import random
 from pathlib import Path
 
+
 def generate_ledger(*, output: Path, accounts: int, seed: int | None) -> None:
     rnd = random.Random(seed)
     # NOTE: stub structure — replace with real XRPL-gen logic

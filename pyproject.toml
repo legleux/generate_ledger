@@ -41,10 +41,35 @@ include = [
 [tool.ruff]
 target-version = "py313"
 line-length = 120
+force-exclude = true
+exclude = [
+    "src/generate_ledger/gen_mbp.py",
+    "src/generate_ledger/gen.py",
+    "src/generate_ledger/menu.py",
+    "src/generate_ledger/topo/",
+    "src/generate_ledger/utils/paths.py",
+    "src/generate_ledger/commands/compose_writer.py",
+    "src/gl/",
+    "tests/lib/ledger/",
+    "mk_txns.py",
+]
 
 [tool.ruff.lint]
 select = ["E","F","I","W","B","UP","ISC","PL","RUF"]
-ignore = ["E203"]
+ignore = [
+    "E203",
+    "B008",      # typer.Option() in function defaults — standard typer/click pattern
+    "PLR0913",   # too many arguments — unavoidable in CLI commands and builders
+    "PLR0912",   # too many branches — complex parsers
+    "PLR0915",   # too many statements — complex functions
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["generate_ledger", "gl"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["PLR2004", "PLC0415"]
+"scripts/**" = ["PLR2004", "PLC0415", "PLW0603", "RUF001"]
 
 [dependency-groups]
 dev = [
@@ -53,6 +78,7 @@ dev = [
   {include-group = "fast"}
 ]
 lint = [
+    "pre-commit>=4.2.0",
     "ruff>=0.12.11",
 ]
 test = [
@@ -97,6 +123,7 @@ omit = [
 
 [tool.coverage.report]
 show_missing = true
+fail_under = 85
 exclude_lines = [
     "pragma: no cover",
     "if __name__",

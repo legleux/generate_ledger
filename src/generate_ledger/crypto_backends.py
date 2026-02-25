@@ -76,7 +76,7 @@ class NativeEd25519Backend(CryptoBackend):
     """Ed25519 using PyNaCl (libsodium). ~22,000 accounts/sec."""
 
     def __init__(self) -> None:
-        import nacl.signing
+        import nacl.signing  # noqa: PLC0415
 
         self._signing = nacl.signing
 
@@ -104,9 +104,9 @@ class FallbackBackend(CryptoBackend):
     """Fallback using xrpl-py (pure Python). Works for all algorithms."""
 
     def __init__(self, algorithm: Algorithm) -> None:
-        from xrpl import CryptoAlgorithm
-        from xrpl.core.keypairs import generate_seed
-        from xrpl.wallet import Wallet
+        from xrpl import CryptoAlgorithm  # noqa: PLC0415
+        from xrpl.core.keypairs import generate_seed  # noqa: PLC0415
+        from xrpl.wallet import Wallet  # noqa: PLC0415
 
         self._algorithm = algorithm
         self._xrpl_algo = (
@@ -153,7 +153,7 @@ def backend_info(algo: Algorithm) -> tuple[bool, str]:
     """
     if algo == Algorithm.ED25519:
         try:
-            import nacl.signing  # noqa: F401
+            import nacl.signing  # noqa: F401, PLC0415
 
             return (True, "pynacl")
         except ImportError:

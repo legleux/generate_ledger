@@ -41,7 +41,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from gl.indices import account_root_index
 
-
 # =============================================================================
 # Crypto Backend Abstraction
 # =============================================================================
@@ -313,8 +312,8 @@ class NativeEd25519Backend(CryptoBackend):
 
     def __init__(self) -> None:
         try:
-            import nacl.signing
             import nacl.encoding
+            import nacl.signing
             self._nacl_signing = nacl.signing
             self._nacl_encoding = nacl.encoding
         except ImportError as e:
@@ -368,7 +367,7 @@ class FastEcdsaSecp256k1Backend(CryptoBackend):
 
     def __init__(self) -> None:
         try:
-            from fastecdsa import keys, curve
+            from fastecdsa import curve, keys
             from fastecdsa.encoding.sec1 import SEC1Encoder
             self._keys = keys
             self._curve = curve.secp256k1
@@ -616,7 +615,7 @@ def generate_seeds(count: int, backend: CryptoBackend, quiet: bool) -> list[str]
         print(f"  Generating {count} seeds...", file=sys.stderr)
     seeds = [backend.generate_seed() for _ in range(count)]
     if not quiet:
-        print(f"  Seeds ready.", file=sys.stderr)
+        print("  Seeds ready.", file=sys.stderr)
     return seeds
 
 
@@ -724,7 +723,7 @@ def run_gpu(
     See: https://github.com/8891689/Secp256k1-CUDA-ecc
     """
     if not quiet:
-        print(f"  WARNING: GPU kernels not implemented, using multiprocessing", file=sys.stderr)
+        print("  WARNING: GPU kernels not implemented, using multiprocessing", file=sys.stderr)
     return run_multiprocessing(seeds, algo, workers, quiet)
 
 

@@ -253,6 +253,27 @@ Python 3.12+ (currently 3.13): Follow standard conventions
 
 - 2025-12-10: Initial setup with Python 3.12+ (currently 3.13) + xrpl-py (4.2.0+), typer/click (CLI), pydantic (validation), ruamel-yaml (config), httpx (networking), base58 (encoding)
 
+## Milestones for 1.0
+
+All items must be complete to exit beta (`0.x`) and release `1.0.0`.
+
+- [ ] **Live validation** — Generated ledgers boot on rippled; amendments are confirmed active via transaction submission (TODOs 0, 0B, 1, 2)
+- [ ] **Ledger object index coverage** — Can generate the ledger object index for all XRPL object types (AccountRoot, RippleState, DirectoryNode, Offer, AMM, Amendments, FeeSettings, etc.)
+- [ ] **Default lsfDefaultRipple** — All generated accounts get `lsfDefaultRipple` by default, with opt-out flag (TODO 4)
+- [x] **CI green on main** — Lint + test matrix passes on push/PR
+- [x] **Pre-commit + ruff clean** — `ruff check .` passes, pre-commit hook installed
+- [x] **85% test coverage** — Enforced in CI via `fail_under = 85` in `[tool.coverage.report]` (currently 89%)
+- [ ] **Methods > N lines documented** — All functions/methods longer than ~20 lines have docstrings
+- [ ] **Clean packaging** — Real description in `pyproject.toml`, README with usage examples, no dead code shipped in wheel
+- [ ] **Automatic deployment** — CI pipeline for version bumping and publishing to PyPI (not just TestPyPI)
+
+### Not blocking 1.0 (v2.0+)
+- MPT support (Phase 6)
+- Vault support (Phase 8)
+- Pre-created Offers (TODO 7)
+- Preset account seeds (TODO 5)
+- Package rename to "ledgen" (TODO 6)
+
 ## Next Session Options
 
 ### Option A - Production Hardening (Recommended)

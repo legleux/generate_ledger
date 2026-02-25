@@ -1,4 +1,3 @@
-from pygraphviz import AGraph
 import itertools
 
 # A = AGraph()
@@ -29,9 +28,11 @@ nodes = list(itertools.permutations(node_list, 2))
 # A.write(f"{f}.dot")  # write to simple.dot
 # A.draw(f"{f}.png", prog="circo")  # draw to png using circo layout
 
-import graphviz
-from pathlib import Path
 import sys
+from pathlib import Path
+
+import graphviz
+
 file_ = sys.argv[1]
 gv_src = Path(file_)
 outfile = gv_src.stem

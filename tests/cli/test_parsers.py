@@ -1,5 +1,6 @@
 """Tests for CLI parsers."""
 import pytest
+
 from gl.cli.parsers import (
     ParseError,
     parse_amm_pool,

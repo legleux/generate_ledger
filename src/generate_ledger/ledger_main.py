@@ -2,13 +2,10 @@
 from pathlib import Path
 
 from generate_ledger.models.ledger import LedgerNamespace  # your existing enum/type
-from gl.indices import LedgerNamespace as NSProtocol       # protocol compatibility
-
 from gl.accounts import generate_accounts, write_accounts_json
 from gl.amendments import fetch_amendments
-from gl.ledger_build import (
-    assemble_ledger_json, write_ledger_json, FeeSettings
-)
+from gl.indices import LedgerNamespace as NSProtocol  # protocol compatibility
+from gl.ledger_build import FeeSettings, assemble_ledger_json, write_ledger_json
 
 TESTNET_DIR = Path("testnet")
 ACCOUNTS_JSON = TESTNET_DIR / "accounts.json"

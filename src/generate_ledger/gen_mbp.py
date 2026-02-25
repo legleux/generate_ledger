@@ -9,7 +9,12 @@ import xrpl
 import xrpl.constants
 from xrpl.core.addresscodec import decode_classic_address
 
+ACCOUNT_ID_BYTES = 20
+STANDARD_CURRENCY_LEN = 3
+HEX_CURRENCY_LEN = 40
+
 from generate_ledger import Wallet, generate_seed
+
 # from generate_ledger.ledger import LedgerNamespace
 
 # from xrpl.core.keypairs import generate_seed
@@ -76,7 +81,7 @@ def order_low_high(a1: bytes, a2: bytes) -> tuple[bytes, bytes]:
     """
     Order two 20-byte AccountIDs as (low, high) by lexicographic byte ordering.
     """
-    if len(a1) != 20 or len(a2) != 20:
+    if len(a1) != ACCOUNT_ID_BYTES or len(a2) != ACCOUNT_ID_BYTES:
         raise ValueError("AccountIDs must be 20 bytes.")
     return (a1, a2) if a1 < a2 else (a2, a1)
 
@@ -94,12 +99,12 @@ def currency_to_160(code: str) -> bytes:
     code = code.strip()
 
     # Hex form?
-    if all(c in "0123456789abcdefABCDEF" for c in code) and len(code) == 40:
+    if all(c in "0123456789abcdefABCDEF" for c in code) and len(code) == HEX_CURRENCY_LEN:
         return bytes.fromhex(code)
 
     # Standard 3-letter form
-    if len(code) == 3 and code.isascii():
-        b = bytearray(20)
+    if len(code) == STANDARD_CURRENCY_LEN and code.isascii():
+        b = bytearray(ACCOUNT_ID_BYTES)
         b[12:15] = code.encode("ascii")
         return bytes(b)
 
@@ -109,7 +114,7 @@ def currency_to_160(code: str) -> bytes:
 def decode_account_id(classic_address: str) -> bytes:
     """Classic address (Base58 'r...') -> 20-byte AccountID."""
     acct = decode_classic_address(classic_address)
-    if len(acct) != 20:
+    if len(acct) != ACCOUNT_ID_BYTES:
         raise ValueError("AccountID must be 20 bytes")
     return acct
 
@@ -137,9 +142,9 @@ def sha512_half(data: bytes) -> bytes:
 def currency_code_to_bytes(code: str) -> bytes:
     """Convert an XRPL currency code (<=20 bytes) to its 160-bit representation."""
     b = code.encode("ascii")
-    if len(b) > 20:
+    if len(b) > ACCOUNT_ID_BYTES:
         raise ValueError("Currency code too long (max 20 bytes)")
-    return b.ljust(20, b"\x00")
+    return b.ljust(ACCOUNT_ID_BYTES, b"\x00")
 
 
 def currency_code_to_hex(code: str) -> str:

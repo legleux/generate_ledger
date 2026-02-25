@@ -1,5 +1,6 @@
 import subprocess
 from pathlib import Path
+
 import xrpl
 
 num_validators = 5
@@ -20,14 +21,14 @@ def generate_public_key():
 
 def generate_public_key_():
     generate_validator_key_command = "docker run legleux/vkt".split()
-    result = subprocess.run(generate_validator_key_command, capture_output=True, text=True)
+    result = subprocess.run(generate_validator_key_command, check=False, capture_output=True, text=True)
     public_key_string, token, *_ = result.stdout.split("\n\n")
     public_key = public_key_string.split(" ")[-1]
     return public_key, token
 
 def gen_voting():
     voting_cfg = (
-        "\n[voting]\n" +
+        "\n[voting]\n"
         f"reference_fee = {reference_fee}\n"
         f"account_reserve = {account_reserve}\n"
         f"owner_reserve = {owner_reserve}\n"

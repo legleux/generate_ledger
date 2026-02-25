@@ -14,6 +14,16 @@ AMM pool format: asset1:asset2:amount1:amount2[:fee[:creator]]
 """
 from dataclasses import dataclass
 
+from generate_ledger.indices import HEX_CURRENCY_LEN, STANDARD_CURRENCY_LEN
+
+TRUSTLINE_PARTS = 4
+ASSET_PARTS = 2
+MIN_AMM_PARTS = 4
+MIN_AMM_AMOUNTS = 2
+MIN_AMM_PARTS_WITH_FEE = 3
+MIN_AMM_PARTS_WITH_CREATOR = 4
+MAX_FEE_BPS = 1000
+
 
 @dataclass
 class ParsedTrustline:
@@ -67,7 +77,7 @@ def parse_trustline(spec: str) -> ParsedTrustline:
         ParseError: If the format is invalid
     """
     parts = spec.split(":")
-    if len(parts) != 4:
+    if len(parts) != TRUSTLINE_PARTS:
         raise ParseError(
             f"Invalid trustline format: '{spec}'. "
             f"Expected 'account1:account2:currency:limit', got {len(parts)} parts"
@@ -81,7 +91,7 @@ def parse_trustline(spec: str) -> ParsedTrustline:
         raise ParseError("account2 cannot be empty")
     if not currency:
         raise ParseError("currency cannot be empty")
-    if len(currency) != 3 and len(currency) != 40:
+    if len(currency) != STANDARD_CURRENCY_LEN and len(currency) != HEX_CURRENCY_LEN:
         raise ParseError(
             f"Invalid currency '{currency}': must be 3 characters (standard) "
             f"or 40 hex characters (non-standard)"
@@ -89,15 +99,15 @@ def parse_trustline(spec: str) -> ParsedTrustline:
 
     try:
         limit = int(limit_str)
-    except ValueError:
-        raise ParseError(f"Invalid limit '{limit_str}': must be an integer")
+    except ValueError as e:
+        raise ParseError(f"Invalid limit '{limit_str}': must be an integer") from e
     if limit <= 0:
         raise ParseError(f"limit must be positive, got {limit}")
 
     return ParsedTrustline(
         account1=account1,
         account2=account2,
-        currency=currency.upper() if len(currency) == 3 else currency,
+        currency=currency.upper() if len(currency) == STANDARD_CURRENCY_LEN else currency,
         limit=limit,
     )
 
@@ -126,7 +136,7 @@ def _parse_asset(spec: str) -> ParsedAsset:
         return ParsedAsset(currency=None, issuer=None)
 
     parts = spec.split(":", 1)
-    if len(parts) != 2:
+    if len(parts) != ASSET_PARTS:
         raise ParseError(
             f"Invalid asset format: '{spec}'. "
             f"Expected 'XRP' or 'currency:issuer'"
@@ -136,7 +146,7 @@ def _parse_asset(spec: str) -> ParsedAsset:
 
     if not currency:
         raise ParseError("currency cannot be empty")
-    if len(currency) != 3 and len(currency) != 40:
+    if len(currency) != STANDARD_CURRENCY_LEN and len(currency) != HEX_CURRENCY_LEN:
         raise ParseError(
             f"Invalid currency '{currency}': must be 3 characters (standard) "
             f"or 40 hex characters (non-standard)"
@@ -145,7 +155,7 @@ def _parse_asset(spec: str) -> ParsedAsset:
         raise ParseError("issuer cannot be empty for issued currency")
 
     return ParsedAsset(
-        currency=currency.upper() if len(currency) == 3 else currency,
+        currency=currency.upper() if len(currency) == STANDARD_CURRENCY_LEN else currency,
         issuer=issuer,
     )
 
@@ -185,7 +195,7 @@ def parse_amm_pool(spec: str) -> ParsedAMMPool:
     # Typical: XRP:USD:issuer:amt1:amt2 = 5 parts
     # Or: USD:issuer1:EUR:issuer2:amt1:amt2 = 6 parts
 
-    if len(parts) < 4:
+    if len(parts) < MIN_AMM_PARTS:
         raise ParseError(
             f"Invalid AMM pool format: '{spec}'. "
             f"Expected at least 'asset1:asset2:amount1:amount2'"
@@ -202,13 +212,13 @@ def parse_amm_pool(spec: str) -> ParsedAMMPool:
             raise ParseError(f"Missing issuer for asset1 currency '{parts[idx]}'")
         currency = parts[idx]
         issuer = parts[idx + 1]
-        if len(currency) != 3 and len(currency) != 40:
+        if len(currency) != STANDARD_CURRENCY_LEN and len(currency) != HEX_CURRENCY_LEN:
             raise ParseError(
                 f"Invalid asset1 currency '{currency}': "
                 f"must be 3 chars, 40 hex chars, or 'XRP'"
             )
         asset1 = ParsedAsset(
-            currency=currency.upper() if len(currency) == 3 else currency,
+            currency=currency.upper() if len(currency) == STANDARD_CURRENCY_LEN else currency,
             issuer=issuer,
         )
         idx += 2
@@ -225,13 +235,13 @@ def parse_amm_pool(spec: str) -> ParsedAMMPool:
             raise ParseError(f"Missing issuer for asset2 currency '{parts[idx]}'")
         currency = parts[idx]
         issuer = parts[idx + 1]
-        if len(currency) != 3 and len(currency) != 40:
+        if len(currency) != STANDARD_CURRENCY_LEN and len(currency) != HEX_CURRENCY_LEN:
             raise ParseError(
                 f"Invalid asset2 currency '{currency}': "
                 f"must be 3 chars, 40 hex chars, or 'XRP'"
             )
         asset2 = ParsedAsset(
-            currency=currency.upper() if len(currency) == 3 else currency,
+            currency=currency.upper() if len(currency) == STANDARD_CURRENCY_LEN else currency,
             issuer=issuer,
         )
         idx += 2
@@ -242,7 +252,7 @@ def parse_amm_pool(spec: str) -> ParsedAMMPool:
 
     # Parse amounts
     remaining = parts[idx:]
-    if len(remaining) < 2:
+    if len(remaining) < ASSET_PARTS:
         raise ParseError(
             f"Missing amounts in AMM pool spec. "
             f"Got {len(remaining)} remaining parts after assets, need at least 2"
@@ -253,27 +263,27 @@ def parse_amm_pool(spec: str) -> ParsedAMMPool:
 
     try:
         int(amount1)  # Validate it's a number
-    except ValueError:
-        raise ParseError(f"Invalid amount1 '{amount1}': must be a number")
+    except ValueError as e:
+        raise ParseError(f"Invalid amount1 '{amount1}': must be a number") from e
 
     try:
         int(amount2)  # Validate it's a number
-    except ValueError:
-        raise ParseError(f"Invalid amount2 '{amount2}': must be a number")
+    except ValueError as e:
+        raise ParseError(f"Invalid amount2 '{amount2}': must be a number") from e
 
     # Parse optional fee
     fee = 500  # Default: 0.5%
-    if len(remaining) >= 3:
+    if len(remaining) >= MIN_AMM_PARTS_WITH_FEE:
         try:
             fee = int(remaining[2])
-        except ValueError:
-            raise ParseError(f"Invalid fee '{remaining[2]}': must be an integer")
-        if fee < 0 or fee > 1000:
+        except ValueError as e:
+            raise ParseError(f"Invalid fee '{remaining[2]}': must be an integer") from e
+        if fee < 0 or fee > MAX_FEE_BPS:
             raise ParseError(f"Fee must be 0-1000 basis points, got {fee}")
 
     # Parse optional creator
     creator = None
-    if len(remaining) >= 4:
+    if len(remaining) >= MIN_AMM_PARTS_WITH_CREATOR:
         creator = remaining[3]
         if not creator:
             raise ParseError("Creator cannot be empty if specified")

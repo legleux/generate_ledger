@@ -5,22 +5,21 @@ This is the largest untested module (472 lines) with two critical bug fixes.
 import math
 
 import pytest
+
 from gl.accounts import Account
 from gl.amm import (
     AMM_ACCOUNT_FLAGS,
-    AMMConfig,
-    AMMObjects,
-    AMMSpec,
-    Asset,
     LSF_AMM_NODE,
     LSF_DEFAULT_RIPPLE,
     LSF_DEPOSIT_AUTH,
     LSF_DISABLE_MASTER,
+    AMMObjects,
+    AMMSpec,
+    Asset,
     calculate_lp_tokens,
     generate_amm_objects,
     generate_amms,
 )
-from gl.indices import amm_account_id, amm_index, amm_lpt_currency
 from tests.conftest import ALICE_ADDRESS, ALICE_SEED, BOB_ADDRESS, BOB_SEED
 
 

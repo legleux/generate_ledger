@@ -1,10 +1,10 @@
 """Tests for gl.amendments — amendment loading and filtering."""
 import pytest
+
 from gl.amendments import (
     Amendment,
     _enabled_amendment_hashes,
     _get_amendments_from_file,
-    get_amendments,
     get_enabled_amendment_hashes,
 )
 
@@ -43,7 +43,7 @@ class TestGetAmendmentsFromFile:
         assert isinstance(data, dict)
 
     def test_nonexistent_raises(self):
-        with pytest.raises(Exception):
+        with pytest.raises(FileNotFoundError):
             _get_amendments_from_file("/nonexistent/path.json")
 
 

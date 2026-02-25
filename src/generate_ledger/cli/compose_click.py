@@ -1,12 +1,16 @@
 # src/generate_ledger/cli/compose_click.py
 from __future__ import annotations
+
 from pathlib import Path
 from typing import Any
+
 import click
 
-from generate_ledger.config import ComposeConfig
 from generate_ledger.compose import write_compose_file
+from generate_ledger.config import ComposeConfig
+
 from .auto import build_command_from_defaults  # your generator
+
 
 def _runner(base_cfg: ComposeConfig, overrides: dict[str, Any], output_file: Path | str | None):
     cfg = base_cfg.model_copy(update=overrides) if overrides else base_cfg

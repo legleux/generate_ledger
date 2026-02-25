@@ -38,7 +38,8 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from typing import Any, Dict, Iterable, Mapping, Tuple, List
+from collections.abc import Mapping
+from typing import Any
 
 # ---------- Utilities ----------
 
@@ -56,7 +57,7 @@ def attrs_to_str(attrs: Mapping[str, Any]) -> str:
     return " [" + ", ".join(parts) + "]"
 
 
-def normalize_edge(e: Any) -> Dict[str, Any]:
+def normalize_edge(e: Any) -> dict[str, Any]:
     """
     Accepts any of:
       - ["A","B"]                          # no attrs
@@ -66,9 +67,11 @@ def normalize_edge(e: Any) -> Dict[str, Any]:
     Returns dict with "source","target", plus any attributes.
     """
     if isinstance(e, list):
-        if len(e) == 2:
+        EDGE_PAIR = 2
+        EDGE_WITH_ATTRS = 3
+        if len(e) == EDGE_PAIR:
             return {"source": e[0], "target": e[1]}
-        if len(e) == 3 and isinstance(e[2], dict):
+        if len(e) == EDGE_WITH_ATTRS and isinstance(e[2], dict):
             d = {"source": e[0], "target": e[1]}
             d.update(e[2])
             return d
@@ -90,12 +93,12 @@ def emit_stmt(line: str, out) -> None:
 def _canonical_cluster_name(name: str) -> str:
     return name if name.startswith("cluster_") else f"cluster_{name}"
 
-def collect_cluster_name_map(spec: Mapping[str, Any]) -> Dict[str, str]:
+def collect_cluster_name_map(spec: Mapping[str, Any]) -> dict[str, str]:
     """
     Build a map of user-provided subgraph names -> canonical 'cluster_*' names
     for those marked with "cluster": true. Non-cluster subgraphs are ignored.
     """
-    name_map: Dict[str, str] = {}
+    name_map: dict[str, str] = {}
     def walk(s: Mapping[str, Any]):
         for sg in (s.get("subgraphs") or []) or []:
             if not isinstance(sg, Mapping):
@@ -110,7 +113,7 @@ def collect_cluster_name_map(spec: Mapping[str, Any]) -> Dict[str, str]:
     walk(spec)
     return name_map
 
-def map_ltail_lhead(attrs: Dict[str, Any], cluster_name_map: Mapping[str, str]) -> Dict[str, Any]:
+def map_ltail_lhead(attrs: dict[str, Any], cluster_name_map: Mapping[str, str]) -> dict[str, Any]:
     """
     Normalize ltail/lhead values to canonical 'cluster_*' names when they refer
     to clusters declared with cluster:true.
@@ -189,13 +192,13 @@ def emit_subgraphs(
 
 # ---------- Validation (optional) ----------
 
-def _gather_membership(spec: Mapping[str, Any]) -> Dict[str, str]:
+def _gather_membership(spec: Mapping[str, Any]) -> dict[str, str]:
     """
     Return a map: node_id -> subgraph_name (closest enclosing subgraph name).
     """
-    membership: Dict[str, str] = {}
-    def node_ids(container: Mapping[str, Any]) -> List[str]:
-        out: List[str] = []
+    membership: dict[str, str] = {}
+    def node_ids(container: Mapping[str, Any]) -> list[str]:
+        out: list[str] = []
         for n in (container.get("nodes") or []) or []:
             if isinstance(n, str):
                 out.append(n)
@@ -217,11 +220,11 @@ def _gather_membership(spec: Mapping[str, Any]) -> Dict[str, str]:
     walk(spec, None)
     return membership
 
-def _collect_all_edges(spec: Mapping[str, Any]) -> List[Dict[str, Any]]:
+def _collect_all_edges(spec: Mapping[str, Any]) -> list[dict[str, Any]]:
     """
     Collect edges from the whole structure (top and nested subgraphs).
     """
-    edges: List[Dict[str, Any]] = []
+    edges: list[dict[str, Any]] = []
     def walk(s: Mapping[str, Any]):
         for e in (s.get("edges") or []) or []:
             edges.append(normalize_edge(e))
@@ -238,7 +241,7 @@ def validate_single_exit(spec: Mapping[str, Any]) -> None:
     membership = _gather_membership(spec)
     edges = _collect_all_edges(spec)
 
-    counts: Dict[str, int] = {}
+    counts: dict[str, int] = {}
 
     for e in edges:
         a = membership.get(e["source"])
@@ -258,7 +261,7 @@ def validate_single_exit(spec: Mapping[str, Any]) -> None:
 
 # ---------- Main conversion ----------
 
-def json_to_dot(spec: Dict[str, Any], *, validate_exits: bool = False) -> str:
+def json_to_dot(spec: dict[str, Any], *, validate_exits: bool = False) -> str:
     directed = bool(spec.get("directed", True))
     strict = bool(spec.get("strict", False))
     name = spec.get("name") or ("G" if directed else "G_undirected")
@@ -277,7 +280,7 @@ def json_to_dot(spec: Dict[str, Any], *, validate_exits: bool = False) -> str:
     if has_subgraphs and "compound" not in graph_attrs:
         graph_attrs["compound"] = True
 
-    from io import StringIO
+    from io import StringIO  # noqa: PLC0415
     buf = StringIO()
 
     # Cluster name normalization map
@@ -321,7 +324,7 @@ def main():
     if args.input == "-":
         data = json.load(sys.stdin)
     else:
-        with open(args.input, "r", encoding="utf-8") as f:
+        with open(args.input, encoding="utf-8") as f:
             data = json.load(f)
 
     try:

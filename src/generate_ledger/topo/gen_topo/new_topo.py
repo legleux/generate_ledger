@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 quadrant_topology.py
 Build a quadrant-based network topology, draw it, and emit rippled.cfg files.
@@ -14,23 +13,27 @@ Usage:
   python3 quadrant_topology.py -c config.json -o star.png --cfg-out cfg/
 """
 
-import argparse, json, math, os, random
-from typing import Dict, List, Tuple, Iterable, Set
+import argparse
+import json
+import math
+import os
+import random
+from collections.abc import Iterable
 
 import matplotlib.pyplot as plt
 import networkx as nx
-from matplotlib.patches import Rectangle, FancyBboxPatch
+from matplotlib.patches import FancyBboxPatch, Rectangle
 
 # --------------------------- helpers ---------------------------
 
-def ring(n: int, r: float, start_deg: float = -90.0) -> List[Tuple[float, float]]:
+def ring(n: int, r: float, start_deg: float = -90.0) -> list[tuple[float, float]]:
     pts = []
     for i in range(n):
         ang = math.radians(start_deg + 360.0 * i / n)
         pts.append((r*math.cos(ang), r*math.sin(ang)))
     return pts
 
-def rect_from_points(points: Iterable[Tuple[float, float]], pad: float = 0.5) -> Tuple[float, float, float, float]:
+def rect_from_points(points: Iterable[tuple[float, float]], pad: float = 0.5) -> tuple[float, float, float, float]:
     xs = [p[0] for p in points]; ys = [p[1] for p in points]
     xmin, xmax = min(xs)-pad, max(xs)+pad
     ymin, ymax = min(ys)-pad, max(ys)+pad
@@ -46,7 +49,7 @@ def write_cfg(node: str, peers: Iterable[str], outdir: str):
 
 # --------------------------- generator ---------------------------
 
-def build_topology(cfg: Dict) -> Tuple[nx.Graph, Dict[str, Tuple[float,float]], Dict[str, Dict]]:
+def build_topology(cfg: dict) -> tuple[nx.Graph, dict[str, tuple[float,float]], dict[str, dict]]:
     rnd = random.Random(cfg.get("seed", 42))
 
     # counts
@@ -70,12 +73,12 @@ def build_topology(cfg: Dict) -> Tuple[nx.Graph, Dict[str, Tuple[float,float]], 
     hub_connect_fraction = float(cfg.get("hub_connect_fraction", 1.0))
 
     G = nx.Graph()
-    pos: Dict[str, Tuple[float, float]] = {}
-    clusters: Dict[str, Dict] = {}  # name -> {label, color, nodes}
+    pos: dict[str, tuple[float, float]] = {}
+    clusters: dict[str, dict] = {}  # name -> {label, color, nodes}
 
     # ----- central hubs cluster -----
     hubs = [f"Hub{i}_c" for i in range(1, num_central+1)]
-    for (x,y), n in zip(ring(num_central, hub_ring_r), hubs):
+    for (x,y), n in zip(ring(num_central, hub_ring_r), hubs, strict=False):
         pos[n] = (x,y)
         G.add_node(n, kind="hub_c")
     # fully connect central hubs
@@ -92,7 +95,7 @@ def build_topology(cfg: Dict) -> Tuple[nx.Graph, Dict[str, Tuple[float,float]], 
                     (-quad_offset,-quad_offset)]   # SW
 
     val_counter = 1
-    local_hubs: List[str] = []
+    local_hubs: list[str] = []
 
     for s in range(num_subnets):
         cname = f"s{s+1}"
@@ -104,7 +107,7 @@ def build_topology(cfg: Dict) -> Tuple[nx.Graph, Dict[str, Tuple[float,float]], 
         G.add_node(local, kind="hub_s")
         # validators around local hub
         nvals = validators_per_subnet[s]
-        vals: List[str] = []
+        vals: list[str] = []
         for k, (dx,dy) in enumerate(ring(nvals, val_radius, start_deg=20+90*s), start=1):
             jx = rnd.uniform(-jitter, jitter)
             jy = rnd.uniform(-jitter, jitter)
@@ -144,9 +147,7 @@ def build_topology(cfg: Dict) -> Tuple[nx.Graph, Dict[str, Tuple[float,float]], 
 # --------------------------- drawing ---------------------------
 
 def draw_topology(G, pos, clusters, out_png):
-    import matplotlib.pyplot as plt
-    from matplotlib.patches import Rectangle, FancyBboxPatch
-    import networkx as nx
+    import networkx as nx  # noqa: PLC0415
 
     fig, ax = plt.subplots(figsize=(10,10))
     ax.set_aspect("equal"); ax.axis("off")
@@ -224,7 +225,7 @@ def draw_topology(G, pos, clusters, out_png):
         pass
 
     # frame
-    xs, ys = zip(*pos.values()); pad = 2.0
+    xs, ys = zip(*pos.values(), strict=False); pad = 2.0
     ax.set_xlim(min(xs)-pad, max(xs)+pad)
     ax.set_ylim(min(ys)-pad, max(ys)+pad)
 
@@ -238,7 +239,7 @@ def draw_topology(G, pos, clusters, out_png):
 # --------------------------- cfg writing ---------------------------
 
 def write_all_cfgs(G: nx.Graph, outdir: str, only_prefix: str = None):
-    adj: Dict[str, Set[str]] = {n: set(G.neighbors(n)) for n in G.nodes()}
+    adj: dict[str, set[str]] = {n: set(G.neighbors(n)) for n in G.nodes()}
     count = 0
     for n, peers in adj.items():
         if only_prefix and not n.startswith(only_prefix):
@@ -270,7 +271,7 @@ def main():
         "hub_connect_fraction": 1.0
     }
     if args.config:
-        with open(args.config, "r", encoding="utf-8") as f:
+        with open(args.config, encoding="utf-8") as f:
             cfg.update(json.load(f))
 
     G, pos, clusters = build_topology(cfg)

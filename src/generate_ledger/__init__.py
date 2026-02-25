@@ -1,5 +1,5 @@
-from importlib.metadata import PackageNotFoundError, packages_distributions, metadata, version
 import importlib.resources
+from importlib.metadata import PackageNotFoundError, metadata, packages_distributions, version
 
 fallback_version = "0.0.0+dev"
 _top_pkg = __name__.split(".", 1)[0]

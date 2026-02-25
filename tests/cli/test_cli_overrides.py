@@ -1,8 +1,9 @@
-from typer.testing import CliRunner
-from generate_ledger.cli import app
-from generate_ledger import __app_name__
-
 from ruamel.yaml import YAML
+from typer.testing import CliRunner
+
+from generate_ledger import __app_name__
+from generate_ledger.cli import app
+
 yaml = YAML()
 
 runner = CliRunner()

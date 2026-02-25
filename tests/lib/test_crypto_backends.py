@@ -1,8 +1,6 @@
 """Tests for gl.crypto_backends — fast crypto backend selection and correctness."""
-import pytest
 from gl.crypto_backends import (
     Algorithm,
-    CryptoBackend,
     FallbackBackend,
     NativeEd25519Backend,
     backend_info,

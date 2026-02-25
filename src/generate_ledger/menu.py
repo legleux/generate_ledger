@@ -1,11 +1,11 @@
 from pathlib import Path
-import typer
-from InquirerPy import inquirer
 
+import typer
 from gl.accounts import generate_accounts, write_accounts_json
 from gl.amendments import fetch_amendments
-from gl.ledger_build import assemble_ledger_json, write_ledger_json, FeeSettings
+from gl.ledger_build import FeeSettings, assemble_ledger_json, write_ledger_json
 from gl.models.ledger import LedgerNamespace  # if you switched to constants, import that instead
+from InquirerPy import inquirer
 
 app = typer.Typer(help="Arrow-key interactive menu")
 
@@ -62,8 +62,8 @@ def run():
                 typer.echo(f"{en:<3} {ob:<3} {a.index}  {a.name}")
 
         elif choice == "compose_write":
-            from gl.config import ComposeConfig
-            from gl.compose import write_compose_file
+            from gl.compose import write_compose_file  # noqa: PLC0415
+            from gl.config import ComposeConfig  # noqa: PLC0415
 
             output_file = Path(inquirer.text(message="Compose output path:", default="compose.yaml").execute())
             validators = int(inquirer.number(message="Validators:", default=1).execute())

@@ -1,6 +1,8 @@
 from __future__ import annotations
+
+from collections.abc import Iterable, Mapping
 from pathlib import Path
-from typing import Any, Mapping, Iterable, Union, TypedDict
+from typing import Any, TypedDict
 
 # You already have this (string form). Keep it working:
 # CLI_DEFAULTS = { "compose-write": {"validators": "num_validators", ...}, ... }
@@ -45,7 +47,7 @@ CLI_DEFAULTS = {
 #     # "ledger-write": {...}
 # }
 
-def _normalize(mapping: Mapping[str, Union[str, OptMeta]]) -> dict[str, OptMeta]:
+def _normalize(mapping: Mapping[str, str | OptMeta]) -> dict[str, OptMeta]:
     out: dict[str, OptMeta] = {}
     for opt, val in mapping.items():
         if isinstance(val, str):

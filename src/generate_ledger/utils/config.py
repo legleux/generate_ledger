@@ -1,5 +1,7 @@
 from pathlib import Path
+
 from platformdirs import user_config_path
+
 
 def get_config_file(app_name: str, filename: str = "config.yaml") -> Path:
     """

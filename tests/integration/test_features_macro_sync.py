@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from gl.amendments import parse_features_macro, amendment_hash
+from gl.amendments import amendment_hash, parse_features_macro
 
 # ---------------------------------------------------------------------------
 # Locate the real features.macro

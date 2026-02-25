@@ -13,7 +13,7 @@ def ensure_parent_dirs(p: Path) -> None:
     p.parent.mkdir(parents=True, exist_ok=True)
 
 
-    def create_if_missing(p: Path, content: str = DEFAULT_TOML) -> bool:
+def create_if_missing(p: Path, content: str = DEFAULT_TOML) -> bool:
     """Create file if it doesn't exist. Returns True if created."""
     if p.exists():
         return False

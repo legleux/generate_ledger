@@ -14,13 +14,13 @@ import json
 import time
 from pathlib import Path
 
+from generate_ledger import ledger_builder
 from gl.accounts import AccountConfig, generate_accounts, write_accounts_json
 from gl.amendments import get_enabled_amendment_hashes
 from gl.crypto import sha512_half
 from gl.indices import owner_dir, ripple_state_index
 from gl.ledger import FeeConfig
 from gl.trustlines import TrustlineObjects
-from generate_ledger import ledger_builder
 
 
 def build_trustline_objects(

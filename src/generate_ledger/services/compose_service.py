@@ -1,7 +1,8 @@
 from pathlib import Path
-from ruamel.yaml import YAML
-from gl.utils import deep_merge
+
 from gl.compose import ComposeConfig
+from gl.utils import deep_merge
+
 
 def load_compose_config(
     profile_doc: dict | None = None,

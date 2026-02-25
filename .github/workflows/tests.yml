@@ -20,7 +20,7 @@ jobs:
     strategy:
       matrix:
         version: [12, 13, 14]
-        os: [bookworm, trixie, jammy, noble]
+        os: [bookworm, trixie]
     container: ghcr.io/astral-sh/uv:python3.${{ matrix.version }}-${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4

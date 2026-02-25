@@ -1,19 +1,18 @@
+import subprocess
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Iterable, List, Tuple
 
-import subprocess
 import xrpl
-
 
 # ---------- Key generation strategies ----------
 
 PublicKey = str
 ValidatorToken = str
-KeygenFn = Callable[[], Tuple[PublicKey, ValidatorToken]]
+KeygenFn = Callable[[], tuple[PublicKey, ValidatorToken]]
 
 
-def keygen_xrpl() -> Tuple[PublicKey, ValidatorToken]:
+def keygen_xrpl() -> tuple[PublicKey, ValidatorToken]:
     """Generate a validator public key and token using xrpl library."""
     seed = xrpl.core.keypairs.generate_seed(algorithm=xrpl.CryptoAlgorithm.SECP256K1)
     pub_hex, _ = xrpl.core.keypairs.derive_keypair(seed, validator=True)
@@ -22,7 +21,7 @@ def keygen_xrpl() -> Tuple[PublicKey, ValidatorToken]:
     return pub_key, token
 
 
-def keygen_docker(cmd: Iterable[str] = ("docker", "run", "legleux/vkt")) -> Tuple[PublicKey, ValidatorToken]:
+def keygen_docker(cmd: Iterable[str] = ("docker", "run", "legleux/vkt")) -> tuple[PublicKey, ValidatorToken]:
     """Generate a validator public key and token via external tool (stdout contract)."""
     res = subprocess.run(list(cmd), capture_output=True, text=True, check=True)
     public_key_string, token, *_ = res.stdout.split("\n\n")
@@ -51,10 +50,10 @@ class RippledConfigSpec:
     template_path: Path = Path(__file__).parent.resolve() / "rippled.cfg"
 
     # key generation strategy
-    keygen: KeygenFn = staticmethod(keygen_xrpl)
+    keygen: KeygenFn = staticmethod(keygen_xrpl)  # noqa: RUF009
 
     # amendment features to vote for
-    features: List[str] | None = None
+    features: list[str] | None = None
 
     # how long before amendments gain majority (e.g. "2 minutes")
     amendment_majority_time: str | None = None
@@ -92,7 +91,7 @@ class RippledConfigSpec:
         - For validator i, include all validators except self i.
         - For the rippled (non-validator) node: include all validators.
         """
-        lines: List[str] = []
+        lines: list[str] = []
         for j in range(self.num_validators):
             if who_index is not None and j == who_index:
                 continue
@@ -110,10 +109,10 @@ class RippledConfigSpec:
         template_str = self.template_path.read_text(encoding="utf-8")
 
         # Generate validator keys/tokens up front
-        vt: List[Tuple[PublicKey, ValidatorToken]] = [self.keygen() for _ in range(self.num_validators)]
+        vt: list[tuple[PublicKey, ValidatorToken]] = [self.keygen() for _ in range(self.num_validators)]
         validator_pubkeys = "\n[validators]\n" + "\n".join(pk for pk, _ in vt) + "\n"
 
-        nodes: List[NodeConfig] = []
+        nodes: list[NodeConfig] = []
 
         # validators
         for i in range(self.num_validators):
@@ -158,7 +157,7 @@ class RippledConfigSpec:
         Returns paths written for assertions/tests.
         """
         result = self.build()
-        written: List[Path] = []
+        written: list[Path] = []
         print(f"Writing rippled configs to {self.base_dir.resolve()}")
 
         for node in result.nodes:
@@ -180,14 +179,14 @@ class NodeConfig:
 
 @dataclass(slots=True)
 class BuildResult:
-    nodes: List[NodeConfig]
-    validator_pubkeys: List[PublicKey]
+    nodes: list[NodeConfig]
+    validator_pubkeys: list[PublicKey]
 
 
 @dataclass(slots=True)
 class WriteResult:
-    paths: List[Path]
-    validator_pubkeys: List[PublicKey]
+    paths: list[Path]
+    validator_pubkeys: list[PublicKey]
 
 
 if __name__ == "__main__":

@@ -1,10 +1,11 @@
 import json
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
+
+from pydantic import PositiveInt
 
 from gl.accounts import generate_accounts
 from gl.indices import account_root_index
-from pydantic import PositiveInt
 
 GENESIS_ADDRESS = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh"
 TOTAL_COINS_DROPS = int(100e9 * 1e6)  # 100 billion XRP in drops

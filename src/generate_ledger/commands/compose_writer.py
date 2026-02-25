@@ -1,8 +1,9 @@
 # src/generate_ledger/commands/compose_writer.py
 from __future__ import annotations
 
-from types import SimpleNamespace
 from pathlib import Path
+from types import SimpleNamespace
+
 import click
 
 # Library writer (your implementation that actually writes the file)

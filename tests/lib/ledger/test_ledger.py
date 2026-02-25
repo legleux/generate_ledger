@@ -1,6 +1,8 @@
-from generate_ledger.ledger import LedgerConfig, write_ledger_file, gen_ledger_state
-from pathlib import Path
+
 from gl.amendments import get_amendments
+
+from generate_ledger.ledger import LedgerConfig, gen_ledger_state, write_ledger_file
+
 
 def test_read_amendments_from_default_file(amendments):
     cfg = LedgerConfig()

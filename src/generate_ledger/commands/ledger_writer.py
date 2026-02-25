@@ -1,7 +1,10 @@
-from types import SimpleNamespace
-import click
 from pathlib import Path
+from types import SimpleNamespace
+
+import click
+
 from gl.ledger import write_ledger_file
+
 
 @click.command("ledger-write")
 @click.option("--output-file", type=click.Path(path_type=Path), show_default=True)

@@ -2,6 +2,7 @@
 from pathlib import Path
 
 import typer
+
 from gl.accounts import AccountConfig
 from gl.cli.parsers import ParseError, parse_amm_pool, parse_trustline
 from gl.ledger import AMMPoolConfig, ExplicitTrustline, LedgerConfig, write_ledger_file
@@ -153,7 +154,7 @@ def ledger(
     currency_list = [c.strip().upper() for c in currencies.split(",") if c.strip()]
 
     # Build config
-    from gl.ledger import FeeConfig
+    from gl.ledger import FeeConfig  # noqa: PLC0415
     config_kwargs: dict = dict(
         account_cfg=AccountConfig(
             num_accounts=num_accounts,

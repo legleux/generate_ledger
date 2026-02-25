@@ -1,7 +1,8 @@
 """Tests for generate_ledger.cli.auto.build_command_from_defaults."""
 
-import click
 from types import SimpleNamespace
+
+import click
 
 from generate_ledger.cli.auto import build_command_from_defaults
 from generate_ledger.compose import ComposeConfig

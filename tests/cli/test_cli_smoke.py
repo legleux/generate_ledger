@@ -1,6 +1,7 @@
 from typer.testing import CliRunner
-from generate_ledger.cli import app
+
 from generate_ledger import __app_name__
+from generate_ledger.cli import app
 
 runner = CliRunner()
 

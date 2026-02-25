@@ -1,19 +1,18 @@
-import json
 import random
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Iterable
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from gl.indices import ripple_state_index, owner_dir
-from gl.accounts import Account
-from xrpl import CryptoAlgorithm
-from xrpl.wallet import Wallet
-from xrpl.models.transactions import TrustSet
-from xrpl.core.binarycodec import encode_for_signing, encode
-from xrpl.core.keypairs import sign
 from binascii import unhexlify
+from dataclasses import dataclass
 
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from xrpl import CryptoAlgorithm
+from xrpl.core.binarycodec import encode, encode_for_signing
+from xrpl.core.keypairs import sign
+from xrpl.models.transactions import TrustSet
+from xrpl.wallet import Wallet
+
+from gl.accounts import Account
 from gl.crypto import sha512_half
+from gl.indices import owner_dir, ripple_state_index
+
 
 @dataclass
 class Trustline:
@@ -40,7 +39,9 @@ class TrustlineConfig(BaseSettings):
     ledger_seq: int = 2  # Ledger sequence for PreviousTxnLgrSeq
 
 
-def generate_trustset_txn_id(account: Account, wallet: Wallet, limit_amount: dict, sequence: int, fee: str = "123") -> str:
+def generate_trustset_txn_id(
+    account: Account, wallet: Wallet, limit_amount: dict, sequence: int, fee: str = "123",
+) -> str:
     """
     Generate a TrustSet transaction ID without submitting it.
 
@@ -81,7 +82,8 @@ def generate_trustline_objects(
     3. DirectoryNode for account_b
     """
     # Create wallets to generate transaction ID
-    algo = CryptoAlgorithm.ED25519 if getattr(account_b, "algorithm", "secp256k1") == "ed25519" else CryptoAlgorithm.SECP256K1
+    is_ed = getattr(account_b, "algorithm", "secp256k1") == "ed25519"
+    algo = CryptoAlgorithm.ED25519 if is_ed else CryptoAlgorithm.SECP256K1
     wallet_b = Wallet.from_seed(account_b.seed, algorithm=algo)
 
     # Prepare the limit amount for the TrustSet transaction
@@ -180,7 +182,8 @@ def generate_trustlines(accounts: list[Account], config: TrustlineConfig | None 
     if cfg.num_trustlines == 0:
         return []
 
-    if len(accounts) < 2:
+    MIN_ACCOUNTS = 2
+    if len(accounts) < MIN_ACCOUNTS:
         raise ValueError("Need at least 2 accounts to create trustlines")
 
     trustlines = []
@@ -194,7 +197,7 @@ def generate_trustlines(accounts: list[Account], config: TrustlineConfig | None 
         currency = random.choice(cfg.currencies)
 
         # Check if this trustline already exists
-        pair_key = tuple(sorted([account_a.address, account_b.address]) + [currency])
+        pair_key = (*sorted([account_a.address, account_b.address]), currency)
         if pair_key in created_pairs:
             continue
 
