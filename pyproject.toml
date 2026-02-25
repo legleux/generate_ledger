@@ -56,12 +56,45 @@ lint = [
 ]
 test = [
     "pytest>=8.4.1",
+    "pytest-cov>=6.0",
 ]
 
 [tool.pytest.ini_options]
 # minversion = "8.0"
 # addopts = "-q"
-addopts = "-rP"
+addopts = "-rP --cov --cov-report=term-missing:skip-covered"
 # addopts = "-rx"
 # addopts = "-qrP"
 # testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["src/generate_ledger"]
+
+omit = [
+    # Dead code: broken imports or unused stubs
+    "*/services/config_service.py",
+    "*/services/ledger_service.py",
+    "*/commands/config.py",
+    "*/utils/topo_net.py",
+    "*/utils/art_file.py",
+    "*/utils/paths.py",
+    # Legacy/unused entry points and modules
+    "*/gen.py",
+    "*/gen_mbp.py",
+    "*/ledger_main.py",
+    "*/main.py",
+    "*/menu.py",
+    "*/xxcli.py",
+    # Unused topology and model modules
+    "*/topo/*",
+    "*/models/ledger.py",
+    "*/models/ripplestate.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__",
+    "if TYPE_CHECKING",
+]

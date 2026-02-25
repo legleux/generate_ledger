@@ -7,7 +7,7 @@ def load_compose_config(
     profile_doc: dict | None = None,
     overrides: dict | None = None,
 ) -> ComposeConfig:
-    base = ComposeConfig().model_dump()
+    base = ComposeConfig().model_dump(exclude={"compose_yml"})
     merged = deep_merge(base, profile_doc or {})
     merged = deep_merge(merged, overrides or {})
     return ComposeConfig.model_validate(merged)
