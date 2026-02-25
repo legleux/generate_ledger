@@ -1,0 +1,28 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, develop, "ci/*"]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    container: ghcr.io/astral-sh/uv:python3.13-bookworm
+    steps:
+      - uses: actions/checkout@v4
+      - run: uv sync --group lint
+      - run: uv run ruff check .
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version: [12, 13, 14]
+        os: [bookworm, trixie, jammy, noble]
+    container: ghcr.io/astral-sh/uv:python3.${{ matrix.version }}-${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: uv sync --group dev
+      - run: uv run pytest
