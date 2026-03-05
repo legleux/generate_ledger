@@ -2,7 +2,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from pydantic import Field, computed_field
+from pydantic import BaseModel, Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from generate_ledger import ledger_builder
@@ -10,6 +10,7 @@ from gl import data_dir
 from gl.accounts import Account, AccountConfig, generate_accounts, write_accounts_json
 from gl.amendments import get_enabled_amendment_hashes
 from gl.amm import AMMSpec, Asset, generate_amm_objects
+from gl.gateways import GatewayConfig, generate_gateway_trustlines
 from gl.trustlines import TrustlineConfig, TrustlineObjects, generate_trustline_objects, generate_trustlines
 
 
@@ -37,6 +38,24 @@ class FeeConfig(BaseSettings):
             "ReserveIncrementDrops": self.reserve_increment_drops,
             "index": "4BC50C9B0D8515D3EAAE1E74B29A95804346C491EE1A95BF25E4AAB854A6A651",
         }
+
+class MPTHolderConfig(BaseModel):
+    """A single MPToken holder with a pre-funded balance."""
+    holder: str   # Account index ("0") or classic address
+    amount: str   # MPT amount as string (integer, no decimals)
+
+
+class MPTIssuanceConfig(BaseModel):
+    """Configuration for a single MPTokenIssuance ledger object."""
+    issuer: str                           # Account index or classic address
+    sequence: int = 1                     # Issuer's account sequence at issuance time
+    max_amount: str | None = None         # Maximum supply (uint64 string); None = unlimited
+    asset_scale: int | None = None        # Decimal precision (0-255)
+    transfer_fee: int | None = None       # Transfer fee in 1/10 basis points (0-50000)
+    metadata: str | None = None           # Hex-encoded metadata blob
+    flags: int = 0                        # MPTokenIssuance flags (e.g. tfMPTCanTransfer=0x40)
+    holders: list[MPTHolderConfig] = Field(default_factory=list)
+
 
 class AMMPoolConfig(BaseSettings):
     """Configuration for a single AMM pool."""
@@ -68,7 +87,9 @@ class LedgerConfig(BaseSettings):
     fee_cfg: FeeConfig = Field(default_factory=FeeConfig)
     trustlines: TrustlineConfig = Field(default_factory=TrustlineConfig)
     explicit_trustlines: list[ExplicitTrustline] = Field(default_factory=list)
+    gateway_cfg: GatewayConfig = Field(default_factory=GatewayConfig)
     amm_pools: list[AMMPoolConfig] = Field(default_factory=list)
+    mpt_issuances: list[MPTIssuanceConfig] = Field(default_factory=list)
 
     base_dir: Path = Field(default=Path("testnet")) # Override with env var GL_BASE_DIR
     ledger_state_json_file: str = "ledger_state.json"
@@ -209,12 +230,17 @@ def gen_ledger_state(config: LedgerConfig | None = None):
     )
     trustline_objects.extend(explicit_tl_objects)
 
+    # 3.5. Generate gateway topology trustlines
+    gateway_tl_objects, gateway_issuers = generate_gateway_trustlines(accounts, cfg.gateway_cfg)
+    trustline_objects.extend(gateway_tl_objects)
+
     # 4. Generate AMM pools and collect issuer addresses
     amm_specs = _build_amm_specs(cfg.amm_pools, accounts)
     amm_objects = [generate_amm_objects(spec) for spec in amm_specs] if amm_specs else None
 
-    # Collect issuers from AMM specs - they need lsfDefaultRipple flag
+    # Collect issuers that need lsfDefaultRipple flag (AMM issuers + gateways)
     amm_issuers: set[str] = set()
+    amm_issuers.update(gateway_issuers)
     for spec in amm_specs:
         if spec.asset1.issuer:
             amm_issuers.add(spec.asset1.issuer)

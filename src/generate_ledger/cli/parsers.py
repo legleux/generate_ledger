@@ -23,6 +23,8 @@ MIN_AMM_AMOUNTS = 2
 MIN_AMM_PARTS_WITH_FEE = 3
 MIN_AMM_PARTS_WITH_CREATOR = 4
 MAX_FEE_BPS = 1000
+MIN_MPT_PARTS = 2
+MAX_MPT_TRANSFER_FEE = 50000
 
 
 @dataclass
@@ -55,6 +57,18 @@ class ParsedAMMPool:
 class ParseError(ValueError):
     """Error parsing CLI format."""
     pass
+
+
+@dataclass
+class ParsedMPT:
+    """Parsed MPT issuance specification."""
+    issuer: str           # Account index or classic address
+    sequence: int         # Issuer account sequence for the issuance
+    max_amount: str | None = None   # Max supply as integer string; None = unlimited
+    flags: int = 0        # MPTokenIssuance flags
+    asset_scale: int | None = None  # Decimal scale (0-255)
+    transfer_fee: int | None = None  # Transfer fee in 1/10 basis points (0-50000)
+    metadata: str | None = None     # Hex-encoded metadata blob
 
 
 def parse_trustline(spec: str) -> ParsedTrustline:
@@ -295,4 +309,101 @@ def parse_amm_pool(spec: str) -> ParsedAMMPool:
         amount2=amount2,
         fee=fee,
         creator=creator,
+    )
+
+
+def parse_mpt_spec(spec: str) -> ParsedMPT:
+    """
+    Parse an MPT issuance specification.
+
+    Format: issuer:sequence[:max_amount[:flags[:asset_scale[:transfer_fee[:metadata]]]]]
+
+    Examples:
+        "0:2"                        - Account 0, sequence 2, unlimited supply
+        "0:2:1000000"                - Max supply of 1,000,000
+        "0:2:1000000:64"             - With flags=64 (tfMPTCanTransfer)
+        "0:2:1000000:64:2"           - With asset_scale=2 (2 decimal places)
+        "0:2:1000000:64:2:100"       - With transfer_fee=100 (10 basis points)
+        "0:2:1000000:64:2:100:48656C6C6F"  - With hex metadata
+
+    Args:
+        spec: Colon-delimited MPT issuance specification
+
+    Returns:
+        ParsedMPT with parsed fields
+
+    Raises:
+        ParseError: If the format is invalid
+    """
+    parts = spec.split(":")
+    if len(parts) < MIN_MPT_PARTS:
+        raise ParseError(
+            f"Invalid MPT format: '{spec}'. "
+            f"Expected at least 'issuer:sequence', got {len(parts)} part(s)"
+        )
+
+    issuer = parts[0]
+    if not issuer:
+        raise ParseError("issuer cannot be empty")
+
+    try:
+        sequence = int(parts[1])
+    except ValueError as e:
+        raise ParseError(f"Invalid sequence '{parts[1]}': must be an integer") from e
+    if sequence < 1:
+        raise ParseError(f"sequence must be >= 1, got {sequence}")
+
+    max_amount: str | None = None
+    if len(parts) > 2 and parts[2]:  # noqa: PLR2004
+        try:
+            val = int(parts[2])
+        except ValueError as e:
+            raise ParseError(f"Invalid max_amount '{parts[2]}': must be an integer") from e
+        if val <= 0:
+            raise ParseError(f"max_amount must be positive, got {val}")
+        max_amount = parts[2]
+
+    flags = 0
+    if len(parts) > 3 and parts[3]:  # noqa: PLR2004
+        try:
+            flags = int(parts[3])
+        except ValueError as e:
+            raise ParseError(f"Invalid flags '{parts[3]}': must be an integer") from e
+
+    asset_scale: int | None = None
+    if len(parts) > 4 and parts[4]:  # noqa: PLR2004
+        try:
+            asset_scale = int(parts[4])
+        except ValueError as e:
+            raise ParseError(f"Invalid asset_scale '{parts[4]}': must be an integer") from e
+        if not 0 <= asset_scale <= 255:  # noqa: PLR2004
+            raise ParseError(f"asset_scale must be 0-255, got {asset_scale}")
+
+    transfer_fee: int | None = None
+    if len(parts) > 5 and parts[5]:  # noqa: PLR2004
+        try:
+            transfer_fee = int(parts[5])
+        except ValueError as e:
+            raise ParseError(f"Invalid transfer_fee '{parts[5]}': must be an integer") from e
+        if not 0 <= transfer_fee <= MAX_MPT_TRANSFER_FEE:
+            raise ParseError(
+                f"transfer_fee must be 0-{MAX_MPT_TRANSFER_FEE}, got {transfer_fee}"
+            )
+
+    metadata: str | None = None
+    if len(parts) > 6 and parts[6]:  # noqa: PLR2004
+        metadata = parts[6].upper()
+        if len(metadata) % 2 != 0 or not all(c in "0123456789ABCDEF" for c in metadata):
+            raise ParseError(
+                f"metadata must be a valid hex string, got '{parts[6]}'"
+            )
+
+    return ParsedMPT(
+        issuer=issuer,
+        sequence=sequence,
+        max_amount=max_amount,
+        flags=flags,
+        asset_scale=asset_scale,
+        transfer_fee=transfer_fee,
+        metadata=metadata,
     )

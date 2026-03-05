@@ -19,6 +19,10 @@ from gl.indices import (
     amm_lpt_currency,
     currency_code_to_bytes,
     currency_code_to_hex,
+    make_mpt_id,
+    mpt_id_to_hex,
+    mpt_issuance_index,
+    mptoken_index,
     owner_dir,
     ripple_state_index,
 )
@@ -303,3 +307,115 @@ class TestAmmLptCurrency:
         lpt = amm_lpt_currency("USD", "EUR")
         assert lpt.startswith("03")
         assert len(lpt) == 40
+
+
+# ---------------------------------------------------------------------------
+# MPT index calculations
+# ---------------------------------------------------------------------------
+class TestMakeMptId:
+    def test_length(self):
+        mpt_id = make_mpt_id(1, ALICE_ADDRESS)
+        assert len(mpt_id) == 24  # 4-byte seq + 20-byte AccountID
+
+    def test_sequence_big_endian(self):
+        """First 4 bytes must be the sequence in big-endian order."""
+        mpt_id = make_mpt_id(1, ALICE_ADDRESS)
+        assert mpt_id[:4] == b"\x00\x00\x00\x01"
+
+    def test_sequence_2(self):
+        mpt_id = make_mpt_id(2, ALICE_ADDRESS)
+        assert mpt_id[:4] == b"\x00\x00\x00\x02"
+
+    def test_different_sequences_differ(self):
+        id1 = make_mpt_id(1, ALICE_ADDRESS)
+        id2 = make_mpt_id(2, ALICE_ADDRESS)
+        assert id1 != id2
+
+    def test_different_issuers_differ(self):
+        id1 = make_mpt_id(1, ALICE_ADDRESS)
+        id2 = make_mpt_id(1, BOB_ADDRESS)
+        assert id1 != id2
+
+    def test_deterministic(self):
+        assert make_mpt_id(1, ALICE_ADDRESS) == make_mpt_id(1, ALICE_ADDRESS)
+
+
+class TestMptIdToHex:
+    def test_length(self):
+        hex_id = mpt_id_to_hex(1, ALICE_ADDRESS)
+        assert len(hex_id) == 48  # 24 bytes = 48 hex chars
+
+    def test_uppercase(self):
+        hex_id = mpt_id_to_hex(1, ALICE_ADDRESS)
+        assert hex_id == hex_id.upper()
+
+    def test_matches_make_mpt_id(self):
+        raw = make_mpt_id(1, ALICE_ADDRESS)
+        assert mpt_id_to_hex(1, ALICE_ADDRESS) == raw.hex().upper()
+
+
+class TestMptIssuanceIndex:
+    def test_length(self):
+        idx = mpt_issuance_index(1, ALICE_ADDRESS)
+        assert len(idx) == 64
+
+    def test_uppercase_hex(self):
+        idx = mpt_issuance_index(1, ALICE_ADDRESS)
+        assert idx == idx.upper()
+        assert all(c in "0123456789ABCDEF" for c in idx)
+
+    def test_deterministic(self):
+        assert mpt_issuance_index(1, ALICE_ADDRESS) == mpt_issuance_index(1, ALICE_ADDRESS)
+
+    def test_different_sequence_different_index(self):
+        idx1 = mpt_issuance_index(1, ALICE_ADDRESS)
+        idx2 = mpt_issuance_index(2, ALICE_ADDRESS)
+        assert idx1 != idx2
+
+    def test_different_issuer_different_index(self):
+        idx1 = mpt_issuance_index(1, ALICE_ADDRESS)
+        idx2 = mpt_issuance_index(1, BOB_ADDRESS)
+        assert idx1 != idx2
+
+    def test_differs_from_account_index(self):
+        """MPTokenIssuance index should not collide with AccountRoot index."""
+        issuance_idx = mpt_issuance_index(1, ALICE_ADDRESS)
+        assert issuance_idx != ALICE_INDEX
+
+
+class TestMptokenIndex:
+    def test_length(self):
+        issuance_idx = mpt_issuance_index(1, ALICE_ADDRESS)
+        idx = mptoken_index(issuance_idx, BOB_ADDRESS)
+        assert len(idx) == 64
+
+    def test_uppercase_hex(self):
+        issuance_idx = mpt_issuance_index(1, ALICE_ADDRESS)
+        idx = mptoken_index(issuance_idx, BOB_ADDRESS)
+        assert idx == idx.upper()
+        assert all(c in "0123456789ABCDEF" for c in idx)
+
+    def test_deterministic(self):
+        issuance_idx = mpt_issuance_index(1, ALICE_ADDRESS)
+        idx1 = mptoken_index(issuance_idx, BOB_ADDRESS)
+        idx2 = mptoken_index(issuance_idx, BOB_ADDRESS)
+        assert idx1 == idx2
+
+    def test_different_holders_differ(self):
+        issuance_idx = mpt_issuance_index(1, ALICE_ADDRESS)
+        idx1 = mptoken_index(issuance_idx, BOB_ADDRESS)
+        idx2 = mptoken_index(issuance_idx, ALICE_ADDRESS)
+        assert idx1 != idx2
+
+    def test_different_issuances_differ(self):
+        issuance_idx1 = mpt_issuance_index(1, ALICE_ADDRESS)
+        issuance_idx2 = mpt_issuance_index(2, ALICE_ADDRESS)
+        idx1 = mptoken_index(issuance_idx1, BOB_ADDRESS)
+        idx2 = mptoken_index(issuance_idx2, BOB_ADDRESS)
+        assert idx1 != idx2
+
+    def test_differs_from_issuance_index(self):
+        """MPToken index must not collide with the MPTokenIssuance index."""
+        issuance_idx = mpt_issuance_index(1, ALICE_ADDRESS)
+        mptoken_idx = mptoken_index(issuance_idx, BOB_ADDRESS)
+        assert mptoken_idx != issuance_idx

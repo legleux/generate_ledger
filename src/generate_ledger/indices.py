@@ -4,7 +4,16 @@ import base58
 from xrpl.core.addresscodec import decode_classic_address, encode_classic_address
 
 from gl.crypto import ripesha, sha512_half  # re-exported
-from gl.models.namespace import ACCOUNT, AMM, OWNER_DIR, TRUST_LINE, NamespaceByte, ns_prefix
+from gl.models.namespace import (
+    ACCOUNT,
+    AMM,
+    MPTOKEN,
+    MPTOKEN_ISSUANCE,
+    OWNER_DIR,
+    TRUST_LINE,
+    NamespaceByte,
+    ns_prefix,
+)
 
 ACCOUNT_ID_BYTES = 20
 STANDARD_CURRENCY_LEN = 3
@@ -146,6 +155,57 @@ def amm_account_id(
     # Direct RIPESHA - no SHA512Half (matches rippled's ammAccountID)
     account_id = ripesha(preimage)
     return encode_classic_address(account_id)
+
+
+def make_mpt_id(sequence: int, issuer_address: str) -> bytes:
+    """
+    Create the 24-byte MPT issuance ID (MPTID).
+
+    Formula (from rippled makeMptID):
+        4-byte big-endian uint32 sequence + 20-byte AccountID
+
+    This ID is used as both the MPTokenIssuanceID field value (as 48-char hex)
+    and as the preimage for computing the MPTokenIssuance ledger index.
+    """
+    seq_bytes = struct.pack('>I', sequence)  # uint32 big-endian
+    account_bytes = _decode_account_id(issuer_address)
+    return seq_bytes + account_bytes
+
+
+def mpt_id_to_hex(sequence: int, issuer_address: str) -> str:
+    """Return the 48-char uppercase hex MPTID (used as MPTokenIssuanceID field)."""
+    return make_mpt_id(sequence, issuer_address).hex().upper()
+
+
+def mpt_issuance_index(sequence: int, issuer_address: str) -> str:
+    """
+    Compute the MPTokenIssuance ledger object index.
+
+    Formula (from rippled keylet::mptIssuance):
+        SHA512Half(0x007E + makeMptID(sequence, issuer))
+
+    Namespace: MPTOKEN_ISSUANCE = '~' = 0x7E
+    """
+    mpt_id = make_mpt_id(sequence, issuer_address)
+    return compute_index(MPTOKEN_ISSUANCE, mpt_id)
+
+
+def mptoken_index(issuance_index_hex: str, holder_address: str) -> str:
+    """
+    Compute the MPToken ledger object index for a specific holder.
+
+    Formula (from rippled keylet::mptoken):
+        SHA512Half(0x0074 + issuanceKey(32 bytes) + holderAccountID(20 bytes))
+
+    Namespace: MPTOKEN = 't' = 0x74
+    Args:
+        issuance_index_hex: The MPTokenIssuance object's ledger index (64-char hex).
+        holder_address:     The holder's classic address.
+    """
+    issuance_key = bytes.fromhex(issuance_index_hex)
+    holder_bytes = _decode_account_id(holder_address)
+    preimage = ns_prefix(MPTOKEN) + issuance_key + holder_bytes
+    return sha512_half(preimage).hex().upper()
 
 
 def amm_lpt_currency(currency1: str | None, currency2: str | None) -> str:

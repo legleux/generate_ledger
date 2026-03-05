@@ -5,7 +5,7 @@ from pathlib import Path
 from pydantic import PositiveInt
 
 from gl.accounts import generate_accounts
-from gl.indices import account_root_index
+from gl.indices import account_root_index, owner_dir
 
 GENESIS_ADDRESS = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh"
 TOTAL_COINS_DROPS = int(100e9 * 1e6)  # 100 billion XRP in drops
@@ -52,6 +52,28 @@ def account_root_entry(
     return entry
 
 LSF_DEFAULT_RIPPLE = 0x00800000  # Required for token issuers in AMM pools
+
+
+def _make_owner_dir_entry(address: str, object_index: str) -> dict:
+    """Create a minimal DirectoryNode entry for a single object in an account's owner dir."""
+    dir_idx = owner_dir(address)
+    return {
+        "Flags": 0,
+        "Indexes": [object_index],
+        "LedgerEntryType": "DirectoryNode",
+        "Owner": address,
+        "RootIndex": dir_idx,
+        "index": dir_idx,
+    }
+
+
+def _merge_dir_node(directory_nodes: dict, entry: dict) -> None:
+    """Merge a DirectoryNode entry into the consolidated directory_nodes dict."""
+    owner = entry["Owner"]
+    if owner in directory_nodes:
+        directory_nodes[owner]["Indexes"].extend(entry["Indexes"])
+    else:
+        directory_nodes[owner] = entry.copy()
 
 
 def assemble_ledger_json(
@@ -174,9 +196,19 @@ def assemble_ledger_json(
                 account_owner_counts[creator_owner] = account_owner_counts.get(creator_owner, 0) + 1
 
     # Add extra objects (from develop/ builders or other sources)
+    # MPTokenIssuance and MPToken objects get DirectoryNode entries and OwnerCount updates.
     if extra_objects:
         for obj in extra_objects:
             state.append(obj)
+            le_type = obj.get("LedgerEntryType")
+            if le_type == "MPTokenIssuance":
+                issuer = obj["Issuer"]
+                _merge_dir_node(directory_nodes, _make_owner_dir_entry(issuer, obj["index"]))
+                account_owner_counts[issuer] = account_owner_counts.get(issuer, 0) + 1
+            elif le_type == "MPToken":
+                holder = obj["Account"]
+                _merge_dir_node(directory_nodes, _make_owner_dir_entry(holder, obj["index"]))
+                account_owner_counts[holder] = account_owner_counts.get(holder, 0) + 1
 
     # Sort Indexes in each DirectoryNode (XRPL serialization requires sorted STVector256)
     for dn in directory_nodes.values():

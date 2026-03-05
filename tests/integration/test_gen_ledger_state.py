@@ -3,11 +3,14 @@ import pytest
 
 from gl.accounts import Account, AccountConfig
 from gl.amendments import amendment_hash, get_amendments_for_profile
+from gl.gateways import GatewayConfig
 from gl.ledger import (
     AMMPoolConfig,
     ExplicitTrustline,
     FeeConfig,
     LedgerConfig,
+    MPTHolderConfig,
+    MPTIssuanceConfig,
     _resolve_account_ref,
     _resolve_account_to_object,
     gen_ledger_state,
@@ -257,3 +260,234 @@ class TestAmendmentsInLedger:
         output_hashes = set(_get_amendments_entry(ledger)["Amendments"])
 
         assert amendment_hash("fixNFTokenNegOffer") in output_hashes
+
+
+# ---------------------------------------------------------------------------
+# Gateway topology through full pipeline
+# ---------------------------------------------------------------------------
+LSF_DEFAULT_RIPPLE = 0x00800000
+
+
+class TestGatewayTopology:
+    def test_gateway_trustlines_in_pipeline(self, tmp_path):
+        """Gateway trustlines flow through the full gen_ledger_state pipeline."""
+        cfg = LedgerConfig(
+            account_cfg=AccountConfig(num_accounts=10),
+            gateway_cfg=GatewayConfig(
+                num_gateways=2,
+                assets_per_gateway=2,
+                currencies=["USD", "EUR", "GBP", "JPY"],
+                coverage=1.0,
+                connectivity=1.0,
+                seed=42,
+            ),
+            base_dir=tmp_path,
+        )
+        ledger = gen_ledger_state(cfg)
+        state = ledger["ledger"]["accountState"]
+
+        rs_entries = [e for e in state if e.get("LedgerEntryType") == "RippleState"]
+        # 8 regular accounts * 2 gateways * 2 assets = 32
+        assert len(rs_entries) == 32
+
+    def test_gateway_accounts_have_default_ripple(self, tmp_path):
+        """Gateway accounts get lsfDefaultRipple flag."""
+        cfg = LedgerConfig(
+            account_cfg=AccountConfig(num_accounts=6),
+            gateway_cfg=GatewayConfig(
+                num_gateways=2,
+                assets_per_gateway=1,
+                currencies=["USD", "EUR"],
+                coverage=1.0,
+                connectivity=1.0,
+                seed=1,
+            ),
+            base_dir=tmp_path,
+        )
+        ledger = gen_ledger_state(cfg)
+        state = ledger["ledger"]["accountState"]
+        account_roots = [e for e in state if e.get("LedgerEntryType") == "AccountRoot"]
+
+        # Gateway accounts (first 2 generated) should have lsfDefaultRipple
+        # Skip genesis (index 0 in state) — gateways are in the generated accounts
+        flagged = [ar for ar in account_roots if ar["Flags"] & LSF_DEFAULT_RIPPLE]
+        assert len(flagged) == 2
+
+    def test_gateways_plus_random_trustlines(self, tmp_path):
+        """Gateway and random trustlines coexist."""
+        cfg = LedgerConfig(
+            account_cfg=AccountConfig(num_accounts=10),
+            trustlines=TrustlineConfig(num_trustlines=3, currencies=["JPY"]),
+            gateway_cfg=GatewayConfig(
+                num_gateways=2,
+                assets_per_gateway=1,
+                currencies=["USD", "EUR"],
+                coverage=1.0,
+                connectivity=1.0,
+                seed=42,
+            ),
+            base_dir=tmp_path,
+        )
+        ledger = gen_ledger_state(cfg)
+        state = ledger["ledger"]["accountState"]
+
+        rs_entries = [e for e in state if e.get("LedgerEntryType") == "RippleState"]
+        # 8 regular * 2 gw * 1 asset = 16 gateway TLs + up to 3 random
+        assert len(rs_entries) >= 16
+
+    def test_directory_consolidation(self, tmp_path):
+        """Each account has at most one DirectoryNode after consolidation."""
+        cfg = LedgerConfig(
+            account_cfg=AccountConfig(num_accounts=6),
+            gateway_cfg=GatewayConfig(
+                num_gateways=2,
+                assets_per_gateway=2,
+                currencies=["USD", "EUR", "GBP", "JPY"],
+                coverage=1.0,
+                connectivity=1.0,
+                seed=1,
+            ),
+            base_dir=tmp_path,
+        )
+        ledger = gen_ledger_state(cfg)
+        state = ledger["ledger"]["accountState"]
+
+        dir_nodes = [e for e in state if e.get("LedgerEntryType") == "DirectoryNode"]
+        owners = [dn["Owner"] for dn in dir_nodes]
+        # No duplicate owners — consolidation is working
+        assert len(owners) == len(set(owners))
+
+
+class TestMPTIntegration:
+    def test_mpt_issuance_appears_in_ledger(self, tmp_path):
+        """MPTokenIssuance object is created when mpt_issuances is configured."""
+        cfg = LedgerConfig(
+            account_cfg=AccountConfig(num_accounts=3),
+            mpt_issuances=[MPTIssuanceConfig(issuer="0", sequence=2)],
+            base_dir=tmp_path,
+        )
+        ledger = gen_ledger_state(cfg)
+        state = ledger["ledger"]["accountState"]
+        issuances = [e for e in state if e.get("LedgerEntryType") == "MPTokenIssuance"]
+        assert len(issuances) == 1
+        assert issuances[0]["Sequence"] == 2
+
+    def test_mpt_issuer_owner_count_incremented(self, tmp_path):
+        """Issuer's OwnerCount is incremented by 1 for each MPTokenIssuance."""
+        cfg = LedgerConfig(
+            account_cfg=AccountConfig(num_accounts=3),
+            mpt_issuances=[MPTIssuanceConfig(issuer="0", sequence=2)],
+            base_dir=tmp_path,
+        )
+        ledger = gen_ledger_state(cfg)
+        state = ledger["ledger"]["accountState"]
+
+        issuances = [e for e in state if e.get("LedgerEntryType") == "MPTokenIssuance"]
+        issuer_address = issuances[0]["Issuer"]
+
+        issuer_account = next(
+            e for e in state
+            if e.get("LedgerEntryType") == "AccountRoot" and e["Account"] == issuer_address
+        )
+        assert issuer_account["OwnerCount"] == 1
+
+    def test_mpt_issuer_directory_created(self, tmp_path):
+        """A DirectoryNode is created for the issuer containing the MPTokenIssuance index."""
+        cfg = LedgerConfig(
+            account_cfg=AccountConfig(num_accounts=3),
+            mpt_issuances=[MPTIssuanceConfig(issuer="0", sequence=2)],
+            base_dir=tmp_path,
+        )
+        ledger = gen_ledger_state(cfg)
+        state = ledger["ledger"]["accountState"]
+
+        issuances = [e for e in state if e.get("LedgerEntryType") == "MPTokenIssuance"]
+        issuer_addr = issuances[0]["Issuer"]
+        issuance_idx = issuances[0]["index"]
+
+        dir_nodes = [
+            e for e in state
+            if e.get("LedgerEntryType") == "DirectoryNode" and e.get("Owner") == issuer_addr
+        ]
+        assert len(dir_nodes) == 1
+        assert issuance_idx in dir_nodes[0]["Indexes"]
+
+    def test_mpt_with_holder(self, tmp_path):
+        """MPToken object created for a holder, with correct OwnerCount."""
+        cfg = LedgerConfig(
+            account_cfg=AccountConfig(num_accounts=3),
+            mpt_issuances=[MPTIssuanceConfig(
+                issuer="0",
+                sequence=2,
+                holders=[MPTHolderConfig(holder="1", amount="500")],
+            )],
+            base_dir=tmp_path,
+        )
+        ledger = gen_ledger_state(cfg)
+        state = ledger["ledger"]["accountState"]
+
+        mptokens = [e for e in state if e.get("LedgerEntryType") == "MPToken"]
+        assert len(mptokens) == 1
+        assert mptokens[0]["MPTAmount"] == "500"
+
+        # Holder's OwnerCount should be 1
+        holder_addr = mptokens[0]["Account"]
+        holder_account = next(
+            e for e in state
+            if e.get("LedgerEntryType") == "AccountRoot" and e["Account"] == holder_addr
+        )
+        assert holder_account["OwnerCount"] == 1
+
+    def test_mpt_outstanding_amount_reflects_holders(self, tmp_path):
+        """OutstandingAmount on issuance is sum of all holder amounts."""
+        cfg = LedgerConfig(
+            account_cfg=AccountConfig(num_accounts=3),
+            mpt_issuances=[MPTIssuanceConfig(
+                issuer="0",
+                sequence=2,
+                holders=[
+                    MPTHolderConfig(holder="1", amount="300"),
+                    MPTHolderConfig(holder="2", amount="200"),
+                ],
+            )],
+            base_dir=tmp_path,
+        )
+        ledger = gen_ledger_state(cfg)
+        state = ledger["ledger"]["accountState"]
+
+        issuances = [e for e in state if e.get("LedgerEntryType") == "MPTokenIssuance"]
+        assert issuances[0]["OutstandingAmount"] == "500"
+
+    def test_multiple_mpt_issuances(self, tmp_path):
+        """Multiple MPTokenIssuance objects can coexist; no index collisions."""
+        cfg = LedgerConfig(
+            account_cfg=AccountConfig(num_accounts=3),
+            mpt_issuances=[
+                MPTIssuanceConfig(issuer="0", sequence=2),
+                MPTIssuanceConfig(issuer="0", sequence=3),
+                MPTIssuanceConfig(issuer="1", sequence=2),
+            ],
+            base_dir=tmp_path,
+        )
+        ledger = gen_ledger_state(cfg)
+        state = ledger["ledger"]["accountState"]
+
+        issuances = [e for e in state if e.get("LedgerEntryType") == "MPTokenIssuance"]
+        assert len(issuances) == 3
+        indices = [i["index"] for i in issuances]
+        assert len(set(indices)) == 3  # all unique
+
+    def test_mpt_no_extra_dir_nodes_for_non_issuers(self, tmp_path):
+        """Accounts with no MPT objects don't get spurious DirectoryNodes."""
+        cfg = LedgerConfig(
+            account_cfg=AccountConfig(num_accounts=3),
+            mpt_issuances=[MPTIssuanceConfig(issuer="0", sequence=2)],
+            base_dir=tmp_path,
+        )
+        ledger = gen_ledger_state(cfg)
+        state = ledger["ledger"]["accountState"]
+
+        dir_nodes = [e for e in state if e.get("LedgerEntryType") == "DirectoryNode"]
+        owners = {dn["Owner"] for dn in dir_nodes}
+        # Only the issuer (account 0) should have a directory, not accounts 1 and 2
+        assert len(owners) == 1

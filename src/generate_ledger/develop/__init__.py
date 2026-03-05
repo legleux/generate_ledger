@@ -21,7 +21,7 @@ from typing import Any
 # Uncomment entries as implementations are added.
 _DEVELOP_OBJECTS: list[tuple[str, str, str, str]] = [
     # (name, module_path, builder_function, required_amendment)
-    # ("mpt", "gl.develop.mpt", "generate_mpt_objects", "MPTokensV1"),
+    ("mpt", "gl.develop.mpt", "generate_mpt_objects", "MPTokensV1"),
     # ("vault", "gl.develop.vault", "generate_vault_objects", "SingleAssetVault"),
 ]
 

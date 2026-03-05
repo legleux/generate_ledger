@@ -63,6 +63,22 @@ class TestLedgerCliCommand:
         ])
         assert result.exit_code == 0, result.output
 
+    def test_gateways_adds_to_regular_accounts(self, tmp_path):
+        """With -n 3 --gateways 2, total should be 5 accounts (3 regular + 2 gateways)."""
+        outdir = tmp_path / "out"
+        result = runner.invoke(app, [
+            "ledger", "ledger", "-n", "3", "-o", str(outdir),
+            "--gateways", "2",
+            "--assets-per-gateway", "1",
+            "--gateway-currencies", "USD",
+        ])
+        assert result.exit_code == 0, result.output
+        data = json.loads((outdir / "ledger.json").read_text())
+        state = data["ledger"]["accountState"]
+        genesis = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh"
+        accts = [e for e in state if e.get("LedgerEntryType") == "AccountRoot" and e["Account"] != genesis]
+        assert len(accts) == 5  # 3 regular + 2 gateways
+
     def test_custom_fees(self, tmp_path):
         outdir = tmp_path / "out"
         result = runner.invoke(app, [

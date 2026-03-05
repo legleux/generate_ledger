@@ -20,8 +20,8 @@ def auto(
     ),
     # Ledger: accounts
     num_accounts: int = typer.Option(
-        40, "--num-accounts", "-n",
-        help="Number of accounts to generate.",
+        40, "--accounts", "-n",
+        help="Number of regular (non-gateway) accounts. Total = accounts + gateways.",
     ),
     balance: str = typer.Option(
         str(100_000_000_000), "--balance", "-b",
@@ -35,6 +35,32 @@ def auto(
     trustline: list[str] | None = typer.Option(
         None, "--trustline", "-t",
         help="Explicit trustline spec: 'acct1:acct2:currency:limit'. Repeatable.",
+    ),
+    # Ledger: gateway topology
+    gateways: int = typer.Option(
+        0, "--gateways",
+        help="Number of gateway accounts (first N accounts become gateways). 0 = disabled.",
+    ),
+    assets_per_gateway: int = typer.Option(
+        4, "--assets-per-gateway",
+        help="Number of unique assets each gateway issues.",
+    ),
+    gateway_currencies: str = typer.Option(
+        "USD,EUR,GBP,JPY,BTC,ETH,CNY,MXN,CAD,AUD,CHF,KRW,SGD,HKD,NOK,SEK",
+        "--gateway-currencies",
+        help="Comma-separated currency pool for gateway assets (distributed round-robin).",
+    ),
+    gateway_coverage: float = typer.Option(
+        0.5, "--gateway-coverage",
+        help="Fraction of non-gateway accounts that receive trustlines (0.0-1.0).",
+    ),
+    gateway_connectivity: float = typer.Option(
+        0.5, "--gateway-connectivity",
+        help="Fraction of gateways each trustline-holding account connects to (0.0-1.0).",
+    ),
+    gateway_seed: int | None = typer.Option(
+        None, "--gateway-seed",
+        help="RNG seed for reproducible gateway topology.",
     ),
     # Ledger: AMM
     amm_pool: list[str] | None = typer.Option(
@@ -134,14 +160,25 @@ def auto(
             except ParseError as e:
                 raise typer.BadParameter(str(e)) from e
 
+    from gl.gateways import GatewayConfig  # noqa: PLC0415
+    gateway_currency_list = [c.strip().upper() for c in gateway_currencies.split(",") if c.strip()]
+
     ledger_config = LedgerConfig(
-        account_cfg=AccountConfig(num_accounts=num_accounts, balance=balance, algo=algo),
+        account_cfg=AccountConfig(num_accounts=num_accounts + gateways, balance=balance, algo=algo),
         fee_cfg=FeeConfig(
             base_fee_drops=base_fee,
             reserve_base_drops=reserve_base,
             reserve_increment_drops=reserve_inc,
         ),
         explicit_trustlines=explicit_trustlines,
+        gateway_cfg=GatewayConfig(
+            num_gateways=gateways,
+            assets_per_gateway=assets_per_gateway,
+            currencies=gateway_currency_list,
+            coverage=gateway_coverage,
+            connectivity=gateway_connectivity,
+            seed=gateway_seed,
+        ),
         amm_pools=amm_pools,
         base_dir=output_dir,
         amendment_profile=amendment_profile,

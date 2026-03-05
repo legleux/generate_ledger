@@ -20,7 +20,9 @@
       "Bash(cd /home/emel/dev/Ripple/generate_ledger/testnet && docker compose up -d 2>&1)",
       "Bash(cd /home/emel/dev/Ripple/generate_ledger && rm -rf testnet && time uv run gen auto -o testnet -v 5 -n 5000 2>&1)",
       "Bash(ls:*)",
-      "Bash(pytest:*)"
+      "Bash(pytest:*)",
+      "Bash(ruff check:*)",
+      "Bash(gen ledger:*)"
     ]
   }
 }

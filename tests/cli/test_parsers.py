@@ -4,6 +4,7 @@ import pytest
 from gl.cli.parsers import (
     ParseError,
     parse_amm_pool,
+    parse_mpt_spec,
     parse_trustline,
 )
 
@@ -156,3 +157,97 @@ class TestParseAMMPool:
         addr = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh"
         result = parse_amm_pool(f"XRP:USD:{addr}:1000:1000")
         assert result.asset2.issuer == addr
+
+
+# ---------------------------------------------------------------------------
+# parse_mpt_spec
+# ---------------------------------------------------------------------------
+class TestParseMptSpec:
+    def test_minimal(self):
+        result = parse_mpt_spec("0:2")
+        assert result.issuer == "0"
+        assert result.sequence == 2
+        assert result.max_amount is None
+        assert result.flags == 0
+        assert result.asset_scale is None
+        assert result.transfer_fee is None
+        assert result.metadata is None
+
+    def test_with_max_amount(self):
+        result = parse_mpt_spec("0:2:1000000")
+        assert result.max_amount == "1000000"
+
+    def test_with_flags(self):
+        result = parse_mpt_spec("0:2:1000000:64")
+        assert result.flags == 64
+
+    def test_with_asset_scale(self):
+        result = parse_mpt_spec("0:2:1000000:0:2")
+        assert result.asset_scale == 2
+
+    def test_with_transfer_fee(self):
+        result = parse_mpt_spec("0:2:1000000:0:0:100")
+        assert result.transfer_fee == 100
+
+    def test_with_metadata(self):
+        result = parse_mpt_spec("0:2:1000000:0:0:0:48656C6C6F")
+        assert result.metadata == "48656C6C6F"
+
+    def test_metadata_uppercased(self):
+        result = parse_mpt_spec("0:2:::0:0:48656c6c6f")
+        assert result.metadata == "48656C6C6F"
+
+    def test_address_as_issuer(self):
+        addr = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh"
+        result = parse_mpt_spec(f"{addr}:1")
+        assert result.issuer == addr
+
+    def test_missing_sequence_raises(self):
+        with pytest.raises(ParseError, match="at least"):
+            parse_mpt_spec("0")
+
+    def test_empty_string_raises(self):
+        with pytest.raises(ParseError):
+            parse_mpt_spec("")
+
+    def test_invalid_sequence_raises(self):
+        with pytest.raises(ParseError, match="sequence"):
+            parse_mpt_spec("0:abc")
+
+    def test_sequence_zero_raises(self):
+        with pytest.raises(ParseError, match="sequence must be"):
+            parse_mpt_spec("0:0")
+
+    def test_invalid_max_amount_raises(self):
+        with pytest.raises(ParseError, match="max_amount"):
+            parse_mpt_spec("0:1:notanumber")
+
+    def test_max_amount_zero_raises(self):
+        with pytest.raises(ParseError, match="max_amount must be positive"):
+            parse_mpt_spec("0:1:0")
+
+    def test_invalid_asset_scale_raises(self):
+        with pytest.raises(ParseError, match="asset_scale"):
+            parse_mpt_spec("0:1:::abc")
+
+    def test_asset_scale_out_of_range_raises(self):
+        with pytest.raises(ParseError, match="asset_scale must be 0-255"):
+            parse_mpt_spec("0:1:::256")
+
+    def test_transfer_fee_out_of_range_raises(self):
+        with pytest.raises(ParseError, match="transfer_fee must be"):
+            parse_mpt_spec("0:1::::50001")
+
+    def test_invalid_metadata_raises(self):
+        with pytest.raises(ParseError, match="metadata"):
+            parse_mpt_spec("0:1:::::ZZZZ")
+
+    def test_odd_length_metadata_raises(self):
+        with pytest.raises(ParseError, match="metadata"):
+            parse_mpt_spec("0:1:::::ABC")
+
+    def test_empty_optional_fields_use_defaults(self):
+        """Empty colon-separated slots between required fields use defaults."""
+        result = parse_mpt_spec("0:1::64")
+        assert result.max_amount is None
+        assert result.flags == 64

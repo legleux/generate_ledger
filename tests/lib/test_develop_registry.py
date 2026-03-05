@@ -14,23 +14,27 @@ class TestDevelopRegistry:
         builders = get_develop_builders()
         assert isinstance(builders, dict)
 
-    def test_empty_when_registry_empty(self):
-        """With all entries commented out, registry returns empty dict."""
+    def test_mpt_builder_registered(self):
+        """MPT builder should now be registered (MPTokensV1 implemented)."""
         from gl.develop import get_develop_builders
         builders = get_develop_builders()
-        # All entries are currently commented out
-        assert len(builders) == 0
+        assert "mpt" in builders
+        assert callable(builders["mpt"]["builder"])
+        assert builders["mpt"]["required_amendment"] == "MPTokensV1"
 
-    def test_stubs_exist(self):
-        """Placeholder modules should be importable."""
+    def test_modules_importable(self):
+        """Developed modules should be importable."""
         from gl.develop import mpt, vault
         assert hasattr(mpt, "generate_mpt_objects")
         assert hasattr(vault, "generate_vault_objects")
 
-    def test_mpt_stub_raises_not_implemented(self):
+    def test_mpt_builder_callable(self):
+        """MPT builder accepts accounts/config kwargs and returns a list."""
         from gl.develop.mpt import generate_mpt_objects
-        with pytest.raises(NotImplementedError):
-            generate_mpt_objects(accounts=[], config=None)
+        from gl.ledger import LedgerConfig
+        cfg = LedgerConfig(mpt_issuances=[])
+        result = generate_mpt_objects(accounts=[], config=cfg)
+        assert result == []
 
     def test_vault_stub_raises_not_implemented(self):
         from gl.develop.vault import generate_vault_objects
