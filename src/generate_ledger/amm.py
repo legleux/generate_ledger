@@ -6,6 +6,7 @@ Generates AMM pools with:
 - AMM pseudo-account (AccountRoot)
 - DirectoryNode for the AMM account
 """
+
 import math
 from binascii import unhexlify
 from dataclasses import dataclass
@@ -17,17 +18,27 @@ from xrpl.core.keypairs import sign
 from xrpl.models.transactions import AMMCreate
 from xrpl.wallet import Wallet
 
-from gl.accounts import Account
-from gl.crypto import sha512_half
-from gl.indices import amm_account_id, amm_index, amm_lpt_currency, owner_dir, ripple_state_index
+from generate_ledger.accounts import Account
+from generate_ledger.constants import (
+    AMM_ACCOUNT_FLAGS,
+    LSF_AMM_NODE,
+    LSF_DEFAULT_RIPPLE,  # noqa: F401 (re-exported for backward compat)
+    LSF_DEPOSIT_AUTH,  # noqa: F401 (re-exported for backward compat)
+    LSF_DISABLE_MASTER,  # noqa: F401 (re-exported for backward compat)
+    TXN_PREFIX,
+)
+from generate_ledger.crypto import sha512_half
+from generate_ledger.indices import amm_account_id, amm_index, amm_lpt_currency, owner_dir, ripple_state_index
+from generate_ledger.trustlines import build_directory_node, build_ripple_state, order_low_high
 
 
 @dataclass
 class Asset:
     """Represents an asset in an AMM pool."""
+
     currency: str | None  # None for XRP
-    issuer: str | None    # None for XRP
-    amount: str           # Amount as string (drops for XRP, value for issued)
+    issuer: str | None  # None for XRP
+    amount: str  # Amount as string (drops for XRP, value for issued)
 
     def is_xrp(self) -> bool:
         return self.currency is None and self.issuer is None
@@ -55,6 +66,7 @@ class Asset:
 @dataclass
 class AMMSpec:
     """Specification for an AMM pool to create."""
+
     asset1: Asset
     asset2: Asset
     trading_fee: int = 500  # Basis points (500 = 0.5%)
@@ -64,10 +76,11 @@ class AMMSpec:
 @dataclass
 class AMMObjects:
     """Complete set of ledger objects for an AMM."""
-    amm: dict                              # AMM ledger object
-    amm_account: dict                      # AMM pseudo-account (AccountRoot)
-    directory_node: dict                   # DirectoryNode for AMM account
-    lp_token_trustline: dict | None = None # RippleState for LP tokens (if creator specified)
+
+    amm: dict  # AMM ledger object
+    amm_account: dict  # AMM pseudo-account (AccountRoot)
+    directory_node: dict  # DirectoryNode for AMM account
+    lp_token_trustline: dict | None = None  # RippleState for LP tokens (if creator specified)
     creator_lp_directory: dict | None = None  # DirectoryNode for creator's LP token
     asset_trustlines: list[dict] | None = None  # RippleState for deposited tokens (AMM <-> issuer)
     issuer_directories: list[dict] | None = None  # DirectoryNode entries for issuers (for asset trustlines)
@@ -75,21 +88,10 @@ class AMMObjects:
 
 class AMMConfig(BaseSettings):
     """Configuration for AMM generation."""
+
     model_config = SettingsConfigDict(env_prefix="GL_AMM_", env_file=".env")
 
     ledger_seq: int = 2  # Ledger sequence for PreviousTxnLgrSeq
-
-
-# Account flags for AMM pseudo-account
-LSF_DISABLE_MASTER = 0x00100000
-LSF_DEFAULT_RIPPLE = 0x00800000
-LSF_DEPOSIT_AUTH = 0x01000000
-AMM_ACCOUNT_FLAGS = LSF_DISABLE_MASTER | LSF_DEFAULT_RIPPLE | LSF_DEPOSIT_AUTH
-
-# RippleState (trustline) flags
-# IMPORTANT: lsfAMMNode is 0x01000000, NOT 0x02000000!
-# 0x02000000 is lsfLowDeepFreeze which would freeze the trustline!
-LSF_AMM_NODE = 0x01000000
 
 
 def calculate_lp_tokens(asset1: Asset, asset2: Asset) -> str:
@@ -151,7 +153,6 @@ def generate_ammcreate_txn_id(
     tx_blob = encode(signed_dict)
 
     # Compute transaction ID
-    TXN_PREFIX = bytes.fromhex("54584E00")  # "TXN\0"
     txn_id = sha512_half(TXN_PREFIX + unhexlify(tx_blob)).hex().upper()
     return txn_id
 
@@ -178,8 +179,10 @@ def generate_amm_objects(
 
     # Calculate AMM index
     idx = amm_index(
-        asset1.issuer, asset1.currency,
-        asset2.issuer, asset2.currency,
+        asset1.issuer,
+        asset1.currency,
+        asset2.issuer,
+        asset2.currency,
     )
 
     # Derive AMM account address (for genesis, parent_hash is all zeros)
@@ -193,9 +196,7 @@ def generate_amm_objects(
 
     # Generate transaction ID if we have a creator
     if spec.creator:
-        txn_id = generate_ammcreate_txn_id(
-            spec.creator, asset1, asset2, spec.trading_fee
-        )
+        txn_id = generate_ammcreate_txn_id(spec.creator, asset1, asset2, spec.trading_fee)
     else:
         # Use a placeholder for genesis without specific creator
         txn_id = "0" * 64
@@ -271,7 +272,8 @@ def generate_amm_objects(
     }
 
     # Calculate AccountRoot index for AMM account
-    from gl.indices import account_root_index  # noqa: PLC0415
+    from generate_ledger.indices import account_root_index  # noqa: PLC0415
+
     amm_account_obj["index"] = account_root_index(amm_account_address)
 
     # Build DirectoryNode for AMM account
@@ -299,68 +301,44 @@ def generate_amm_objects(
             lpt_currency,
         )
 
-        # Determine high/low accounts (lexicographic order)
-        amm_bytes = amm_account_address.encode()
-        creator_bytes = spec.creator.address.encode()
-        if amm_bytes < creator_bytes:
-            lo_address, hi_address = amm_account_address, spec.creator.address
-            # Creator is high, so balance is negative (creator holds tokens)
-            balance_value = f"-{lp_token_amount}"
+        lo_address, hi_address = order_low_high(amm_account_address, spec.creator.address)
+        # Balance sign: positive if AMM is lo (AMM holds tokens), negative if creator is lo
+        if lo_address == amm_account_address:
+            balance_value = f"-{lp_token_amount}"  # Creator is hi, holds tokens
         else:
-            lo_address, hi_address = spec.creator.address, amm_account_address
-            # Creator is low, so balance is positive (creator holds tokens)
-            balance_value = lp_token_amount
+            balance_value = lp_token_amount  # Creator is lo, holds tokens
 
-        # Build LP token RippleState (trustline)
-        # Note: AMM trustlines have 0 credit limit and lsfAMMNode flag
-        LSF_AMM_NODE = 0x01000000  # lsfAMMNode (NOT 0x02000000 which is lsfLowDeepFreeze!)
-        lp_token_trustline = {
-            "Balance": {
-                "currency": lpt_currency,
-                "issuer": "rrrrrrrrrrrrrrrrrrrrBZbvji",  # Neutral issuer for balance
-                "value": balance_value,
-            },
-            "Flags": LSF_AMM_NODE,  # lsfAMMNode flag
-            "HighLimit": {
-                "currency": lpt_currency,
-                "issuer": hi_address,
-                "value": "0",  # AMM trustlines have 0 limit
-            },
-            "HighNode": "0",
-            "LedgerEntryType": "RippleState",
-            "LowLimit": {
-                "currency": lpt_currency,
-                "issuer": lo_address,
-                "value": "0",  # AMM trustlines have 0 limit
-            },
-            "LowNode": "0",
-            "PreviousTxnID": txn_id,
-            "PreviousTxnLgrSeq": ledger_seq,
-            "index": lpt_rs_index,
-        }
+        # Build LP token RippleState (AMM trustlines have 0 limit and lsfAMMNode flag)
+        lp_token_trustline = build_ripple_state(
+            currency=lpt_currency,
+            lo_address=lo_address,
+            hi_address=hi_address,
+            balance_value=balance_value,
+            lo_limit="0",
+            hi_limit="0",
+            flags=LSF_AMM_NODE,
+            txn_id=txn_id,
+            ledger_seq=ledger_seq,
+            index=lpt_rs_index,
+        )
 
         # Add LP token trustline index to AMM account's directory
         directory_node["Indexes"].append(lpt_rs_index)
 
         # Build DirectoryNode for creator's LP token holding
-        creator_root_index = owner_dir(spec.creator.address)
-        creator_lp_directory = {
-            "Flags": 0,
-            "Indexes": [lpt_rs_index],
-            "LedgerEntryType": "DirectoryNode",
-            "Owner": spec.creator.address,
-            "PreviousTxnID": txn_id,
-            "PreviousTxnLgrSeq": ledger_seq,
-            "RootIndex": creator_root_index,
-            "index": creator_root_index,
-        }
+        creator_lp_directory = build_directory_node(
+            index=owner_dir(spec.creator.address),
+            entries=[lpt_rs_index],
+            owner=spec.creator.address,
+            txn_id=txn_id,
+            ledger_seq=ledger_seq,
+        )
 
         # Note: AMM account OwnerCount stays at 1 (just the AMM object)
         # The LP trustline reserve is on the LP holder's (creator's) side
 
     # Build trustlines for deposited tokens (non-XRP assets)
     # These represent the tokens held by the AMM, with lsfAMMNode flag
-    LSF_AMM_NODE = 0x01000000  # lsfAMMNode (NOT 0x02000000 which is lsfLowDeepFreeze!)
     asset_trustlines = []
     issuer_directories = []
 
@@ -375,62 +353,35 @@ def generate_amm_objects(
             asset.currency,
         )
 
-        # Determine high/low accounts (lexicographic order)
-        amm_bytes = amm_account_address.encode()
-        issuer_bytes = asset.issuer.encode()
-        if amm_bytes < issuer_bytes:
-            lo_address, hi_address = amm_account_address, asset.issuer
-            # AMM is low, issuer is high
-            # Positive balance = AMM holds tokens (owes issuer)
-            asset_balance_value = asset.amount
-        else:
-            lo_address, hi_address = asset.issuer, amm_account_address
-            # Issuer is low, AMM is high
-            # Negative balance from low's perspective = AMM holds tokens
-            asset_balance_value = f"-{asset.amount}"
+        lo_address, hi_address = order_low_high(amm_account_address, asset.issuer)
+        # Balance sign: positive from lo's perspective means lo holds tokens
+        asset_balance_value = asset.amount if lo_address == amm_account_address else f"-{asset.amount}"
 
-        asset_trustline = {
-            "Balance": {
-                "currency": asset.currency,
-                "issuer": "rrrrrrrrrrrrrrrrrrrrBZbvji",  # Neutral issuer for balance
-                "value": asset_balance_value,
-            },
-            "Flags": LSF_AMM_NODE,  # lsfAMMNode flag
-            "HighLimit": {
-                "currency": asset.currency,
-                "issuer": hi_address,
-                "value": "0",  # AMM trustlines have 0 limit
-            },
-            "HighNode": "0",
-            "LedgerEntryType": "RippleState",
-            "LowLimit": {
-                "currency": asset.currency,
-                "issuer": lo_address,
-                "value": "0",  # AMM trustlines have 0 limit
-            },
-            "LowNode": "0",
-            "PreviousTxnID": txn_id,
-            "PreviousTxnLgrSeq": ledger_seq,
-            "index": asset_rs_index,
-        }
+        asset_trustline = build_ripple_state(
+            currency=asset.currency,
+            lo_address=lo_address,
+            hi_address=hi_address,
+            balance_value=asset_balance_value,
+            lo_limit="0",
+            hi_limit="0",
+            flags=LSF_AMM_NODE,
+            txn_id=txn_id,
+            ledger_seq=ledger_seq,
+            index=asset_rs_index,
+        )
         asset_trustlines.append(asset_trustline)
 
         # Add to AMM account's directory
         directory_node["Indexes"].append(asset_rs_index)
 
-        # Create issuer's directory entry for this trustline
-        # (RippleState must be in BOTH parties' directories)
-        issuer_root_index = owner_dir(asset.issuer)
-        issuer_dir = {
-            "Flags": 0,
-            "Indexes": [asset_rs_index],
-            "LedgerEntryType": "DirectoryNode",
-            "Owner": asset.issuer,
-            "PreviousTxnID": txn_id,
-            "PreviousTxnLgrSeq": ledger_seq,
-            "RootIndex": issuer_root_index,
-            "index": issuer_root_index,
-        }
+        # Create issuer's directory entry (RippleState must be in BOTH parties' directories)
+        issuer_dir = build_directory_node(
+            index=owner_dir(asset.issuer),
+            entries=[asset_rs_index],
+            owner=asset.issuer,
+            txn_id=txn_id,
+            ledger_seq=ledger_seq,
+        )
         issuer_directories.append(issuer_dir)
 
     return AMMObjects(

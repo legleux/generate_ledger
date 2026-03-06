@@ -1,7 +1,9 @@
 """Tests for gl.amendments — amendment loading and filtering."""
+
 import pytest
 
-from gl.amendments import (
+from generate_ledger.amendments import (
+    DEFAULT_MAINNET_LIST,
     Amendment,
     _enabled_amendment_hashes,
     _get_amendments_from_file,
@@ -32,15 +34,10 @@ class TestAmendmentDataclass:
 # _get_amendments_from_file
 # ---------------------------------------------------------------------------
 class TestGetAmendmentsFromFile:
-    def test_load_default(self):
-        data = _get_amendments_from_file()
+    def test_load_explicit_path(self):
+        data = _get_amendments_from_file(str(DEFAULT_MAINNET_LIST))
         assert isinstance(data, dict)
         assert len(data) > 0
-
-    def test_load_explicit_path(self):
-        from gl.amendments import DEFAULT_AMENDMENT_LIST
-        data = _get_amendments_from_file(str(DEFAULT_AMENDMENT_LIST))
-        assert isinstance(data, dict)
 
     def test_nonexistent_raises(self):
         with pytest.raises(FileNotFoundError):
@@ -52,7 +49,7 @@ class TestGetAmendmentsFromFile:
 # ---------------------------------------------------------------------------
 class TestGetEnabledAmendmentHashes:
     def test_returns_list_of_hex_strings(self):
-        hashes = get_enabled_amendment_hashes()
+        hashes = get_enabled_amendment_hashes(profile="release")
         assert isinstance(hashes, list)
         assert len(hashes) > 0
         for h in hashes:

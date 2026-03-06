@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from gl.amendments import amendment_hash, parse_features_macro
+from generate_ledger.amendments import amendment_hash, parse_features_macro
 
 # ---------------------------------------------------------------------------
 # Locate the real features.macro
@@ -56,6 +56,7 @@ _KNOWN_MACROS = {"XRPL_FEATURE", "XRPL_FIX", "XRPL_RETIRE", "XRPL_RETIRE_FEATURE
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestRealFeaturesMacro:
     def test_parser_does_not_crash(self):

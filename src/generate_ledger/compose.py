@@ -11,24 +11,26 @@ yaml.indent(mapping=2, sequence=4, offset=2)
 yaml.preserve_quotes = True
 yaml.representer.ignore_aliases = lambda x: True  # disable anchors
 
+
 def make_flow_list(items):
     seq = CommentedSeq(items)
     seq.fa.set_flow_style()
     return seq
 
+
 class ComposeConfig(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="GL_", env_file=".env")
     default_output_dir: str = "testnet"
     docker_compose_yml: str = "docker-compose.yml"
-    base_dir: Path = Field(default=Path(default_output_dir)) # Override with env var GL_BASE_DIR
+    base_dir: Path = Field(default=Path(default_output_dir))  # Override with env var GL_BASE_DIR
     num_validators: PositiveInt = 5
     validator_name: str = "val"
-    validator_image_tag: str = "latest" # latest _Major Release_
-    validator_image: str = "rippleci/rippled" # REVIEW: Required?
+    validator_image_tag: str = "develop"
+    validator_image: str = "rippleci/xrpld"
     num_hubs: PositiveInt = 1
     hub_name: str = "rippled"
-    hub_image: str = "rippleci/rippled"
-    hub_image_tag: str = "latest"
+    hub_image: str = "rippleci/xrpld"
+    hub_image_tag: str = "develop"
     # where outputs land by default (env var GL_BASE_DIR overrides)
     # base_dir: Path = Field(default=Path(".gl"))
 
@@ -42,8 +44,9 @@ class ComposeConfig(BaseSettings):
     ws_port: int = 6006
     standalone: bool = False
 
-    ledger_file: str = "/ledger.json" # REVIEW: Should this live here? What is the path?
-    first_validator: str  = f"{validator_name}0"
+    ledger_file: str = "/ledger.json"  # REVIEW: Should this live here? What is the path?
+    first_validator: str = f"{validator_name}0"
+
 
 def gen_compose_data(config: ComposeConfig | None = None):
     cfg = config or ComposeConfig()
@@ -51,8 +54,7 @@ def gen_compose_data(config: ComposeConfig | None = None):
     # print(f"generating {cfg.num_validators} validators")
     entrypoint_cmd = "rippled"
 
-    load_command = {
-        "command": make_flow_list([dq("--ledgerfile"), dq(cfg.ledger_file)])}
+    load_command = {"command": make_flow_list([dq("--ledgerfile"), dq(cfg.ledger_file)])}
     net_command = {"command": make_flow_list([dq("--net")])}
     entrypoint = {"entrypoint": make_flow_list([dq(f"{entrypoint_cmd}")])}
     # TODO: Image default entrypoint should already be "rippled"
@@ -80,13 +82,7 @@ def gen_compose_data(config: ComposeConfig | None = None):
     #         "interval": healthcheck_data["interval"],
     #     }
     # }
-    depends_on = {
-        "depends_on": {
-            f"{cfg.first_validator}": {
-                "condition": "service_healthy"
-            }
-            }
-    }
+    depends_on = {"depends_on": {f"{cfg.first_validator}": {"condition": "service_healthy"}}}
     # depends_on = {"depends_on": make_flow_list([dq(f"{cfg.first_validator}")])}
     # depends_on = {
     #     "depends_on": "val0"}
@@ -106,10 +102,16 @@ def gen_compose_data(config: ComposeConfig | None = None):
             "container_name": f"{name}",
             "hostname": f"{name}",
             **(validator_entrypoint),
-            **({"ports": [
-                f'{cfg.rpc_port + i + cfg.num_hubs}:{cfg.rpc_port}',
-                f'{cfg.ws_port + i + cfg.num_hubs}:{cfg.ws_port}',
-                ]} if name == cfg.first_validator else {}),
+            **(
+                {
+                    "ports": [
+                        f"{cfg.rpc_port + i + cfg.num_hubs}:{cfg.rpc_port}",
+                        f"{cfg.ws_port + i + cfg.num_hubs}:{cfg.ws_port}",
+                    ]
+                }
+                if name == cfg.first_validator
+                else {}
+            ),
             # **(load_command),
             **(load_command if name == cfg.first_validator else net_command),
             **(healthcheck if name == cfg.first_validator else depends_on),
@@ -118,11 +120,12 @@ def gen_compose_data(config: ComposeConfig | None = None):
                 f"./volumes/{name}:/etc/opt/ripple",
                 # TODO: Only loading the ledger file if it's the first validator? Test with
                 # *([f"./{cfg.ledger_file}:/{cfg.ledger_file}"] if i == 0 else [])
-                *([f".{cfg.ledger_file}:{cfg.ledger_file}"])
+                *([f".{cfg.ledger_file}:{cfg.ledger_file}"]),
                 # "./ledger.json:/ledger.json" if i == 0 else None,
             ],
-            "networks": [cfg.network_name]
-        } for i in range(cfg.num_validators)
+            "networks": [cfg.network_name],
+        }
+        for i in range(cfg.num_validators)
     }
 
     hubs = {
@@ -131,10 +134,16 @@ def gen_compose_data(config: ComposeConfig | None = None):
             "container_name": f"{name}",
             "hostname": f"{name}",
             **(hub_entrypoint),
-            **({"ports": [
-                f'{(cfg.rpc_port + i)}:{cfg.rpc_port}',
-                f'{cfg.ws_port + i}:{cfg.ws_port}',
-                ]} if expose_hub_ports else {}),
+            **(
+                {
+                    "ports": [
+                        f"{(cfg.rpc_port + i)}:{cfg.rpc_port}",
+                        f"{cfg.ws_port + i}:{cfg.ws_port}",
+                    ]
+                }
+                if expose_hub_ports
+                else {}
+            ),
             **(depends_on),
             # FIXME: volume mount kind of ugly...
             "volumes": [
@@ -143,20 +152,20 @@ def gen_compose_data(config: ComposeConfig | None = None):
                 # *([f"./{cfg.ledger_file}:/{cfg.ledger_file}"] if i == 0 else [])
                 # "./ledger.json:/ledger.json" if i == 0 else None,
             ],
-            "networks": [cfg.network_name]
-        } for i in range(cfg.num_hubs)
+            "networks": [cfg.network_name],
+        }
+        for i in range(cfg.num_hubs)
     }
 
     networks = {
-        cfg.network_name : {
-            "name": cfg.network_name
-        },
+        cfg.network_name: {"name": cfg.network_name},
     }
 
     compose_data.update(services={**validators, **hubs})
     compose_data.update(networks=networks)
 
     return compose_data
+
 
 def write_compose_file(output_file: Path | None = None, config: ComposeConfig | None = None) -> Path:
     cfg = config or ComposeConfig()

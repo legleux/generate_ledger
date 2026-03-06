@@ -23,6 +23,7 @@ from .rippled_cfg import app as rippled_typer_app
 def _print_ledgend() -> None:
     import zlib  # noqa: PLC0415
     from importlib.resources import files  # noqa: PLC0415
+
     data = files("generate_ledger.data").joinpath("ledgend.bin").read_bytes()
     click.echo(zlib.decompress(data).decode("utf-8"))
 
@@ -47,7 +48,7 @@ def cli(ctx: click.Context, output_file: Path | None, ledgend: bool):
         # defaults (single source of truth)
         compose_leaf = defaults_leaf_from_cfg(state.compose, "compose-write")
         ctx.default_map = merge_default_maps(
-            nest_default_map(("compose","write"), compose_leaf),
+            nest_default_map(("compose", "write"), compose_leaf),
         )
 
     # default action: run `compose write`
@@ -56,6 +57,7 @@ def cli(ctx: click.Context, output_file: Path | None, ledgend: bool):
         if output_file is not None:
             kwargs["output_file"] = output_file
         return ctx.invoke(write_cmd, **kwargs)
+
 
 # mount the generated Click "compose" group
 cli.add_command(compose, name="compose")

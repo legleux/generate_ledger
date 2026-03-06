@@ -1,15 +1,16 @@
 """Tests for gl.develop.mpt — MPToken ledger object generation."""
+
 import pytest
 
-from gl.accounts import Account
-from gl.develop.mpt import (
+from generate_ledger.accounts import Account
+from generate_ledger.develop.mpt import (
     _build_issuance_object,
     _build_mptoken_object,
     _outstanding_amount,
     generate_mpt_objects,
 )
-from gl.indices import mpt_id_to_hex, mpt_issuance_index, mptoken_index
-from gl.ledger import LedgerConfig, MPTHolderConfig, MPTIssuanceConfig
+from generate_ledger.indices import mpt_id_to_hex, mpt_issuance_index, mptoken_index
+from generate_ledger.ledger import LedgerConfig, MPTHolderConfig, MPTIssuanceConfig
 from tests.conftest import ALICE_ADDRESS, ALICE_SEED, BOB_ADDRESS, BOB_SEED
 
 
@@ -164,9 +165,7 @@ class TestGenerateMptObjects:
         assert result == []
 
     def test_single_issuance_no_holders(self, two_accounts, alice):
-        config = LedgerConfig(
-            mpt_issuances=[MPTIssuanceConfig(issuer="0", sequence=1)]
-        )
+        config = LedgerConfig(mpt_issuances=[MPTIssuanceConfig(issuer="0", sequence=1)])
         result = generate_mpt_objects(accounts=two_accounts, config=config)
         assert len(result) == 1
         obj = result[0]
@@ -176,30 +175,28 @@ class TestGenerateMptObjects:
         assert obj["OutstandingAmount"] == "0"
 
     def test_issuance_index_is_correct(self, two_accounts, alice):
-        config = LedgerConfig(
-            mpt_issuances=[MPTIssuanceConfig(issuer="0", sequence=2)]
-        )
+        config = LedgerConfig(mpt_issuances=[MPTIssuanceConfig(issuer="0", sequence=2)])
         result = generate_mpt_objects(accounts=two_accounts, config=config)
         assert result[0]["index"] == mpt_issuance_index(2, alice.address)
 
     def test_issuance_with_max_amount(self, two_accounts):
-        config = LedgerConfig(
-            mpt_issuances=[MPTIssuanceConfig(issuer="0", sequence=1, max_amount="9999999")]
-        )
+        config = LedgerConfig(mpt_issuances=[MPTIssuanceConfig(issuer="0", sequence=1, max_amount="9999999")])
         result = generate_mpt_objects(accounts=two_accounts, config=config)
         assert result[0]["MaximumAmount"] == "9999999"
 
     def test_issuance_with_all_optional_fields(self, two_accounts):
         config = LedgerConfig(
-            mpt_issuances=[MPTIssuanceConfig(
-                issuer="0",
-                sequence=1,
-                max_amount="1000000",
-                asset_scale=2,
-                transfer_fee=100,
-                metadata="48656C6C6F",
-                flags=64,
-            )]
+            mpt_issuances=[
+                MPTIssuanceConfig(
+                    issuer="0",
+                    sequence=1,
+                    max_amount="1000000",
+                    asset_scale=2,
+                    transfer_fee=100,
+                    metadata="48656C6C6F",
+                    flags=64,
+                )
+            ]
         )
         result = generate_mpt_objects(accounts=two_accounts, config=config)
         obj = result[0]
@@ -211,11 +208,13 @@ class TestGenerateMptObjects:
 
     def test_single_issuance_with_one_holder(self, two_accounts, alice, bob):
         config = LedgerConfig(
-            mpt_issuances=[MPTIssuanceConfig(
-                issuer="0",
-                sequence=1,
-                holders=[MPTHolderConfig(holder="1", amount="500")],
-            )]
+            mpt_issuances=[
+                MPTIssuanceConfig(
+                    issuer="0",
+                    sequence=1,
+                    holders=[MPTHolderConfig(holder="1", amount="500")],
+                )
+            ]
         )
         result = generate_mpt_objects(accounts=two_accounts, config=config)
         assert len(result) == 2  # 1 issuance + 1 mptoken
@@ -232,11 +231,13 @@ class TestGenerateMptObjects:
 
     def test_mptoken_issuance_id_matches_issuer(self, two_accounts, alice, bob):
         config = LedgerConfig(
-            mpt_issuances=[MPTIssuanceConfig(
-                issuer="0",
-                sequence=1,
-                holders=[MPTHolderConfig(holder="1", amount="100")],
-            )]
+            mpt_issuances=[
+                MPTIssuanceConfig(
+                    issuer="0",
+                    sequence=1,
+                    holders=[MPTHolderConfig(holder="1", amount="100")],
+                )
+            ]
         )
         result = generate_mpt_objects(accounts=two_accounts, config=config)
         mptoken = result[1]
@@ -245,14 +246,16 @@ class TestGenerateMptObjects:
 
     def test_multiple_holders_outstanding_amount(self, two_accounts, alice, bob):
         config = LedgerConfig(
-            mpt_issuances=[MPTIssuanceConfig(
-                issuer="0",
-                sequence=1,
-                holders=[
-                    MPTHolderConfig(holder="1", amount="300"),
-                    MPTHolderConfig(holder="0", amount="200"),  # alice holds her own token
-                ],
-            )]
+            mpt_issuances=[
+                MPTIssuanceConfig(
+                    issuer="0",
+                    sequence=1,
+                    holders=[
+                        MPTHolderConfig(holder="1", amount="300"),
+                        MPTHolderConfig(holder="0", amount="200"),  # alice holds her own token
+                    ],
+                )
+            ]
         )
         result = generate_mpt_objects(accounts=two_accounts, config=config)
         assert len(result) == 3  # 1 issuance + 2 mptokens
@@ -273,22 +276,16 @@ class TestGenerateMptObjects:
 
     def test_resolve_by_address(self, two_accounts, alice):
         """Issuer can be specified by classic address, not just index."""
-        config = LedgerConfig(
-            mpt_issuances=[MPTIssuanceConfig(issuer=alice.address, sequence=1)]
-        )
+        config = LedgerConfig(mpt_issuances=[MPTIssuanceConfig(issuer=alice.address, sequence=1)])
         result = generate_mpt_objects(accounts=two_accounts, config=config)
         assert result[0]["Issuer"] == alice.address
 
     def test_invalid_account_index_raises(self, two_accounts):
-        config = LedgerConfig(
-            mpt_issuances=[MPTIssuanceConfig(issuer="99", sequence=1)]
-        )
+        config = LedgerConfig(mpt_issuances=[MPTIssuanceConfig(issuer="99", sequence=1)])
         with pytest.raises(ValueError, match="out of range"):
             generate_mpt_objects(accounts=two_accounts, config=config)
 
     def test_unknown_address_raises(self, two_accounts):
-        config = LedgerConfig(
-            mpt_issuances=[MPTIssuanceConfig(issuer="rUnknownXXXXXXXXXXXXXXXXXXXXXXX", sequence=1)]
-        )
+        config = LedgerConfig(mpt_issuances=[MPTIssuanceConfig(issuer="rUnknownXXXXXXXXXXXXXXXXXXXXXXX", sequence=1)])
         with pytest.raises(ValueError, match="not found"):
             generate_mpt_objects(accounts=two_accounts, config=config)

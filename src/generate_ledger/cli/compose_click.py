@@ -17,6 +17,7 @@ def _runner(base_cfg: ComposeConfig, overrides: dict[str, Any], output_file: Pat
     result = write_compose_file(output_file=output_file, config=cfg)
     click.echo(f"Wrote {result.resolve()}")
 
+
 # Define the group via decorator so the function *is* the group's callback.
 @click.group(name="compose", help="Docker Compose helpers.", invoke_without_command=True)
 @click.pass_context
@@ -26,10 +27,11 @@ def compose(ctx: click.Context):
         # write_cmd is defined below; it's available by the time this runs.
         return ctx.invoke(write_cmd)
 
+
 # Generate the command from CLI_DEFAULTS and attach it to the group.
 write_cmd = build_command_from_defaults(
     command_name="write",
-    command_key="compose-write",   # key in CLI_DEFAULTS
+    command_key="compose-write",  # key in CLI_DEFAULTS
     model_cls=ComposeConfig,
     state_attr="compose",
     runner=_runner,

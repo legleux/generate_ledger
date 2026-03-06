@@ -35,33 +35,35 @@ _RE_ACTIVE = re.compile(
     r"\s*VoteBehavior::(\w+)\s*\)"
 )
 
-_RE_RETIRE = re.compile(
-    r"(XRPL_RETIRE)\s*\(\s*(\w+)\s*\)"
-)
+_RE_RETIRE = re.compile(r"(XRPL_RETIRE)\s*\(\s*(\w+)\s*\)")
 
 
 def _parse_lines(text: str) -> list[dict]:
     entries = []
     for m in _RE_ACTIVE.finditer(text):
         macro, kind, name, supported, vote = m.groups()
-        entries.append({
-            "macro": macro,
-            "kind": kind,
-            "name": name,
-            "supported": supported,
-            "vote": vote,
-            "line": m.group(0),
-        })
+        entries.append(
+            {
+                "macro": macro,
+                "kind": kind,
+                "name": name,
+                "supported": supported,
+                "vote": vote,
+                "line": m.group(0),
+            }
+        )
     for m in _RE_RETIRE.finditer(text):
         macro, name = m.groups()
-        entries.append({
-            "macro": macro,
-            "kind": "RETIRE",
-            "name": name,
-            "supported": None,
-            "vote": None,
-            "line": m.group(0),
-        })
+        entries.append(
+            {
+                "macro": macro,
+                "kind": "RETIRE",
+                "name": name,
+                "supported": None,
+                "vote": None,
+                "line": m.group(0),
+            }
+        )
     return entries
 
 
@@ -72,6 +74,7 @@ def _bucket_key(e: dict) -> tuple:
 # ---------------------------------------------------------------------------
 # Find a real features.macro
 # ---------------------------------------------------------------------------
+
 
 def _find_real_macro(explicit: str | None = None) -> Path | None:
     if explicit:
@@ -98,6 +101,7 @@ def _find_real_macro(explicit: str | None = None) -> Path | None:
 # ---------------------------------------------------------------------------
 # Generate fixture
 # ---------------------------------------------------------------------------
+
 
 def generate_fixture(source: Path) -> str:
     text = source.read_text()
@@ -127,18 +131,14 @@ def generate_fixture(source: Path) -> str:
         lines.append("// Active features")
         for e in active_features:
             name_comma = e["name"] + ","
-            lines.append(
-                f"XRPL_FEATURE({name_comma:<25s}Supported::{e['supported']},  VoteBehavior::{e['vote']})"
-            )
+            lines.append(f"XRPL_FEATURE({name_comma:<25s}Supported::{e['supported']},  VoteBehavior::{e['vote']})")
         lines.append("")
 
     if active_fixes:
         lines.append('// Active fixes (get "fix" prefix)')
         for e in active_fixes:
             name_comma = e["name"] + ","
-            lines.append(
-                f"XRPL_FIX({name_comma:<29s}Supported::{e['supported']},  VoteBehavior::{e['vote']})"
-            )
+            lines.append(f"XRPL_FIX({name_comma:<29s}Supported::{e['supported']},  VoteBehavior::{e['vote']})")
         lines.append("")
 
     if obsolete:
@@ -147,9 +147,7 @@ def generate_fixture(source: Path) -> str:
             name_comma = e["name"] + ","
             macro = e["macro"]
             pad = 25 if macro == "XRPL_FEATURE" else 29
-            lines.append(
-                f"{macro}({name_comma:<{pad}s}Supported::{e['supported']},  VoteBehavior::{e['vote']})"
-            )
+            lines.append(f"{macro}({name_comma:<{pad}s}Supported::{e['supported']},  VoteBehavior::{e['vote']})")
         lines.append("")
 
     if retired:
@@ -167,8 +165,7 @@ def main():
 
     if source is None:
         print(
-            "ERROR: No features.macro found. Provide a path as argument or "
-            "clone rippled in a sibling directory.",
+            "ERROR: No features.macro found. Provide a path as argument or clone rippled in a sibling directory.",
             file=sys.stderr,
         )
         sys.exit(1)

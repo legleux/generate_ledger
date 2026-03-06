@@ -11,15 +11,18 @@ from .auto import build_command_from_defaults
 
 app = typer.Typer(help="Docker Compose helpers.")
 
+
 @app.callback()
 def _compose_root(ctx: typer.Context):
     """Group entrypoint; needed so get_command(app) can build a Click group."""
     pass
 
+
 def _runner(base_cfg: ComposeConfig, overrides: dict, output_file: Path | None):
     cfg = base_cfg.model_copy(update=overrides) if overrides else base_cfg
     write_compose_file(output_file=output_file, config=cfg)
     click.echo(f"Wrote {output_file.resolve() if output_file else 'compose file (default path)'}")
+
 
 write_cmd = build_command_from_defaults(
     command_name="write",
@@ -31,6 +34,7 @@ write_cmd = build_command_from_defaults(
 
 # After the callback is defined, this now works:
 get_command(app).add_command(write_cmd)
+
 
 # Also add a Typer command wrapper for when this app is nested in another Typer app
 @app.command("write")
@@ -48,6 +52,7 @@ def write_typer(
         from types import SimpleNamespace  # noqa: PLC0415
 
         from generate_ledger.config import LedgerConfig  # noqa: PLC0415
+
         ctx.obj = SimpleNamespace(compose=ComposeConfig(), ledger=LedgerConfig())
 
     base_cfg = ctx.obj.compose

@@ -4,18 +4,19 @@ import time
 
 import pytest
 
-from gl.accounts import Account, AccountConfig, generate_accounts
-from gl.gateways import (
+from generate_ledger.accounts import Account, AccountConfig, generate_accounts
+from generate_ledger.gateways import (
     GatewayConfig,
     _build_gateway_assets,
     generate_gateway_trustlines,
     generate_trustline_objects_fast,
 )
-from gl.trustlines import TrustlineObjects
+from generate_ledger.trustlines import TrustlineObjects
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_accounts(n: int) -> list[Account]:
     return generate_accounts(AccountConfig(num_accounts=n, algo="ed25519"))
@@ -139,9 +140,7 @@ class TestGenerateGatewayTrustlines:
     def test_too_few_accounts_raises(self):
         accounts = _make_accounts(2)
         with pytest.raises(ValueError, match="Need more accounts"):
-            generate_gateway_trustlines(
-                accounts, GatewayConfig(num_gateways=3)
-            )
+            generate_gateway_trustlines(accounts, GatewayConfig(num_gateways=3))
 
     def test_basic_count(self):
         """4 gateways, 2 assets each, 20 regular accounts, full coverage + connectivity."""
@@ -160,8 +159,9 @@ class TestGenerateGatewayTrustlines:
 
     def test_gateway_addresses_returned(self):
         accounts = _make_accounts(10)
-        cfg = GatewayConfig(num_gateways=2, assets_per_gateway=1, currencies=["USD", "EUR"],
-                            coverage=1.0, connectivity=1.0, seed=1)
+        cfg = GatewayConfig(
+            num_gateways=2, assets_per_gateway=1, currencies=["USD", "EUR"], coverage=1.0, connectivity=1.0, seed=1
+        )
         _, gw_addrs = generate_gateway_trustlines(accounts, cfg)
         assert gw_addrs == {accounts[0].address, accounts[1].address}
 
@@ -198,9 +198,12 @@ class TestGenerateGatewayTrustlines:
     def test_no_duplicate_trustlines(self):
         accounts = _make_accounts(24)
         cfg = GatewayConfig(
-            num_gateways=4, assets_per_gateway=2,
+            num_gateways=4,
+            assets_per_gateway=2,
             currencies=["USD", "EUR", "GBP", "JPY", "BTC", "ETH", "CNY", "MXN"],
-            coverage=1.0, connectivity=1.0, seed=99,
+            coverage=1.0,
+            connectivity=1.0,
+            seed=99,
         )
         tls, _ = generate_gateway_trustlines(accounts, cfg)
         indices = [tl.ripple_state["index"] for tl in tls]
@@ -208,9 +211,14 @@ class TestGenerateGatewayTrustlines:
 
     def test_reproducible_with_seed(self):
         accounts = _make_accounts(20)
-        cfg = GatewayConfig(num_gateways=2, assets_per_gateway=2,
-                            currencies=["USD", "EUR", "GBP", "JPY"],
-                            coverage=0.6, connectivity=0.5, seed=123)
+        cfg = GatewayConfig(
+            num_gateways=2,
+            assets_per_gateway=2,
+            currencies=["USD", "EUR", "GBP", "JPY"],
+            coverage=0.6,
+            connectivity=0.5,
+            seed=123,
+        )
         tls1, _ = generate_gateway_trustlines(accounts, cfg)
         tls2, _ = generate_gateway_trustlines(accounts, cfg)
         idx1 = [tl.ripple_state["index"] for tl in tls1]
@@ -219,12 +227,22 @@ class TestGenerateGatewayTrustlines:
 
     def test_different_seed_different_result(self):
         accounts = _make_accounts(20)
-        cfg1 = GatewayConfig(num_gateways=2, assets_per_gateway=2,
-                             currencies=["USD", "EUR", "GBP", "JPY"],
-                             coverage=0.5, connectivity=0.5, seed=1)
-        cfg2 = GatewayConfig(num_gateways=2, assets_per_gateway=2,
-                             currencies=["USD", "EUR", "GBP", "JPY"],
-                             coverage=0.5, connectivity=0.5, seed=2)
+        cfg1 = GatewayConfig(
+            num_gateways=2,
+            assets_per_gateway=2,
+            currencies=["USD", "EUR", "GBP", "JPY"],
+            coverage=0.5,
+            connectivity=0.5,
+            seed=1,
+        )
+        cfg2 = GatewayConfig(
+            num_gateways=2,
+            assets_per_gateway=2,
+            currencies=["USD", "EUR", "GBP", "JPY"],
+            coverage=0.5,
+            connectivity=0.5,
+            seed=2,
+        )
         tls1, _ = generate_gateway_trustlines(accounts, cfg1)
         tls2, _ = generate_gateway_trustlines(accounts, cfg2)
         idx1 = {tl.ripple_state["index"] for tl in tls1}
@@ -258,9 +276,14 @@ class TestScaleSmoke:
 
     def test_gateway_accounts_are_first_n(self):
         accounts = _make_accounts(10)
-        cfg = GatewayConfig(num_gateways=3, assets_per_gateway=1,
-                            currencies=["USD", "EUR", "GBP"],
-                            coverage=1.0, connectivity=1.0, seed=1)
+        cfg = GatewayConfig(
+            num_gateways=3,
+            assets_per_gateway=1,
+            currencies=["USD", "EUR", "GBP"],
+            coverage=1.0,
+            connectivity=1.0,
+            seed=1,
+        )
         _, gw_addrs = generate_gateway_trustlines(accounts, cfg)
         expected = {accounts[i].address for i in range(3)}
         assert gw_addrs == expected

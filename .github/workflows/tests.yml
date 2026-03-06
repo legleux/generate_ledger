@@ -7,6 +7,14 @@ on:
     branches: [main, develop]
 
 jobs:
+  commit-message:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: webiny/action-conventional-commits@v1.3.0
+
   lint:
     runs-on: ubuntu-latest
     container: ghcr.io/astral-sh/uv:python3.13-bookworm
@@ -26,3 +34,46 @@ jobs:
       - uses: actions/checkout@v4
       - run: uv sync --group dev
       - run: uv run pytest
+
+  complexity:
+    runs-on: ubuntu-latest
+    container: ghcr.io/astral-sh/uv:python3.13-bookworm
+    steps:
+      - uses: actions/checkout@v4
+      - run: uv sync
+      - name: Run complexipy
+        run: |
+          uv run complexipy src/generate_ledger/ --output-file complexipy-report.txt || true
+          uv run complexipy src/generate_ledger/ 2>&1 | tee complexipy-report.txt || true
+      - name: Run radon cyclomatic complexity
+        run: |
+          uv run radon cc src/generate_ledger/ -s -a 2>&1 | tee radon-cc-report.txt
+      - name: Run radon maintainability index
+        run: |
+          uv run radon mi src/generate_ledger/ -s 2>&1 | tee radon-mi-report.txt
+      - name: Write job summary
+        run: |
+          echo "## Complexity Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Complexipy (cognitive complexity, threshold 15)" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          grep -E "FAILED|^Failed" complexipy-report.txt >> $GITHUB_STEP_SUMMARY || echo "All functions passed" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Radon Cyclomatic Complexity (grade C and worse)" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          uv run radon cc src/generate_ledger/ -s -a --min C 2>&1 >> $GITHUB_STEP_SUMMARY || echo "All functions grade A/B" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Radon Maintainability Index" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat radon-mi-report.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+      - name: Upload complexity reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: complexity-reports
+          path: |
+            complexipy-report.txt
+            radon-cc-report.txt
+            radon-mi-report.txt

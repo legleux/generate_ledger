@@ -2,3 +2,7 @@
 testnet/
 .coverage
 __pycache__/
+.complexipy_cache/
+.claude/
+.specify/
+.vscode/

@@ -3,13 +3,14 @@
 Every other module depends on correct indices, so these are highest priority.
 Test vectors come from a running rippled node (tests/data/ledger/testnet/volumes/ledger.json).
 """
+
 import hashlib
 
 import pytest
 from xrpl.core.addresscodec import decode_classic_address
 
-from gl.crypto import ripesha, sha512_half
-from gl.indices import (
+from generate_ledger.crypto import ripesha, sha512_half
+from generate_ledger.indices import (
     _currency_to_160,
     _decode_account,
     _order_low_high,

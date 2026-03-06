@@ -1,12 +1,14 @@
 """Fast cryptographic backends for XRPL account generation.
 
-Provides native C-library backends (PyNaCl/libsodium for ed25519) with
-automatic fallback to xrpl-py's pure-Python implementation.
+Provides native C-library backends (PyNaCl/libsodium for ed25519,
+coincurve/libsecp256k1 for secp256k1) with automatic fallback to
+xrpl-py's pure-Python implementation.
 
 Performance:
-    NativeEd25519Backend (PyNaCl):  ~22,000 accounts/sec
-    FallbackBackend (xrpl-py):      ~60 accounts/sec (secp256k1)
-                                    ~80 accounts/sec (ed25519)
+    NativeSecp256k1Backend (coincurve): ~6,000 accounts/sec
+    NativeEd25519Backend (PyNaCl):      ~22,000 accounts/sec
+    FallbackBackend (xrpl-py):          ~60 accounts/sec (secp256k1)
+                                        ~80 accounts/sec (ed25519)
 """
 
 import hashlib
@@ -20,6 +22,7 @@ from xrpl.core.addresscodec import encode_classic_address
 
 class Algorithm(Enum):
     """Supported cryptographic algorithms."""
+
     SECP256K1 = "secp256k1"
     ED25519 = "ed25519"
 
@@ -29,8 +32,7 @@ class CryptoBackend(ABC):
 
     @property
     @abstractmethod
-    def algorithm(self) -> Algorithm:
-        ...
+    def algorithm(self) -> Algorithm: ...
 
     @abstractmethod
     def generate_account(self) -> tuple[str, str]:
@@ -60,14 +62,18 @@ def _account_id_from_pubkey(public_key: bytes, algorithm: Algorithm) -> bytes:
     return ripemd160.digest()
 
 
-def hex_to_base58_seed(hex_seed: str) -> str:
-    """Convert 16-byte hex seed to XRPL base58 seed format ("s..." string).
+def hex_to_base58_seed(hex_seed: str, algorithm: Algorithm = Algorithm.SECP256K1) -> str:
+    """Convert 16-byte hex seed to XRPL base58 seed format.
 
-    The XRPL seed format is: version_byte(0x21) + 16_bytes + 4_byte_checksum,
-    Base58-encoded with the XRP alphabet.
+    secp256k1 seeds use version byte 0x21 → "s..." prefix.
+    ed25519 seeds use version bytes [0x01, 0xE1, 0x4B] → "sEd..." prefix.
     """
     seed_bytes = bytes.fromhex(hex_seed)
-    versioned = b"\x21" + seed_bytes
+    if algorithm == Algorithm.ED25519:
+        version = b"\x01\xe1\x4b"
+    else:
+        version = b"\x21"
+    versioned = version + seed_bytes
     checksum = hashlib.sha256(hashlib.sha256(versioned).digest()).digest()[:4]
     return base58.b58encode(versioned + checksum, alphabet=base58.XRP_ALPHABET).decode()
 
@@ -96,7 +102,64 @@ class NativeEd25519Backend(CryptoBackend):
         acct_id = _account_id_from_pubkey(public_key, Algorithm.ED25519)
         address = encode_classic_address(acct_id)
         # 5. Encode seed as base58 "s..." format
-        seed = hex_to_base58_seed(entropy.hex())
+        seed = hex_to_base58_seed(entropy.hex(), Algorithm.ED25519)
+        return seed, address
+
+
+_SECP256K1_ORDER = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+_INTERMEDIATE_PADDING = b"\x00\x00\x00\x00"
+
+
+class NativeSecp256k1Backend(CryptoBackend):
+    """secp256k1 using coincurve (libsecp256k1).
+
+    Implements the full XRPL 3-pass key derivation:
+      1. Root keypair:  SHA512Half(seed + seq) → EC multiply
+      2. Mid keypair:   SHA512Half(root_pub + padding + seq) → EC multiply
+      3. Final keypair: (root_priv + mid_priv) mod n, point addition
+    """
+
+    def __init__(self) -> None:
+        import coincurve  # noqa: PLC0415
+
+        self._coincurve = coincurve
+
+    @property
+    def algorithm(self) -> Algorithm:
+        return Algorithm.SECP256K1
+
+    def _derive_secret(self, base: bytes, use_padding: bool = False) -> int:
+        """Find a valid secp256k1 private key via the XRPL sequence hashing loop."""
+        for seq in range(0xFFFFFFFF + 1):
+            seq_bytes = seq.to_bytes(4, byteorder="big")
+            if use_padding:
+                candidate = _sha512_half(base + _INTERMEDIATE_PADDING + seq_bytes)
+            else:
+                candidate = _sha512_half(base + seq_bytes)
+            secret = int.from_bytes(candidate, "big")
+            if 0 < secret < _SECP256K1_ORDER:
+                return secret
+        msg = "Failed to derive valid secret"
+        raise RuntimeError(msg)
+
+    def generate_account(self) -> tuple[str, str]:
+        # 1. Generate 16-byte XRPL seed entropy
+        entropy = os.urandom(16)
+        # 2. Root keypair
+        root_secret = self._derive_secret(entropy)
+        root_key = self._coincurve.PrivateKey(root_secret.to_bytes(32, "big"))
+        root_pub_compressed = root_key.public_key.format(compressed=True)
+        # 3. Intermediate keypair (derived from root public key)
+        mid_secret = self._derive_secret(root_pub_compressed, use_padding=True)
+        # 4. Final private key = (root + mid) mod order
+        final_secret = (root_secret + mid_secret) % _SECP256K1_ORDER
+        final_key = self._coincurve.PrivateKey(final_secret.to_bytes(32, "big"))
+        final_pub = final_key.public_key.format(compressed=True)
+        # 5. Compute XRPL address
+        acct_id = _account_id_from_pubkey(final_pub, Algorithm.SECP256K1)
+        address = encode_classic_address(acct_id)
+        # 6. Encode seed
+        seed = hex_to_base58_seed(entropy.hex(), Algorithm.SECP256K1)
         return seed, address
 
 
@@ -109,11 +172,7 @@ class FallbackBackend(CryptoBackend):
         from xrpl.wallet import Wallet  # noqa: PLC0415
 
         self._algorithm = algorithm
-        self._xrpl_algo = (
-            CryptoAlgorithm.ED25519
-            if algorithm == Algorithm.ED25519
-            else CryptoAlgorithm.SECP256K1
-        )
+        self._xrpl_algo = CryptoAlgorithm.ED25519 if algorithm == Algorithm.ED25519 else CryptoAlgorithm.SECP256K1
         self._Wallet = Wallet
         self._generate_seed = generate_seed
 
@@ -127,30 +186,49 @@ class FallbackBackend(CryptoBackend):
         return seed, wallet.address
 
 
-def get_backend(algo: Algorithm) -> CryptoBackend:
+def get_backend(algo: Algorithm, *, use_gpu: bool = False) -> CryptoBackend:
     """Get the best available backend for the given algorithm.
 
+    For ed25519 with use_gpu=True: returns GpuEd25519Backend if CuPy is available.
     For ed25519: returns NativeEd25519Backend if PyNaCl is installed,
     otherwise FallbackBackend.
 
-    For secp256k1: always returns FallbackBackend (xrpl-py's secp256k1
-    key derivation uses XRPL-specific sequence hashing that native
-    libraries can't replicate without reimplementing the full algorithm).
+    For secp256k1: returns NativeSecp256k1Backend if coincurve is installed,
+    otherwise FallbackBackend.
     """
+    if algo == Algorithm.ED25519 and use_gpu:
+        try:
+            from generate_ledger.gpu_backend import GpuEd25519Backend  # noqa: PLC0415
+
+            return GpuEd25519Backend()
+        except (ImportError, RuntimeError):
+            pass
     if algo == Algorithm.ED25519:
         try:
             return NativeEd25519Backend()
         except ImportError:
             pass
+    elif algo == Algorithm.SECP256K1:
+        try:
+            return NativeSecp256k1Backend()
+        except ImportError:
+            pass
     return FallbackBackend(algo)
 
 
-def backend_info(algo: Algorithm) -> tuple[bool, str]:
+def backend_info(algo: Algorithm, *, use_gpu: bool = False) -> tuple[bool, str]:
     """Check if a native backend is available for the algorithm.
 
     Returns:
         (is_native, backend_name) tuple.
     """
+    if algo == Algorithm.ED25519 and use_gpu:
+        try:
+            import cupy  # noqa: F401, PLC0415
+
+            return (True, "cupy-cuda")
+        except ImportError:
+            pass
     if algo == Algorithm.ED25519:
         try:
             import nacl.signing  # noqa: F401, PLC0415
@@ -158,5 +236,11 @@ def backend_info(algo: Algorithm) -> tuple[bool, str]:
             return (True, "pynacl")
         except ImportError:
             return (False, "xrpl-py")
-    else:
-        return (False, "xrpl-py")
+    elif algo == Algorithm.SECP256K1:
+        try:
+            import coincurve  # noqa: F401, PLC0415
+
+            return (True, "coincurve")
+        except ImportError:
+            return (False, "xrpl-py")
+    return (False, "xrpl-py")

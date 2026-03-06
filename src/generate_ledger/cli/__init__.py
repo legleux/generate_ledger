@@ -18,6 +18,7 @@ from .rippled_cfg import app as rippled_app
 
 app = typer.Typer(help="generate_ledger CLI", no_args_is_help=False)
 
+
 @app.callback(invoke_without_command=True)
 def _root(
     ctx: typer.Context,
@@ -42,6 +43,7 @@ def _root(
             kwargs["output_file"] = output_file
         # IMPORTANT: ctx.invoke works with any Click command, it doesn't need to be on the same group instance
         return ctx.invoke(write_cmd, **kwargs)
+
 
 # keep the explicit sub-apps
 app.add_typer(compose_app, name="compose")

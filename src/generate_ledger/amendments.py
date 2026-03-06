@@ -3,16 +3,18 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+import urllib.error
 import urllib.request
 from collections.abc import Iterable
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from urllib.parse import urlparse
 
-from gl import data_dir
-from gl.crypto import sha512_half
+from generate_ledger import data_dir
+from generate_ledger.crypto import sha512_half
 
 network_endpoint = {
     "devnet": "https://s.devnet.rippletest.net:51234",
@@ -21,13 +23,23 @@ network_endpoint = {
 }
 
 DEFAULT_NETWORK = "devnet"
-DEFAULT_AMENDMENT_LIST = data_dir / "amendment_list_dev_20250907.json"
-DEFAULT_RELEASE_LIST = data_dir / "amendments_release.json"
+
+# Amendment data file names
+MAINNET_AMENDMENTS_FILE = "amendments_mainnet.json"
+
+# Resolved paths
+DEFAULT_MAINNET_LIST = data_dir / MAINNET_AMENDMENTS_FILE
+
+# GitHub raw URL for the develop branch features.macro
+FEATURES_MACRO_URL = (
+    "https://raw.githubusercontent.com/XRPLF/rippled/develop/include/xrpl/protocol/detail/features.macro"
+)
 
 
 # ---------------------------------------------------------------------------
 # Data model
 # ---------------------------------------------------------------------------
+
 
 @dataclass(frozen=True, slots=True)
 class Amendment:
@@ -40,15 +52,16 @@ class Amendment:
     retired: bool = False
 
 
-class AmendmentProfile(str, Enum):
-    RELEASE = "release"   # Curated JSON for latest official rippled release
-    DEVELOP = "develop"   # Parse from features.macro, enable DefaultYes + Supported::yes
-    CUSTOM = "custom"     # User-provided JSON file
+class AmendmentProfile(StrEnum):
+    RELEASE = "release"  # Curated JSON for latest official rippled release
+    DEVELOP = "develop"  # Parse from features.macro, enable DefaultYes + Supported::yes
+    CUSTOM = "custom"  # User-provided JSON file
 
 
 # ---------------------------------------------------------------------------
 # Hash computation
 # ---------------------------------------------------------------------------
+
 
 def amendment_hash(name: str) -> str:
     """SHA512Half(name) as uppercase hex — matches rippled's Feature.cpp."""
@@ -69,14 +82,10 @@ _RE_ACTIVE = re.compile(
 )
 
 # Retired (modern): XRPL_RETIRE(Name) — name used as-is (includes any "fix" prefix)
-_RE_RETIRED = re.compile(
-    r"XRPL_RETIRE\s*\(\s*(\w+)\s*\)"
-)
+_RE_RETIRED = re.compile(r"XRPL_RETIRE\s*\(\s*(\w+)\s*\)")
 
 # Retired (legacy): XRPL_RETIRE_FEATURE(Name) / XRPL_RETIRE_FIX(Name)
-_RE_RETIRED_LEGACY = re.compile(
-    r"XRPL_RETIRE_(FEATURE|FIX)\s*\(\s*(\w+)\s*\)"
-)
+_RE_RETIRED_LEGACY = re.compile(r"XRPL_RETIRE_(FEATURE|FIX)\s*\(\s*(\w+)\s*\)")
 
 
 def _derive_name(kind: str, raw_name: str) -> str:
@@ -86,40 +95,43 @@ def _derive_name(kind: str, raw_name: str) -> str:
     return raw_name
 
 
-def parse_features_macro(path: str | Path) -> list[Amendment]:
-    """Parse rippled's features.macro file into a list of Amendments.
+def parse_features_macro_text(text: str) -> list[Amendment]:
+    """Parse features.macro content into a list of Amendments.
 
     All amendments are returned with ``enabled=False``; use
     ``apply_develop_profile()`` or ``get_amendments_for_profile()``
     to decide which to enable.
     """
-    text = Path(path).read_text()
     amendments: list[Amendment] = []
 
     # Active amendments
     for m in _RE_ACTIVE.finditer(text):
         kind, raw_name, supported, vote = m.groups()
         name = _derive_name(kind, raw_name)
-        amendments.append(Amendment(
-            name=name,
-            index=amendment_hash(name),
-            enabled=False,
-            supported=(supported == "yes"),
-            vote_behavior=vote,
-            retired=False,
-        ))
+        amendments.append(
+            Amendment(
+                name=name,
+                index=amendment_hash(name),
+                enabled=False,
+                supported=(supported == "yes"),
+                vote_behavior=vote,
+                retired=False,
+            )
+        )
 
     # Retired amendments (modern format: XRPL_RETIRE(Name))
     for m in _RE_RETIRED.finditer(text):
         name = m.group(1)
-        amendments.append(Amendment(
-            name=name,
-            index=amendment_hash(name),
-            enabled=False,
-            supported=True,
-            vote_behavior="DefaultYes",
-            retired=True,
-        ))
+        amendments.append(
+            Amendment(
+                name=name,
+                index=amendment_hash(name),
+                enabled=False,
+                supported=True,
+                vote_behavior="DefaultYes",
+                retired=True,
+            )
+        )
 
     # Retired amendments (legacy format: XRPL_RETIRE_FEATURE/FIX(Name))
     for m in _RE_RETIRED_LEGACY.finditer(text):
@@ -127,16 +139,65 @@ def parse_features_macro(path: str | Path) -> list[Amendment]:
         name = _derive_name(kind, raw_name)
         # Skip if already captured by the modern regex
         if not any(a.name == name for a in amendments):
-            amendments.append(Amendment(
-                name=name,
-                index=amendment_hash(name),
-                enabled=False,
-                supported=True,
-                vote_behavior="DefaultYes",
-                retired=True,
-            ))
+            amendments.append(
+                Amendment(
+                    name=name,
+                    index=amendment_hash(name),
+                    enabled=False,
+                    supported=True,
+                    vote_behavior="DefaultYes",
+                    retired=True,
+                )
+            )
 
     return amendments
+
+
+def parse_features_macro(path: str | Path) -> list[Amendment]:
+    """Parse rippled's features.macro file into a list of Amendments."""
+    return parse_features_macro_text(Path(path).read_text())
+
+
+def fetch_features_macro(url: str = FEATURES_MACRO_URL, *, timeout: int = 10) -> str:
+    """Fetch features.macro content from a URL. Returns the raw text."""
+    req = urllib.request.Request(url)
+    response = urllib.request.urlopen(req, timeout=timeout)
+    return response.read().decode("utf-8")
+
+
+def resolve_develop_source(explicit_source: str | Path | None = None) -> list[Amendment]:
+    """Resolve develop amendments via: explicit path → GitHub fetch → GL_FEATURES_MACRO env var.
+
+    Returns parsed (but not yet profile-applied) amendments.
+    Raises RuntimeError if all sources fail.
+    """
+    # 1. Explicit --amendment-source takes priority
+    if explicit_source is not None:
+        return parse_features_macro(explicit_source)
+
+    # 2. Try GitHub fetch
+    try:
+        text = fetch_features_macro()
+        return parse_features_macro_text(text)
+    except (urllib.error.URLError, OSError, TimeoutError):
+        pass
+
+    # 3. Try GL_FEATURES_MACRO env var
+    env_path = os.environ.get("GL_FEATURES_MACRO")
+    if env_path:
+        p = Path(env_path)
+        if p.is_file():
+            return parse_features_macro(p)
+
+    # 4. All failed
+    raise RuntimeError(
+        "Could not load develop amendments. GitHub fetch failed and "
+        "GL_FEATURES_MACRO is not set.\n"
+        "Options:\n"
+        "  1. Set GL_FEATURES_MACRO=/path/to/rippled/.../features.macro\n"
+        "  2. Use --amendment-source /path/to/features.macro\n"
+        "  3. Use --amendment-profile release (curated mainnet amendments)"
+    )
 
 
 def apply_develop_profile(amendments: list[Amendment]) -> list[Amendment]:
@@ -148,21 +209,24 @@ def apply_develop_profile(amendments: list[Amendment]) -> list[Amendment]:
     result = []
     for a in amendments:
         should_enable = a.retired or (a.supported and a.vote_behavior != "Obsolete")
-        result.append(Amendment(
-            name=a.name,
-            index=a.index,
-            enabled=should_enable,
-            obsolete=a.obsolete,
-            supported=a.supported,
-            vote_behavior=a.vote_behavior,
-            retired=a.retired,
-        ))
+        result.append(
+            Amendment(
+                name=a.name,
+                index=a.index,
+                enabled=should_enable,
+                obsolete=a.obsolete,
+                supported=a.supported,
+                vote_behavior=a.vote_behavior,
+                retired=a.retired,
+            )
+        )
     return result
 
 
 # ---------------------------------------------------------------------------
 # Profile-based loading
 # ---------------------------------------------------------------------------
+
 
 def get_amendments_for_profile(
     profile: AmendmentProfile | str = AmendmentProfile.RELEASE,
@@ -182,19 +246,13 @@ def get_amendments_for_profile(
     profile = AmendmentProfile(profile) if isinstance(profile, str) else profile
 
     if profile == AmendmentProfile.RELEASE:
-        amendments = _load_release_amendments()
+        amendments = resolve_release_source()
     elif profile == AmendmentProfile.DEVELOP:
-        if source is None:
-            raise ValueError(
-                "develop profile requires --amendment-source pointing to features.macro"
-            )
-        raw = parse_features_macro(source)
+        raw = resolve_develop_source(source)
         amendments = apply_develop_profile(raw)
     elif profile == AmendmentProfile.CUSTOM:
         if source is None:
-            raise ValueError(
-                "custom profile requires --amendment-source pointing to a JSON file"
-            )
+            raise ValueError("custom profile requires --amendment-source pointing to a JSON file")
         amendments = _load_amendments_from_json(Path(source))
     else:
         raise ValueError(f"Unknown profile: {profile}")
@@ -208,9 +266,47 @@ def get_amendments_for_profile(
     return amendments
 
 
-def _load_release_amendments() -> list[Amendment]:
-    """Load curated release amendments from bundled JSON."""
-    return _load_amendments_from_json(DEFAULT_RELEASE_LIST)
+def resolve_release_source() -> list[Amendment]:
+    """Resolve release amendments via: mainnet RPC → bundled JSON fallback.
+
+    Returns amendments with enabled status from the source.
+    """
+    # 1. Try mainnet RPC
+    try:
+        raw = _fetch_amendments(network="mainnet")
+        return _amendments_from_raw_dict(raw)
+    except (urllib.error.URLError, OSError, TimeoutError, KeyError):
+        pass
+
+    # 2. Fall back to bundled JSON
+    if Path(str(DEFAULT_MAINNET_LIST)).exists():
+        return _load_amendments_from_json(DEFAULT_MAINNET_LIST)
+
+    raise RuntimeError(
+        "Could not load release amendments. Mainnet RPC failed and "
+        f"bundled {MAINNET_AMENDMENTS_FILE} not found.\n"
+        "Options:\n"
+        "  1. Use --amendment-source /path/to/amendments.json\n"
+        "  2. Use --amendment-profile develop (auto-fetches from GitHub)"
+    )
+
+
+def _amendments_from_raw_dict(raw: dict) -> list[Amendment]:
+    """Convert raw rippled 'feature' RPC response dict to Amendment list."""
+    amendments: list[Amendment] = []
+    for am_hash, info in raw.items():
+        amendments.append(
+            Amendment(
+                name=info.get("name", am_hash),
+                index=am_hash,
+                enabled=bool(info.get("enabled", False)),
+                obsolete=bool(info.get("obsolete", False)),
+                supported=bool(info.get("supported", True)),
+                vote_behavior=info.get("vote_behavior", "DefaultNo"),
+                retired=bool(info.get("retired", False)),
+            )
+        )
+    return amendments
 
 
 def _load_amendments_from_json(path: Path) -> list[Amendment]:
@@ -218,15 +314,17 @@ def _load_amendments_from_json(path: Path) -> list[Amendment]:
     data = json.loads(path.resolve().read_text())
     amendments: list[Amendment] = []
     for am_hash, info in data.items():
-        amendments.append(Amendment(
-            name=info.get("name", am_hash),
-            index=am_hash,
-            enabled=bool(info.get("enabled", False)),
-            obsolete=bool(info.get("obsolete", False)),
-            supported=bool(info.get("supported", True)),
-            vote_behavior=info.get("vote_behavior", "DefaultNo"),
-            retired=bool(info.get("retired", False)),
-        ))
+        amendments.append(
+            Amendment(
+                name=info.get("name", am_hash),
+                index=am_hash,
+                enabled=bool(info.get("enabled", False)),
+                obsolete=bool(info.get("obsolete", False)),
+                supported=bool(info.get("supported", True)),
+                vote_behavior=info.get("vote_behavior", "DefaultNo"),
+                retired=bool(info.get("retired", False)),
+            )
+        )
     return amendments
 
 
@@ -239,17 +337,29 @@ def _apply_overrides(
     result = []
     for a in amendments:
         if a.name in enable:
-            result.append(Amendment(
-                name=a.name, index=a.index, enabled=True,
-                obsolete=a.obsolete, supported=a.supported,
-                vote_behavior=a.vote_behavior, retired=a.retired,
-            ))
+            result.append(
+                Amendment(
+                    name=a.name,
+                    index=a.index,
+                    enabled=True,
+                    obsolete=a.obsolete,
+                    supported=a.supported,
+                    vote_behavior=a.vote_behavior,
+                    retired=a.retired,
+                )
+            )
         elif a.name in disable:
-            result.append(Amendment(
-                name=a.name, index=a.index, enabled=False,
-                obsolete=a.obsolete, supported=a.supported,
-                vote_behavior=a.vote_behavior, retired=a.retired,
-            ))
+            result.append(
+                Amendment(
+                    name=a.name,
+                    index=a.index,
+                    enabled=False,
+                    obsolete=a.obsolete,
+                    supported=a.supported,
+                    vote_behavior=a.vote_behavior,
+                    retired=a.retired,
+                )
+            )
         else:
             result.append(a)
     return result
@@ -259,13 +369,10 @@ def _apply_overrides(
 # Legacy API (backward-compatible with existing callers)
 # ---------------------------------------------------------------------------
 
-def _get_amendments_from_file(amendments_file: str | None = None) -> dict:
+
+def _get_amendments_from_file(amendments_file: str) -> dict:
     """Return raw amendment dict from JSON file."""
-    if amendments_file is not None:
-        features_file = Path(amendments_file)
-    else:
-        features_file = DEFAULT_AMENDMENT_LIST
-    return json.loads(features_file.resolve().read_text())
+    return json.loads(Path(amendments_file).resolve().read_text())
 
 
 def _get_amendments_from_network(network: str | None = None) -> dict:

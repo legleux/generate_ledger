@@ -57,15 +57,25 @@ def build_trustline_objects(
 
     root_a = owner_dir(gateway_address)
     dir_a = {
-        "Flags": 0, "Indexes": [rsi], "LedgerEntryType": "DirectoryNode",
-        "Owner": gateway_address, "PreviousTxnID": txn_id, "PreviousTxnLgrSeq": ledger_seq,
-        "RootIndex": root_a, "index": root_a,
+        "Flags": 0,
+        "Indexes": [rsi],
+        "LedgerEntryType": "DirectoryNode",
+        "Owner": gateway_address,
+        "PreviousTxnID": txn_id,
+        "PreviousTxnLgrSeq": ledger_seq,
+        "RootIndex": root_a,
+        "index": root_a,
     }
     root_b = owner_dir(account_address)
     dir_b = {
-        "Flags": 0, "Indexes": [rsi], "LedgerEntryType": "DirectoryNode",
-        "Owner": account_address, "PreviousTxnID": txn_id, "PreviousTxnLgrSeq": ledger_seq,
-        "RootIndex": root_b, "index": root_b,
+        "Flags": 0,
+        "Indexes": [rsi],
+        "LedgerEntryType": "DirectoryNode",
+        "Owner": account_address,
+        "PreviousTxnID": txn_id,
+        "PreviousTxnLgrSeq": ledger_seq,
+        "RootIndex": root_b,
+        "index": root_b,
     }
 
     return TrustlineObjects(ripple_state, dir_a, dir_b)
@@ -83,7 +93,7 @@ def main():
     currencies = [c.strip() for c in args.currencies.split(",")]
     if len(currencies) < args.gateways:
         # Cycle currencies if fewer than gateways
-        currencies = (currencies * ((args.gateways // len(currencies)) + 1))[:args.gateways]
+        currencies = (currencies * ((args.gateways // len(currencies)) + 1))[: args.gateways]
 
     output_dir = args.output.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -137,10 +147,10 @@ def main():
     size_mb = output_file.stat().st_size / 1024 / 1024
     num_objects = len(ledger["ledger"]["accountState"])
 
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print(f"  Total time:      {total:.2f}s")
     print(f"  Accounts:        {args.accounts:,}")
-    print(f"  Gateways:        {args.gateways} ({', '.join(currencies[:args.gateways])})")
+    print(f"  Gateways:        {args.gateways} ({', '.join(currencies[: args.gateways])})")
     print(f"  Trustlines:      {len(trustline_objects):,}")
     print(f"  Ledger objects:  {num_objects:,}")
     print(f"  Output:          {output_file}")

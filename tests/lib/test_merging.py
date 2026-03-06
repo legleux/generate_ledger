@@ -1,6 +1,6 @@
 """Tests for generate_ledger.utils.merging.deep_merge."""
 
-from gl.utils.merging import deep_merge
+from generate_ledger.utils.merging import deep_merge
 
 
 class TestDeepMerge:

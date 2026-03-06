@@ -6,17 +6,20 @@ import pytest
 class TestDevelopRegistry:
     def test_import_succeeds(self):
         """The develop package should be importable on this branch."""
-        from gl.develop import get_develop_builders
+        from generate_ledger.develop import get_develop_builders
+
         assert callable(get_develop_builders)
 
     def test_returns_dict(self):
-        from gl.develop import get_develop_builders
+        from generate_ledger.develop import get_develop_builders
+
         builders = get_develop_builders()
         assert isinstance(builders, dict)
 
     def test_mpt_builder_registered(self):
         """MPT builder should now be registered (MPTokensV1 implemented)."""
-        from gl.develop import get_develop_builders
+        from generate_ledger.develop import get_develop_builders
+
         builders = get_develop_builders()
         assert "mpt" in builders
         assert callable(builders["mpt"]["builder"])
@@ -24,20 +27,23 @@ class TestDevelopRegistry:
 
     def test_modules_importable(self):
         """Developed modules should be importable."""
-        from gl.develop import mpt, vault
+        from generate_ledger.develop import mpt, vault
+
         assert hasattr(mpt, "generate_mpt_objects")
         assert hasattr(vault, "generate_vault_objects")
 
     def test_mpt_builder_callable(self):
         """MPT builder accepts accounts/config kwargs and returns a list."""
-        from gl.develop.mpt import generate_mpt_objects
-        from gl.ledger import LedgerConfig
+        from generate_ledger.develop.mpt import generate_mpt_objects
+        from generate_ledger.ledger import LedgerConfig
+
         cfg = LedgerConfig(mpt_issuances=[])
         result = generate_mpt_objects(accounts=[], config=cfg)
         assert result == []
 
     def test_vault_stub_raises_not_implemented(self):
-        from gl.develop.vault import generate_vault_objects
+        from generate_ledger.develop.vault import generate_vault_objects
+
         with pytest.raises(NotImplementedError):
             generate_vault_objects(accounts=[], config=None)
 
@@ -56,7 +62,8 @@ class TestGracefulImportError:
         # Force ImportError for gl.develop
         sys.modules["gl.develop"] = None  # type: ignore[assignment]
         try:
-            from gl.ledger import LedgerConfig, gen_ledger_state
+            from generate_ledger.ledger import LedgerConfig, gen_ledger_state
+
             cfg = LedgerConfig(
                 account_cfg={"num_accounts": 2},
                 base_dir="/tmp/test_graceful_import",

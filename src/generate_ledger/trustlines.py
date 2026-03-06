@@ -9,28 +9,34 @@ from xrpl.core.keypairs import sign
 from xrpl.models.transactions import TrustSet
 from xrpl.wallet import Wallet
 
-from gl.accounts import Account
-from gl.crypto import sha512_half
-from gl.indices import owner_dir, ripple_state_index
+from generate_ledger.accounts import Account
+from generate_ledger.constants import NEUTRAL_ISSUER, TXN_PREFIX
+from generate_ledger.crypto import sha512_half
+from generate_ledger.indices import owner_dir, ripple_state_index
 
 
 @dataclass
 class Trustline:
     """Represents a trustline specification."""
+
     account_a: str  # First account address
     account_b: str  # Second account address
-    currency: str   # Currency code (e.g., "USD")
-    limit: int      # Trust limit amount
+    currency: str  # Currency code (e.g., "USD")
+    limit: int  # Trust limit amount
+
 
 @dataclass
 class TrustlineObjects:
     """Complete set of ledger objects for a trustline."""
+
     ripple_state: dict
     directory_node_a: dict
     directory_node_b: dict
 
+
 class TrustlineConfig(BaseSettings):
     """Configuration for trustline generation."""
+
     model_config = SettingsConfigDict(env_prefix="GL_TRUSTLINE_", env_file=".env")
 
     num_trustlines: int = 0  # Number of random trustlines to generate
@@ -40,7 +46,11 @@ class TrustlineConfig(BaseSettings):
 
 
 def generate_trustset_txn_id(
-    account: Account, wallet: Wallet, limit_amount: dict, sequence: int, fee: str = "123",
+    account: Account,
+    wallet: Wallet,
+    limit_amount: dict,
+    sequence: int,
+    fee: str = "123",
 ) -> str:
     """
     Generate a TrustSet transaction ID without submitting it.
@@ -63,17 +73,12 @@ def generate_trustset_txn_id(
     tx_blob = encode(signed_dict)
 
     # Compute transaction ID
-    TXN_PREFIX = bytes.fromhex("54584E00")  # "TXN\0"
     txn_id = sha512_half(TXN_PREFIX + unhexlify(tx_blob)).hex().upper()
     return txn_id
 
 
 def generate_trustline_objects(
-    account_a: Account,
-    account_b: Account,
-    currency: str,
-    limit: int,
-    ledger_seq: int = 2
+    account_a: Account, account_b: Account, currency: str, limit: int, ledger_seq: int = 2
 ) -> TrustlineObjects:
     """
     Generate all 3 ledger objects needed for a trustline:
@@ -87,11 +92,7 @@ def generate_trustline_objects(
     wallet_b = Wallet.from_seed(account_b.seed, algorithm=algo)
 
     # Prepare the limit amount for the TrustSet transaction
-    limit_amount = {
-        "currency": currency,
-        "issuer": account_a.address,
-        "value": str(limit)
-    }
+    limit_amount = {"currency": currency, "issuer": account_a.address, "value": str(limit)}
 
     # Generate TrustSet transaction ID (used for DirectoryNode PreviousTxnID)
     txn_id = generate_trustset_txn_id(account_b, wallet_b, limit_amount, sequence=4)
@@ -99,65 +100,153 @@ def generate_trustline_objects(
     # Calculate the RippleState index
     rsi = ripple_state_index(account_a.address, account_b.address, currency)
 
-    # Determine high/low accounts (lexicographic order)
-    a1 = account_a.address.encode()
-    a2 = account_b.address.encode()
-    if a1 < a2:
-        lo_address, hi_address = account_a.address, account_b.address
-    else:
-        lo_address, hi_address = account_b.address, account_a.address
+    lo_address, hi_address = order_low_high(account_a.address, account_b.address)
 
-    # Create RippleState object
-    ripple_state = {
+    ripple_state = build_ripple_state(
+        currency=currency,
+        lo_address=lo_address,
+        hi_address=hi_address,
+        balance_value="0",
+        lo_limit=str(limit),
+        hi_limit=str(limit),
+        flags=131072,  # lsfLowReserve
+        txn_id=txn_id,
+        ledger_seq=ledger_seq,
+        index=rsi,
+    )
+    directory_node_a = build_directory_node(
+        index=owner_dir(account_a.address),
+        entries=[rsi],
+        owner=account_a.address,
+        txn_id=txn_id,
+        ledger_seq=ledger_seq,
+    )
+    directory_node_b = build_directory_node(
+        index=owner_dir(account_b.address),
+        entries=[rsi],
+        owner=account_b.address,
+        txn_id=txn_id,
+        ledger_seq=ledger_seq,
+    )
+
+    return TrustlineObjects(
+        ripple_state=ripple_state,
+        directory_node_a=directory_node_a,
+        directory_node_b=directory_node_b,
+    )
+
+
+def order_low_high(addr_a: str, addr_b: str) -> tuple[str, str]:
+    """Return (lo, hi) addresses ordered by lexicographic byte comparison of the address strings."""
+    if addr_a.encode() < addr_b.encode():
+        return addr_a, addr_b
+    return addr_b, addr_a
+
+
+def build_ripple_state(
+    currency: str,
+    lo_address: str,
+    hi_address: str,
+    balance_value: str,
+    lo_limit: str,
+    hi_limit: str,
+    flags: int,
+    txn_id: str,
+    ledger_seq: int,
+    index: str,
+) -> dict:
+    """Build a RippleState ledger object dict."""
+    return {
         "Balance": {
             "currency": currency,
-            "issuer": "rrrrrrrrrrrrrrrrrrrrBZbvji",  # Neutral issuer for balance
-            "value": "0",
+            "issuer": NEUTRAL_ISSUER,
+            "value": balance_value,
         },
-        "Flags": 131072,  # lsfLowReserve flag
+        "Flags": flags,
         "HighLimit": {
             "currency": currency,
             "issuer": hi_address,
-            "value": str(limit),
+            "value": hi_limit,
         },
         "HighNode": "0",
         "LedgerEntryType": "RippleState",
         "LowLimit": {
             "currency": currency,
             "issuer": lo_address,
-            "value": str(limit),
+            "value": lo_limit,
         },
         "LowNode": "0",
         "PreviousTxnID": txn_id,
         "PreviousTxnLgrSeq": ledger_seq,
-        "index": rsi,
+        "index": index,
     }
 
-    # Create DirectoryNode for account_a
-    root_index_a = owner_dir(account_a.address)
-    directory_node_a = {
-        "Flags": 0,
-        "Indexes": [rsi],
+
+def build_directory_node(
+    index: str,
+    entries: list[str],
+    owner: str,
+    txn_id: str,
+    ledger_seq: int,
+    flags: int = 0,
+) -> dict:
+    """Build a DirectoryNode ledger object dict."""
+    return {
+        "Flags": flags,
+        "Indexes": list(entries),
         "LedgerEntryType": "DirectoryNode",
-        "Owner": account_a.address,
+        "Owner": owner,
         "PreviousTxnID": txn_id,
         "PreviousTxnLgrSeq": ledger_seq,
-        "RootIndex": root_index_a,
-        "index": root_index_a,
+        "RootIndex": index,
+        "index": index,
     }
 
-    # Create DirectoryNode for account_b
-    root_index_b = owner_dir(account_b.address)
-    directory_node_b = {
-        "Flags": 0,
-        "Indexes": [rsi],
-        "LedgerEntryType": "DirectoryNode",
-        "Owner": account_b.address,
-        "PreviousTxnID": txn_id,
-        "PreviousTxnLgrSeq": ledger_seq,
-        "RootIndex": root_index_b,
-        "index": root_index_b,
-    }
+
+def generate_trustline_objects_fast(
+    account_a: Account,
+    account_b: Account,
+    currency: str,
+    limit: int,
+    ledger_seq: int = 2,
+) -> TrustlineObjects:
+    """Generate trustline objects without signing a TrustSet transaction.
+
+    Uses the RippleState index as a synthetic PreviousTxnID.  This is valid
+    for genesis ledgers — rippled does not validate PreviousTxnID on bootstrap.
+    ~100x faster than generate_trustline_objects() because it skips
+    Wallet.from_seed() and xrpl-py transaction signing.
+    """
+    rsi = ripple_state_index(account_a.address, account_b.address, currency)
+    lo_address, hi_address = order_low_high(account_a.address, account_b.address)
+    txn_id = rsi  # Synthetic PreviousTxnID: deterministic, unique per trustline
+
+    ripple_state = build_ripple_state(
+        currency=currency,
+        lo_address=lo_address,
+        hi_address=hi_address,
+        balance_value="0",
+        lo_limit=str(limit),
+        hi_limit=str(limit),
+        flags=131072,  # lsfLowReserve
+        txn_id=txn_id,
+        ledger_seq=ledger_seq,
+        index=rsi,
+    )
+    directory_node_a = build_directory_node(
+        index=owner_dir(account_a.address),
+        entries=[rsi],
+        owner=account_a.address,
+        txn_id=txn_id,
+        ledger_seq=ledger_seq,
+    )
+    directory_node_b = build_directory_node(
+        index=owner_dir(account_b.address),
+        entries=[rsi],
+        owner=account_b.address,
+        txn_id=txn_id,
+        ledger_seq=ledger_seq,
+    )
 
     return TrustlineObjects(
         ripple_state=ripple_state,

@@ -1,7 +1,8 @@
 """Tests for CLI parsers."""
+
 import pytest
 
-from gl.cli.parsers import (
+from generate_ledger.cli.parsers import (
     ParseError,
     parse_amm_pool,
     parse_mpt_spec,

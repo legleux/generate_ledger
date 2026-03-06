@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from gl.amendments import (
-    DEFAULT_RELEASE_LIST,
+from generate_ledger.amendments import (
+    DEFAULT_MAINNET_LIST,
     Amendment,
     AmendmentProfile,
     _apply_overrides,
@@ -15,6 +15,12 @@ from gl.amendments import (
     get_amendments_for_profile,
     get_enabled_amendment_hashes,
     parse_features_macro,
+    resolve_develop_source,
+)
+from tests.conftest import (
+    MAINNET_AMENDMENT_COUNT,
+    MAINNET_OBSOLETE_COUNT,
+    MAINNET_RETIRED_COUNT,
 )
 
 
@@ -188,25 +194,22 @@ class TestGetAmendmentsForProfile:
                 assert a.enabled is True, f"{a.name} should be enabled in release profile"
 
     def test_develop_profile(self, macro_path):
-        amendments = get_amendments_for_profile(
-            AmendmentProfile.DEVELOP, source=macro_path
-        )
+        amendments = get_amendments_for_profile(AmendmentProfile.DEVELOP, source=macro_path)
         assert len(amendments) == 9
         enabled = [a for a in amendments if a.enabled]
         assert len(enabled) > 0
 
-    def test_develop_without_source_raises(self):
-        with pytest.raises(ValueError, match=r"features\.macro"):
-            get_amendments_for_profile(AmendmentProfile.DEVELOP)
+    def test_develop_without_source_uses_resolve_chain(self):
+        """Develop profile without explicit source uses resolve chain (env var fallback in tests)."""
+        amendments = get_amendments_for_profile(AmendmentProfile.DEVELOP)
+        assert len(amendments) > 0
 
     def test_custom_without_source_raises(self):
         with pytest.raises(ValueError, match="JSON file"):
             get_amendments_for_profile(AmendmentProfile.CUSTOM)
 
     def test_custom_profile(self):
-        amendments = get_amendments_for_profile(
-            AmendmentProfile.CUSTOM, source=str(DEFAULT_RELEASE_LIST)
-        )
+        amendments = get_amendments_for_profile(AmendmentProfile.CUSTOM, source=str(DEFAULT_MAINNET_LIST))
         assert len(amendments) > 0
 
     def test_string_profile(self, macro_path):
@@ -254,9 +257,9 @@ class TestGetEnabledAmendmentHashesProfile:
         )
         assert len(hashes) > 0
 
-    def test_legacy_fallback(self):
-        """When profile=None, uses the legacy source parameter."""
-        hashes = get_enabled_amendment_hashes()
+    def test_legacy_source_param(self, data_dir):
+        """Legacy source= parameter still works for loading JSON files."""
+        hashes = get_enabled_amendment_hashes(source=str(data_dir / "amendments_develop.json"))
         assert len(hashes) > 0
 
 
@@ -290,14 +293,14 @@ class TestApplyOverrides:
 # ---------------------------------------------------------------------------
 class TestReleaseJson:
     def test_file_exists(self):
-        assert DEFAULT_RELEASE_LIST.is_file() or Path(str(DEFAULT_RELEASE_LIST)).exists()
+        assert DEFAULT_MAINNET_LIST.is_file() or Path(str(DEFAULT_MAINNET_LIST)).exists()
 
     def test_loadable(self):
-        amendments = _load_amendments_from_json(Path(str(DEFAULT_RELEASE_LIST)))
+        amendments = _load_amendments_from_json(Path(str(DEFAULT_MAINNET_LIST)))
         assert len(amendments) > 0
 
     def test_all_enabled(self):
-        amendments = _load_amendments_from_json(Path(str(DEFAULT_RELEASE_LIST)))
+        amendments = _load_amendments_from_json(Path(str(DEFAULT_MAINNET_LIST)))
         for a in amendments:
             if a.obsolete or not a.supported:
                 assert a.enabled is False, f"{a.name} is obsolete/unsupported and should be disabled"
@@ -305,15 +308,44 @@ class TestReleaseJson:
                 assert a.enabled is True, f"{a.name} should be enabled in release JSON"
 
     def test_retired_count(self):
-        amendments = _load_amendments_from_json(Path(str(DEFAULT_RELEASE_LIST)))
+        amendments = _load_amendments_from_json(Path(str(DEFAULT_MAINNET_LIST)))
         retired = [a for a in amendments if a.retired]
-        assert len(retired) == 15
+        assert len(retired) == MAINNET_RETIRED_COUNT
 
     def test_obsolete_count(self):
-        amendments = _load_amendments_from_json(Path(str(DEFAULT_RELEASE_LIST)))
+        amendments = _load_amendments_from_json(Path(str(DEFAULT_MAINNET_LIST)))
         obsolete = [a for a in amendments if a.obsolete]
-        assert len(obsolete) == 4
+        assert len(obsolete) == MAINNET_OBSOLETE_COUNT
 
     def test_total_count(self):
-        amendments = _load_amendments_from_json(Path(str(DEFAULT_RELEASE_LIST)))
-        assert len(amendments) == 92
+        amendments = _load_amendments_from_json(Path(str(DEFAULT_MAINNET_LIST)))
+        assert len(amendments) == MAINNET_AMENDMENT_COUNT
+
+
+# ---------------------------------------------------------------------------
+# resolve_develop_source() — fetch/fallback chain
+# ---------------------------------------------------------------------------
+class TestResolveDevelopSource:
+    @pytest.fixture
+    def macro_path(self, data_dir: Path) -> Path:
+        return data_dir / "features_test.macro"
+
+    def test_explicit_source_takes_priority(self, macro_path):
+        """Explicit path is used regardless of fetch or env var."""
+        amendments = resolve_develop_source(macro_path)
+        assert len(amendments) == 9
+
+    def test_explicit_source_bypasses_fetch(self, monkeypatch, macro_path):
+        """Explicit path is used even when fetch and env var are available."""
+
+        def _should_not_be_called(**kw):
+            raise AssertionError("fetch should not be called")
+
+        monkeypatch.setattr("generate_ledger.amendments.fetch_features_macro", _should_not_be_called)
+        amendments = resolve_develop_source(macro_path)
+        assert len(amendments) > 0
+
+    def test_env_var_fallback_works(self):
+        """The autouse fixture proves env var fallback works (fetch blocked, GL_FEATURES_MACRO set)."""
+        amendments = resolve_develop_source()
+        assert len(amendments) > 0

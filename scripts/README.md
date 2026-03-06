@@ -9,35 +9,45 @@ Benchmark script for testing parallel XRPL account generation and trustline (Rip
 pip install pynacl fastecdsa
 
 # Run account benchmark
-uv run scripts/bench_accounts.py -n 1000 --algo ed25519 --mode seq
+uv run scripts/bench_accounts.py --accounts 1000 --algo ed25519 --mode seq
 
 # Run accounts + trustlines benchmark
-uv run scripts/bench_accounts.py -n 1000 --trustlines --mode mp
+uv run scripts/bench_accounts.py --accounts 1000 --trustlines --mode mp
 ```
 
 ## Usage
 
 ```
-usage: bench_accounts.py [-h] -n COUNT [--mode {seq,mp,thread,hybrid,gpu}]
+usage: bench_accounts.py [-h] [--accounts ACCOUNTS]
+                         [--mode {seq,mp,thread,hybrid,gpu}]
                          [--workers WORKERS] [--algo {secp256k1,ed25519}]
-                         [--output FILE] [--quiet] [--info]
-                         [--trustlines] [--topology {star,ring,mesh,random}]
+                         [--output FILE] [--quiet] [--info] [--trustlines]
+                         [--topology {star,ring,mesh,random}]
                          [--currencies CURRENCIES] [--limit LIMIT]
 
 Account Options:
-  -n, --count       Number of accounts to generate
-  --mode            Parallelization mode (default: seq)
-  --workers         Number of workers (default: CPU count)
-  --algo            Crypto algorithm (default: secp256k1)
-  --output FILE     Output JSON file with results
-  --quiet           Suppress progress output
-  --info            Print system info and exit
+  --accounts        Number of accounts to generate (required unless --info)
+  --mode            Parallelization strategy: seq (single-threaded baseline),
+                    mp (multiprocessing), thread (multithreaded, benefits from
+                    3.13t no-GIL), hybrid (processes + threads), gpu (stub,
+                    falls back to mp). Default: seq
+  --workers         Number of parallel workers (processes or threads depending
+                    on --mode). Ignored for seq. Default: CPU core count
+  --algo            Crypto algorithm: ed25519 (~279x faster with PyNaCl) or
+                    secp256k1 (traditional XRPL). Default: secp256k1
+  --output FILE     Write results (accounts, trustlines, timing) to JSON file
+  --quiet           Suppress progress output (only print final results)
+  --info            Print detected backends, Python version, CPU count, then exit
 
 Trustline Options:
-  --trustlines      Enable trustline generation benchmark
-  --topology        Trustline topology: star, ring, mesh, random (default: star)
-  --currencies      Comma-separated currencies (default: USD)
-  --limit           Trust limit (default: 1000000)
+  --trustlines      Also benchmark RippleState + DirectoryNode object generation
+                    after accounts are created. Pairs determined by --topology
+  --topology        How accounts are paired: star (all trust account 0), ring
+                    (each trusts the next), mesh (all pairs), random (30% of
+                    pairs). Default: star
+  --currencies      Comma-separated currency codes. Each currency multiplies
+                    the trustline count. Default: USD
+  --limit           Trust limit per trustline. Default: 1000000
 ```
 
 ## Parallelization Modes
@@ -91,23 +101,23 @@ The script auto-detects available backends and uses the fastest one.
 uv run scripts/bench_accounts.py --info
 
 # Benchmark ed25519 (fastest with pynacl)
-uv run scripts/bench_accounts.py -n 10000 --algo ed25519 --mode seq
+uv run scripts/bench_accounts.py --accounts 10000 --algo ed25519 --mode seq
 
 # Benchmark with multiprocessing
-uv run scripts/bench_accounts.py -n 10000 --algo secp256k1 --mode mp --workers 8
+uv run scripts/bench_accounts.py --accounts 10000 --algo secp256k1 --mode mp --workers 8
 
 # Save results to JSON
-uv run scripts/bench_accounts.py -n 1000 --output results.json
+uv run scripts/bench_accounts.py --accounts 1000 --output results.json
 
 # Benchmark trustline generation (accounts + trustlines)
-uv run scripts/bench_accounts.py -n 1000 --trustlines --mode mp
+uv run scripts/bench_accounts.py --accounts 1000 --trustlines --mode mp
 
 # Benchmark with different topologies
-uv run scripts/bench_accounts.py -n 100 --trustlines --topology mesh --mode mp
-uv run scripts/bench_accounts.py -n 1000 --trustlines --topology ring --mode mp
+uv run scripts/bench_accounts.py --accounts 100 --trustlines --topology mesh --mode mp
+uv run scripts/bench_accounts.py --accounts 1000 --trustlines --topology ring --mode mp
 
 # Benchmark with multiple currencies
-uv run scripts/bench_accounts.py -n 1000 --trustlines --currencies USD,EUR,JPY --mode mp
+uv run scripts/bench_accounts.py --accounts 1000 --trustlines --currencies USD,EUR,JPY --mode mp
 ```
 
 ## Output Format

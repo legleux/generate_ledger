@@ -3,8 +3,8 @@ import struct
 import base58
 from xrpl.core.addresscodec import decode_classic_address, encode_classic_address
 
-from gl.crypto import ripesha, sha512_half  # re-exported
-from gl.models.namespace import (
+from generate_ledger.crypto import ripesha, sha512_half  # re-exported
+from generate_ledger.models.namespace import (
     ACCOUNT,
     AMM,
     MPTOKEN,
@@ -24,25 +24,30 @@ def _decode_account(address: str) -> bytes:
     # XRP Base58Check decode, drop version byte
     return base58.b58decode_check(address, alphabet=base58.XRP_ALPHABET)[1:]
 
+
 def _decode_account_id(classic_address: str) -> bytes:
-    # or use xply-py version?
+    # or use xrpl-py version?
     """Classic address (Base58 'r...') -> 20-byte AccountID."""
     acct = decode_classic_address(classic_address)
     if len(acct) != ACCOUNT_ID_BYTES:
         raise ValueError("AccountID must be 20 bytes")
     return acct
 
+
 def compute_index(ns: NamespaceByte, payload: bytes) -> str:
     return sha512_half(ns_prefix(ns) + payload).hex().upper()
 
+
 def account_root_index(address: str) -> str:
     return compute_index(ACCOUNT, _decode_account(address))
+
 
 def _order_low_high(a1: bytes, a2: bytes) -> tuple[bytes, bytes]:
     """Order two 20-byte AccountIDs as (low, high) by lexicographic byte ordering."""
     if len(a1) != ACCOUNT_ID_BYTES or len(a2) != ACCOUNT_ID_BYTES:
         raise ValueError("AccountIDs must be 20 bytes.")
     return (a1, a2) if a1 < a2 else (a2, a1)
+
 
 def _currency_to_160(code: str) -> bytes:
     """
@@ -68,6 +73,7 @@ def _currency_to_160(code: str) -> bytes:
 
     raise ValueError("Currency must be a 3-letter ASCII code (e.g., 'USD') or a 40-hex string.")
 
+
 def currency_code_to_bytes(code: str) -> bytes:
     """Convert an XRPL currency code (<=20 bytes) to its 160-bit representation."""
     b = code.encode("ascii")
@@ -75,8 +81,10 @@ def currency_code_to_bytes(code: str) -> bytes:
         raise ValueError("Currency code too long (max 20 bytes)")
     return b.ljust(ACCOUNT_ID_BYTES, b"\x00")
 
+
 def currency_code_to_hex(code: str) -> str:
     return currency_code_to_bytes(code).hex().upper()
+
 
 def ripple_state_index(account_a: str, account_b: str, currency: str) -> str:
     a1 = _decode_account_id(account_a)
@@ -87,6 +95,7 @@ def ripple_state_index(account_a: str, account_b: str, currency: str) -> str:
     # prefix = TRUST_LINE.ns_prefix()  # RippleState space key 0x0072
     preimage = ns_prefix(TRUST_LINE) + low + high + cur
     return sha512_half(preimage).hex().upper()
+
 
 def owner_dir(account: str) -> str:
     """Compute the owner directory index for an account."""
@@ -113,8 +122,10 @@ def _asset_to_bytes(issuer: str | None, currency: str | None) -> bytes:
 
 
 def amm_index(
-    issuer1: str | None, currency1: str | None,
-    issuer2: str | None, currency2: str | None,
+    issuer1: str | None,
+    currency1: str | None,
+    issuer2: str | None,
+    currency2: str | None,
 ) -> str:
     """
     Compute the AMM ledger object index from two assets.
@@ -150,7 +161,7 @@ def amm_account_id(
     """
     amm_index_bytes = bytes.fromhex(amm_index_hex)
     # i=0 as uint16 big-endian (network byte order, matching rippled hash_append)
-    i_bytes = struct.pack('>H', 0)
+    i_bytes = struct.pack(">H", 0)
     preimage = i_bytes + parent_hash + amm_index_bytes
     # Direct RIPESHA - no SHA512Half (matches rippled's ammAccountID)
     account_id = ripesha(preimage)
@@ -167,7 +178,7 @@ def make_mpt_id(sequence: int, issuer_address: str) -> bytes:
     This ID is used as both the MPTokenIssuanceID field value (as 48-char hex)
     and as the preimage for computing the MPTokenIssuance ledger index.
     """
-    seq_bytes = struct.pack('>I', sequence)  # uint32 big-endian
+    seq_bytes = struct.pack(">I", sequence)  # uint32 big-endian
     account_bytes = _decode_account_id(issuer_address)
     return seq_bytes + account_bytes
 

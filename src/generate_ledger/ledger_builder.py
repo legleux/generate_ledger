@@ -4,12 +4,14 @@ from pathlib import Path
 
 from pydantic import PositiveInt
 
-from gl.accounts import generate_accounts
-from gl.indices import account_root_index, owner_dir
+from generate_ledger.accounts import generate_accounts
+from generate_ledger.constants import LSF_DEFAULT_RIPPLE
+from generate_ledger.indices import account_root_index, owner_dir
 
 GENESIS_ADDRESS = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh"
 TOTAL_COINS_DROPS = int(100e9 * 1e6)  # 100 billion XRP in drops
 DEFAULT_ACCOUNT_BALANCE = 100_000_000_000  # 100k XRP in drops
+
 
 def amendments_to_ledger_entry(amendment_hashes: list[str]) -> dict:
     return {
@@ -17,13 +19,14 @@ def amendments_to_ledger_entry(amendment_hashes: list[str]) -> dict:
         "Flags": 0,
         "LedgerEntryType": "Amendments",
         # Amendments index is always this
-        "index": "7DB0788C020F02780A673DC74757F23823FA3014C1866E72CC4CD8B226CD6EF4"
-
+        "index": "7DB0788C020F02780A673DC74757F23823FA3014C1866E72CC4CD8B226CD6EF4",
     }
+
 
 def generate_account_creds(num_accounts: PositiveInt):
     accts = generate_accounts(num_accounts)
     return accts
+
 
 def account_root_entry(
     address: str,
@@ -33,6 +36,7 @@ def account_root_entry(
     prev_txn_id: str | None = None,
     prev_txn_lgr_seq: int | None = None,
     sequence: int = 2,
+    precomputed_index: str | None = None,
 ) -> dict:
     entry = {
         "Account": address,
@@ -43,15 +47,13 @@ def account_root_entry(
         "PreviousTxnID": "0" * 64,
         "PreviousTxnLgrSeq": sequence - 1,
         "Sequence": sequence,
-        "index": account_root_index(address),
+        "index": precomputed_index if precomputed_index is not None else account_root_index(address),
     }
     if prev_txn_id is not None:
         entry["PreviousTxnID"] = prev_txn_id
     if prev_txn_lgr_seq is not None:
         entry["PreviousTxnLgrSeq"] = prev_txn_lgr_seq
     return entry
-
-LSF_DEFAULT_RIPPLE = 0x00800000  # Required for token issuers in AMM pools
 
 
 def _make_owner_dir_entry(address: str, object_index: str) -> dict:
@@ -119,7 +121,8 @@ def assemble_ledger_json(
                 prev_txn_id="0" * 64,
                 prev_txn_lgr_seq=0,
                 sequence=2,
-                owner_count=0  # Will update below if trustlines exist
+                owner_count=0,  # Will update below if trustlines exist
+                precomputed_index=getattr(a, "account_root_idx", None),
             )
         )
         balances_total += default_acct_balance
@@ -249,6 +252,7 @@ def assemble_ledger_json(
             "total_coins": str(total_coins_drops),
         }
     }
+
 
 def write_ledger_json(ledger: dict, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)

@@ -1,10 +1,11 @@
 """Tests for gl.trustlines — trustline object generation."""
+
 import pytest
 from xrpl import CryptoAlgorithm
 from xrpl.wallet import Wallet
 
-from gl.accounts import Account
-from gl.trustlines import (
+from generate_ledger.accounts import Account
+from generate_ledger.trustlines import (
     TrustlineConfig,
     TrustlineObjects,
     generate_trustline_objects,
@@ -15,6 +16,7 @@ from tests.conftest import ALICE_ADDRESS, ALICE_SEED, BOB_ADDRESS, BOB_SEED
 
 # TODO: Constant
 TXN_ID_LEN = 64
+
 
 @pytest.fixture
 def alice():

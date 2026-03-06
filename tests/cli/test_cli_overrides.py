@@ -8,6 +8,7 @@ yaml = YAML()
 
 runner = CliRunner()
 
+
 def test_validators_override(tmp_path, monkeypatch):
     out = tmp_path / "docker-compose.yml"
 

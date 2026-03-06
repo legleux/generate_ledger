@@ -1,77 +1,55 @@
 """CLI command for ledger generation with trustlines and AMM pools."""
+
 from pathlib import Path
 
 import typer
 
-from gl.accounts import AccountConfig
-from gl.cli.parsers import ParseError, parse_amm_pool, parse_mpt_spec, parse_trustline
-from gl.ledger import AMMPoolConfig, ExplicitTrustline, LedgerConfig, MPTIssuanceConfig, write_ledger_file
-from gl.trustlines import TrustlineConfig
+from generate_ledger.accounts import AccountConfig
+from generate_ledger.cli.parsers import (
+    ParseError,
+    build_amm_pool_config,
+    parse_amm_pool,
+    parse_mpt_spec,
+    parse_trustline,
+)
+from generate_ledger.ledger import ExplicitTrustline, LedgerConfig, MPTIssuanceConfig, write_ledger_file
+from generate_ledger.trustlines import TrustlineConfig
 
 app = typer.Typer(help="Commands to generate custom ledger.json files.")
-
-
-def _build_amm_pool_config(spec) -> AMMPoolConfig:
-    """Convert a ParsedAMMPool to AMMPoolConfig."""
-    return AMMPoolConfig(
-        asset1_currency=spec.asset1.currency,
-        asset1_issuer=spec.asset1.issuer,
-        asset1_amount=spec.amount1,
-        asset2_currency=spec.asset2.currency,
-        asset2_issuer=spec.asset2.issuer,
-        asset2_amount=spec.amount2,
-        trading_fee=spec.fee,
-        creator=spec.creator,
-    )
 
 
 @app.command()
 def ledger(
     # Account options
     num_accounts: int = typer.Option(
-        40, "--accounts", "-n",
-        help="Number of regular (non-gateway) accounts. Total = accounts + gateways."
+        40, "--accounts", help="Number of regular (non-gateway) accounts. Total = accounts + gateways."
     ),
     balance: str = typer.Option(
-        str(100_000_000000), "--balance", "-b",
-        help="Default account balance in drops (default: 100k XRP)."
+        str(100_000_000000), "--balance", "-b", help="Default account balance in drops (default: 100k XRP)."
     ),
-    algo: str = typer.Option(
-        "ed25519", "--algo",
-        help="Key algorithm: ed25519 (fast, default) or secp256k1."
-    ),
-
+    algo: str = typer.Option("ed25519", "--algo", help="Key algorithm: ed25519 (fast, default) or secp256k1."),
     # Output options
-    outdir: Path = typer.Option(
-        Path("testnet"), "--outdir", "-o",
-        help="Output directory."
-    ),
-
+    outdir: Path = typer.Option(Path("testnet"), "--output-dir", "-o", help="Output directory."),
     # Trustline options
-    num_trustlines: int = typer.Option(
-        0, "--num-trustlines",
-        help="Number of random trustlines to generate."
-    ),
+    num_trustlines: int = typer.Option(0, "--num-trustlines", help="Number of random trustlines to generate."),
     trustline: list[str] | None = typer.Option(
-        None, "--trustline", "-t",
-        help="Explicit trustline spec: 'account1:account2:currency:limit'. Repeatable."
+        None, "--trustline", "-t", help="Explicit trustline spec: 'account1:account2:currency:limit'. Repeatable."
     ),
     currencies: str = typer.Option(
-        "USD,EUR,GBP", "--currencies",
-        help="Comma-separated currencies for random trustlines."
+        "USD,EUR,GBP", "--currencies", help="Comma-separated currencies for random trustlines."
     ),
     trustline_limit: int = typer.Option(
-        100_000_000_000, "--trustline-limit",
-        help="Default trust limit for random trustlines."
+        100_000_000_000, "--trustline-limit", help="Default trust limit for random trustlines."
     ),
-
     # Gateway topology options
     gateways: int = typer.Option(
-        0, "--gateways",
+        0,
+        "--gateways",
         help="Number of gateway accounts (first N accounts become gateways). 0 = disabled.",
     ),
     assets_per_gateway: int = typer.Option(
-        4, "--assets-per-gateway",
+        4,
+        "--assets-per-gateway",
         help="Number of unique assets each gateway issues.",
     ),
     gateway_currencies: str = typer.Option(
@@ -80,64 +58,54 @@ def ledger(
         help="Comma-separated currency pool for gateway assets (distributed round-robin).",
     ),
     gateway_coverage: float = typer.Option(
-        0.5, "--gateway-coverage",
+        0.5,
+        "--gateway-coverage",
         help="Fraction of non-gateway accounts that receive trustlines (0.0-1.0).",
     ),
     gateway_connectivity: float = typer.Option(
-        0.5, "--gateway-connectivity",
+        0.5,
+        "--gateway-connectivity",
         help="Fraction of gateways each trustline-holding account connects to (0.0-1.0).",
     ),
     gateway_seed: int | None = typer.Option(
-        None, "--gateway-seed",
+        None,
+        "--gateway-seed",
         help="RNG seed for reproducible gateway topology.",
     ),
-
     # AMM options
     amm_pool: list[str] | None = typer.Option(
-        None, "--amm-pool", "-a",
-        help="AMM pool spec: 'asset1:asset2:amount1:amount2[:fee[:creator]]'. Repeatable."
+        None, "--amm-pool", "-a", help="AMM pool spec: 'asset1:asset2:amount1:amount2[:fee[:creator]]'. Repeatable."
     ),
-
     # MPT options
     mpt: list[str] | None = typer.Option(
-        None, "--mpt",
+        None,
+        "--mpt",
         help=(
             "MPT issuance spec: 'issuer:sequence[:max_amount[:flags[:scale[:fee[:metadata]]]]]'."
             " Requires MPTokensV1 amendment. Repeatable."
         ),
     ),
-
     # Amendment options
-    amendment_profile: str | None = typer.Option(
-        None, "--amendment-profile",
-        help="Amendment profile: release, develop, or custom."
+    amendment_profile: str = typer.Option(
+        "develop",
+        "--amendment-profile",
+        help="Amendment profile: develop (default, auto-fetches from GitHub), release (curated mainnet), or custom.",
     ),
     amendment_source: str | None = typer.Option(
-        None, "--amendment-source",
-        help="Path to features.macro (develop) or JSON file (custom)."
+        None,
+        "--amendment-source",
+        help="Path to features.macro or JSON file. Overrides GitHub fetch. Can also set GL_FEATURES_MACRO env var.",
     ),
     enable_amendment: list[str] | None = typer.Option(
-        None, "--enable-amendment",
-        help="Force-enable a specific amendment by name. Repeatable."
+        None, "--enable-amendment", help="Force-enable a specific amendment by name. Repeatable."
     ),
     disable_amendment: list[str] | None = typer.Option(
-        None, "--disable-amendment",
-        help="Force-disable a specific amendment by name. Repeatable."
+        None, "--disable-amendment", help="Force-disable a specific amendment by name. Repeatable."
     ),
-
     # Fee options
-    base_fee: int = typer.Option(
-        121, "--base-fee",
-        help="Base fee (drops)."
-    ),
-    reserve_base: int = typer.Option(
-        2_000_000, "--reserve-base",
-        help="Reserve base (drops)."
-    ),
-    reserve_inc: int = typer.Option(
-        666, "--reserve-inc",
-        help="Reserve increment (drops)."
-    ),
+    base_fee: int = typer.Option(121, "--base-fee", help="Base fee (drops)."),
+    reserve_base: int = typer.Option(2_000_000, "--reserve-base", help="Reserve base (drops)."),
+    reserve_inc: int = typer.Option(666, "--reserve-inc", help="Reserve increment (drops)."),
 ):
     """
     Build a ledger.json with accounts, trustlines, and AMM pools.
@@ -145,19 +113,19 @@ def ledger(
     Examples:
 
         # Basic: 10 accounts
-        gen ledger -n 10
+        gen ledger --accounts 10
 
         # With 5 random trustlines
-        gen ledger -n 10 --num-trustlines 5 --currencies USD,EUR
+        gen ledger --accounts 10 --num-trustlines 5 --currencies USD,EUR
 
         # With explicit trustlines (account indices)
-        gen ledger -n 5 -t "0:1:USD:1000000000" -t "1:2:EUR:500000000"
+        gen ledger --accounts 5 -t "0:1:USD:1000000000" -t "1:2:EUR:500000000"
 
         # With AMM pool (XRP/USD, account[0] as issuer)
-        gen ledger -n 5 -a "XRP:USD:0:1000000000000:1000000"
+        gen ledger --accounts 5 -a "XRP:USD:0:1000000000000:1000000"
 
         # Combined
-        gen ledger -n 10 --num-trustlines 3 -t "0:1:USD:1000000000" -a "XRP:USD:0:1000000000000:1000000:500:1"
+        gen ledger --accounts 10 --num-trustlines 3 -t "0:1:USD:1000000000" -a "XRP:USD:0:1000000000000:1000000:500:1"
     """
     outdir.mkdir(parents=True, exist_ok=True)
 
@@ -167,12 +135,14 @@ def ledger(
         for spec in trustline:
             try:
                 parsed = parse_trustline(spec)
-                explicit_trustlines.append(ExplicitTrustline(
-                    account1=parsed.account1,
-                    account2=parsed.account2,
-                    currency=parsed.currency,
-                    limit=parsed.limit,
-                ))
+                explicit_trustlines.append(
+                    ExplicitTrustline(
+                        account1=parsed.account1,
+                        account2=parsed.account2,
+                        currency=parsed.currency,
+                        limit=parsed.limit,
+                    )
+                )
             except ParseError as e:
                 raise typer.BadParameter(str(e)) from e
 
@@ -182,7 +152,7 @@ def ledger(
         for spec in amm_pool:
             try:
                 parsed = parse_amm_pool(spec)
-                amm_pools.append(_build_amm_pool_config(parsed))
+                amm_pools.append(build_amm_pool_config(parsed))
             except ParseError as e:
                 raise typer.BadParameter(str(e)) from e
 
@@ -192,15 +162,17 @@ def ledger(
         for spec in mpt:
             try:
                 parsed = parse_mpt_spec(spec)
-                mpt_issuances.append(MPTIssuanceConfig(
-                    issuer=parsed.issuer,
-                    sequence=parsed.sequence,
-                    max_amount=parsed.max_amount,
-                    flags=parsed.flags,
-                    asset_scale=parsed.asset_scale,
-                    transfer_fee=parsed.transfer_fee,
-                    metadata=parsed.metadata,
-                ))
+                mpt_issuances.append(
+                    MPTIssuanceConfig(
+                        issuer=parsed.issuer,
+                        sequence=parsed.sequence,
+                        max_amount=parsed.max_amount,
+                        flags=parsed.flags,
+                        asset_scale=parsed.asset_scale,
+                        transfer_fee=parsed.transfer_fee,
+                        metadata=parsed.metadata,
+                    )
+                )
             except ParseError as e:
                 raise typer.BadParameter(str(e)) from e
 
@@ -208,8 +180,8 @@ def ledger(
     currency_list = [c.strip().upper() for c in currencies.split(",") if c.strip()]
 
     # Build config
-    from gl.gateways import GatewayConfig  # noqa: PLC0415
-    from gl.ledger import FeeConfig  # noqa: PLC0415
+    from generate_ledger.gateways import GatewayConfig  # noqa: PLC0415
+    from generate_ledger.ledger import FeeConfig  # noqa: PLC0415
 
     gateway_currency_list = [c.strip().upper() for c in gateway_currencies.split(",") if c.strip()]
     config_kwargs: dict = dict(
@@ -241,8 +213,7 @@ def ledger(
         mpt_issuances=mpt_issuances,
         base_dir=outdir,
     )
-    if amendment_profile is not None:
-        config_kwargs["amendment_profile"] = amendment_profile
+    config_kwargs["amendment_profile"] = amendment_profile
     if amendment_source is not None:
         config_kwargs["amendment_profile_source"] = amendment_source
     if enable_amendment:
@@ -259,11 +230,7 @@ def ledger(
     typer.echo(f"Generated ledger.json at {output_file}")
     if gateways > 0:
         typer.echo(f"  Accounts: {total_accounts} ({num_accounts} regular + {gateways} gateways)")
-        expected_tl = int(
-            num_accounts * gateway_coverage
-            * gateways * gateway_connectivity
-            * assets_per_gateway
-        )
+        expected_tl = int(num_accounts * gateway_coverage * gateways * gateway_connectivity * assets_per_gateway)
         typer.echo(f"  Expected gateway trustlines: ~{expected_tl}")
     else:
         typer.echo(f"  Accounts: {total_accounts}")

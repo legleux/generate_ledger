@@ -7,31 +7,25 @@ from typing import Any, TypedDict
 # You already have this (string form). Keep it working:
 # CLI_DEFAULTS = { "compose-write": {"validators": "num_validators", ...}, ... }
 
+
 class OptMeta(TypedDict, total=False):
-    field: str           # model field name
-    aliases: list[str]   # e.g. ["-v", "--validators"]
-    env: str             # e.g. "GL_VALIDATORS"
-    help: str            # help text override
+    field: str  # model field name
+    aliases: list[str]  # e.g. ["-v", "--validators"]
+    env: str  # e.g. "GL_VALIDATORS"
+    help: str  # help text override
+
 
 # Types? dict[str, dict[str, Union[str, OptMeta]]]
 CLI_DEFAULTS = {
-  "compose-write": {
-    # If you want -o/--output-file generated here, include it (with aliases/env if you like)
-    "output_file": {
-        "field": "compose_yml",
-        "aliases": ["-o", "--output-file"],
-        "help": "Write to this path"
+    "compose-write": {
+        # If you want -o/--output-file generated here, include it (with aliases/env if you like)
+        "output_file": {"field": "compose_yml", "aliases": ["-o", "--output-file"], "help": "Write to this path"},
+        "validators": {"field": "num_validators", "aliases": ["-v", "--validators"], "env": "GL_VALIDATORS"},
+        "validator_image": "validator_image",
+        "validator_name": "validator_name",
+        "validator_version": "validator_version",
+        "hubs": "num_hubs",
     },
-    "validators":  {
-        "field": "num_validators",
-        "aliases": ["-v", "--validators"],
-        "env": "GL_VALIDATORS"
-    },
-    "validator_image": "validator_image",
-    "validator_name":  "validator_name",
-    "validator_version": "validator_version",
-    "hubs": "num_hubs",
-  },
 }
 
 # CLI_DEFAULTS: dict[str, dict[str, Union[str, OptMeta]]] = {
@@ -47,6 +41,7 @@ CLI_DEFAULTS = {
 #     # "ledger-write": {...}
 # }
 
+
 def _normalize(mapping: Mapping[str, str | OptMeta]) -> dict[str, OptMeta]:
     out: dict[str, OptMeta] = {}
     for opt, val in mapping.items():
@@ -55,6 +50,7 @@ def _normalize(mapping: Mapping[str, str | OptMeta]) -> dict[str, OptMeta]:
         else:
             out[opt] = val  # already OptMeta
     return out
+
 
 def defaults_leaf_from_cfg(cfg: Any, command_key: str) -> dict[str, Any]:
     mapping = _normalize(CLI_DEFAULTS[command_key])
@@ -66,6 +62,7 @@ def defaults_leaf_from_cfg(cfg: Any, command_key: str) -> dict[str, Any]:
             leaf[cli_opt] = str(v) if isinstance(v, Path) else v
     return leaf
 
+
 def nest_default_map(command_path: Iterable[str], leaf: dict[str, Any]) -> dict[str, Any]:
     segs = list(command_path)
     root: dict[str, Any] = {}
@@ -74,6 +71,7 @@ def nest_default_map(command_path: Iterable[str], leaf: dict[str, Any]) -> dict[
         cur[seg] = leaf if i == len(segs) - 1 else {}
         cur = cur[seg]
     return root
+
 
 def merge_default_maps(*maps: dict[str, Any]) -> dict[str, Any]:
     def _merge(a: dict, b: dict) -> dict:
@@ -84,10 +82,12 @@ def merge_default_maps(*maps: dict[str, Any]) -> dict[str, Any]:
             else:
                 out[k] = v
         return out
+
     m: dict[str, Any] = {}
     for d in maps:
         m = _merge(m, d)
     return m
+
 
 def normalized_mapping(command_key: str) -> dict[str, OptMeta]:
     return _normalize(CLI_DEFAULTS[command_key])

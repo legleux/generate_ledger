@@ -2,12 +2,13 @@
 
 This is the largest untested module (472 lines) with two critical bug fixes.
 """
+
 import math
 
 import pytest
 
-from gl.accounts import Account
-from gl.amm import (
+from generate_ledger.accounts import Account
+from generate_ledger.amm import (
     AMM_ACCOUNT_FLAGS,
     LSF_AMM_NODE,
     LSF_DEFAULT_RIPPLE,

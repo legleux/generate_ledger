@@ -1,6 +1,6 @@
 [project]
 name = "generate-ledger"
-version = "0.0.4a4"
+version = "0.0.5"
 description = "Add your description here"
 readme = "README.md"
 authors = [
@@ -10,6 +10,7 @@ requires-python = ">=3.13"
 dependencies = [
     "base58>=2.1.1",
     "click>=8.2.1",
+    "complexipy>=5.2.0",
     "httpx>=0.28.1",
     "platformdirs>=4.3.8",
     "pydantic>=2.11.7",
@@ -43,15 +44,6 @@ target-version = "py313"
 line-length = 120
 force-exclude = true
 exclude = [
-    "src/generate_ledger/gen_mbp.py",
-    "src/generate_ledger/gen.py",
-    "src/generate_ledger/menu.py",
-    "src/generate_ledger/topo/",
-    "src/generate_ledger/utils/paths.py",
-    "src/generate_ledger/commands/compose_writer.py",
-    "src/gl/",
-    "tests/lib/ledger/",
-    "mk_txns.py",
 ]
 
 [tool.ruff.lint]
@@ -75,7 +67,7 @@ known-first-party = ["generate_ledger", "gl"]
 dev = [
   {include-group = "lint"},
   {include-group = "test"},
-  {include-group = "fast"}
+  "radon>=6.0.1",
 ]
 lint = [
     "pre-commit>=4.2.0",
@@ -86,7 +78,13 @@ test = [
     "pytest-cov>=6.0",
 ]
 fast = [
+    "coincurve>=20.0.0,<21.0.0",
     "pynacl>=1.5.0",
+]
+gpu = [
+    "cupy-cuda12x>=13.0.0",
+    "nvidia-cuda-nvcc-cu12>=12.9.86",
+    "nvidia-cuda-nvrtc-cu12>=12.9.86",
 ]
 
 [tool.pytest.ini_options]
@@ -100,26 +98,7 @@ addopts = "-rP --cov --cov-report=term-missing:skip-covered"
 [tool.coverage.run]
 source = ["src/generate_ledger"]
 
-omit = [
-    # Dead code: broken imports or unused stubs
-    "*/services/config_service.py",
-    "*/services/ledger_service.py",
-    "*/commands/config.py",
-    "*/utils/topo_net.py",
-    "*/utils/art_file.py",
-    "*/utils/paths.py",
-    # Legacy/unused entry points and modules
-    "*/gen.py",
-    "*/gen_mbp.py",
-    "*/ledger_main.py",
-    "*/main.py",
-    "*/menu.py",
-    "*/xxcli.py",
-    # Unused topology and model modules
-    "*/topo/*",
-    "*/models/ledger.py",
-    "*/models/ripplestate.py",
-]
+omit = []
 
 [tool.coverage.report]
 show_missing = true

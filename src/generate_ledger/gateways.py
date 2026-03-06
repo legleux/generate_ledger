@@ -6,13 +6,26 @@ from dataclasses import dataclass
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from gl.accounts import Account
-from gl.indices import owner_dir, ripple_state_index
-from gl.trustlines import TrustlineObjects
+from generate_ledger.accounts import Account
+from generate_ledger.trustlines import TrustlineObjects, generate_trustline_objects_fast
 
 DEFAULT_GATEWAY_CURRENCIES = [
-    "USD", "EUR", "GBP", "JPY", "BTC", "ETH", "CNY", "MXN",
-    "CAD", "AUD", "CHF", "KRW", "SGD", "HKD", "NOK", "SEK",
+    "USD",
+    "EUR",
+    "GBP",
+    "JPY",
+    "BTC",
+    "ETH",
+    "CNY",
+    "MXN",
+    "CAD",
+    "AUD",
+    "CHF",
+    "KRW",
+    "SGD",
+    "HKD",
+    "NOK",
+    "SEK",
 ]
 
 
@@ -50,87 +63,6 @@ def _build_gateway_assets(config: GatewayConfig) -> dict[int, list[str]]:
             currencies.append(pool[flat_idx % len(pool)])
         assets_by_gw[gw_idx] = currencies
     return assets_by_gw
-
-
-def generate_trustline_objects_fast(
-    account_a: Account,
-    account_b: Account,
-    currency: str,
-    limit: int,
-    ledger_seq: int = 2,
-) -> TrustlineObjects:
-    """Generate trustline objects without signing a TrustSet transaction.
-
-    Uses the RippleState index as a synthetic PreviousTxnID.  This is valid
-    for genesis ledgers — rippled does not validate PreviousTxnID on bootstrap.
-    ~100x faster than generate_trustline_objects() because it skips
-    Wallet.from_seed() and xrpl-py transaction signing.
-    """
-    rsi = ripple_state_index(account_a.address, account_b.address, currency)
-
-    # Determine high/low accounts (lexicographic order of addresses)
-    if account_a.address.encode() < account_b.address.encode():
-        lo_address, hi_address = account_a.address, account_b.address
-    else:
-        lo_address, hi_address = account_b.address, account_a.address
-
-    # Synthetic PreviousTxnID: the RSI itself (deterministic, unique per trustline)
-    txn_id = rsi
-
-    ripple_state = {
-        "Balance": {
-            "currency": currency,
-            "issuer": "rrrrrrrrrrrrrrrrrrrrBZbvji",
-            "value": "0",
-        },
-        "Flags": 131072,  # lsfLowReserve
-        "HighLimit": {
-            "currency": currency,
-            "issuer": hi_address,
-            "value": str(limit),
-        },
-        "HighNode": "0",
-        "LedgerEntryType": "RippleState",
-        "LowLimit": {
-            "currency": currency,
-            "issuer": lo_address,
-            "value": str(limit),
-        },
-        "LowNode": "0",
-        "PreviousTxnID": txn_id,
-        "PreviousTxnLgrSeq": ledger_seq,
-        "index": rsi,
-    }
-
-    root_index_a = owner_dir(account_a.address)
-    directory_node_a = {
-        "Flags": 0,
-        "Indexes": [rsi],
-        "LedgerEntryType": "DirectoryNode",
-        "Owner": account_a.address,
-        "PreviousTxnID": txn_id,
-        "PreviousTxnLgrSeq": ledger_seq,
-        "RootIndex": root_index_a,
-        "index": root_index_a,
-    }
-
-    root_index_b = owner_dir(account_b.address)
-    directory_node_b = {
-        "Flags": 0,
-        "Indexes": [rsi],
-        "LedgerEntryType": "DirectoryNode",
-        "Owner": account_b.address,
-        "PreviousTxnID": txn_id,
-        "PreviousTxnLgrSeq": ledger_seq,
-        "RootIndex": root_index_b,
-        "index": root_index_b,
-    }
-
-    return TrustlineObjects(
-        ripple_state=ripple_state,
-        directory_node_a=directory_node_a,
-        directory_node_b=directory_node_b,
-    )
 
 
 def generate_gateway_trustlines(

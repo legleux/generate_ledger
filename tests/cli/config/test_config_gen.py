@@ -27,10 +27,14 @@ def test_rippled_write(tmp_path: Path):
         [
             "rippled",
             "write",
-            "--template-path", str(tpl),
-            "--base-dir", str(outdir),
-            "--validators", "3",
-            "--keygen", "xrpl",
+            "--template-path",
+            str(tpl),
+            "--base-dir",
+            str(outdir),
+            "--validators",
+            "3",
+            "--keygen",
+            "xrpl",
         ],
         prog_name=__app_name__,
     )

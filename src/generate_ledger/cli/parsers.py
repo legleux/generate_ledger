@@ -12,6 +12,7 @@ AMM pool format: asset1:asset2:amount1:amount2[:fee[:creator]]
   - fee: Trading fee in basis points (default: 500)
   - creator: Creator account index or address (optional)
 """
+
 from dataclasses import dataclass
 
 from generate_ledger.indices import HEX_CURRENCY_LEN, STANDARD_CURRENCY_LEN
@@ -30,45 +31,50 @@ MAX_MPT_TRANSFER_FEE = 50000
 @dataclass
 class ParsedTrustline:
     """Parsed trustline specification."""
+
     account1: str  # Account index or rAddress
     account2: str  # Account index or rAddress
     currency: str  # Currency code
-    limit: int     # Trust limit
+    limit: int  # Trust limit
 
 
 @dataclass
 class ParsedAsset:
     """Parsed asset specification."""
+
     currency: str | None  # None for XRP
-    issuer: str | None    # None for XRP (index or address for issued)
+    issuer: str | None  # None for XRP (index or address for issued)
 
 
 @dataclass
 class ParsedAMMPool:
     """Parsed AMM pool specification."""
+
     asset1: ParsedAsset
     asset2: ParsedAsset
-    amount1: str          # Asset 1 amount
-    amount2: str          # Asset 2 amount
-    fee: int              # Trading fee in basis points
-    creator: str | None   # Creator account index or address
+    amount1: str  # Asset 1 amount
+    amount2: str  # Asset 2 amount
+    fee: int  # Trading fee in basis points
+    creator: str | None  # Creator account index or address
 
 
 class ParseError(ValueError):
     """Error parsing CLI format."""
+
     pass
 
 
 @dataclass
 class ParsedMPT:
     """Parsed MPT issuance specification."""
-    issuer: str           # Account index or classic address
-    sequence: int         # Issuer account sequence for the issuance
-    max_amount: str | None = None   # Max supply as integer string; None = unlimited
-    flags: int = 0        # MPTokenIssuance flags
+
+    issuer: str  # Account index or classic address
+    sequence: int  # Issuer account sequence for the issuance
+    max_amount: str | None = None  # Max supply as integer string; None = unlimited
+    flags: int = 0  # MPTokenIssuance flags
     asset_scale: int | None = None  # Decimal scale (0-255)
     transfer_fee: int | None = None  # Transfer fee in 1/10 basis points (0-50000)
-    metadata: str | None = None     # Hex-encoded metadata blob
+    metadata: str | None = None  # Hex-encoded metadata blob
 
 
 def parse_trustline(spec: str) -> ParsedTrustline:
@@ -93,8 +99,7 @@ def parse_trustline(spec: str) -> ParsedTrustline:
     parts = spec.split(":")
     if len(parts) != TRUSTLINE_PARTS:
         raise ParseError(
-            f"Invalid trustline format: '{spec}'. "
-            f"Expected 'account1:account2:currency:limit', got {len(parts)} parts"
+            f"Invalid trustline format: '{spec}'. Expected 'account1:account2:currency:limit', got {len(parts)} parts"
         )
 
     account1, account2, currency, limit_str = parts
@@ -107,8 +112,7 @@ def parse_trustline(spec: str) -> ParsedTrustline:
         raise ParseError("currency cannot be empty")
     if len(currency) != STANDARD_CURRENCY_LEN and len(currency) != HEX_CURRENCY_LEN:
         raise ParseError(
-            f"Invalid currency '{currency}': must be 3 characters (standard) "
-            f"or 40 hex characters (non-standard)"
+            f"Invalid currency '{currency}': must be 3 characters (standard) or 40 hex characters (non-standard)"
         )
 
     try:
@@ -151,10 +155,7 @@ def _parse_asset(spec: str) -> ParsedAsset:
 
     parts = spec.split(":", 1)
     if len(parts) != ASSET_PARTS:
-        raise ParseError(
-            f"Invalid asset format: '{spec}'. "
-            f"Expected 'XRP' or 'currency:issuer'"
-        )
+        raise ParseError(f"Invalid asset format: '{spec}'. Expected 'XRP' or 'currency:issuer'")
 
     currency, issuer = parts
 
@@ -162,8 +163,7 @@ def _parse_asset(spec: str) -> ParsedAsset:
         raise ParseError("currency cannot be empty")
     if len(currency) != STANDARD_CURRENCY_LEN and len(currency) != HEX_CURRENCY_LEN:
         raise ParseError(
-            f"Invalid currency '{currency}': must be 3 characters (standard) "
-            f"or 40 hex characters (non-standard)"
+            f"Invalid currency '{currency}': must be 3 characters (standard) or 40 hex characters (non-standard)"
         )
     if not issuer:
         raise ParseError("issuer cannot be empty for issued currency")
@@ -210,10 +210,7 @@ def parse_amm_pool(spec: str) -> ParsedAMMPool:
     # Or: USD:issuer1:EUR:issuer2:amt1:amt2 = 6 parts
 
     if len(parts) < MIN_AMM_PARTS:
-        raise ParseError(
-            f"Invalid AMM pool format: '{spec}'. "
-            f"Expected at least 'asset1:asset2:amount1:amount2'"
-        )
+        raise ParseError(f"Invalid AMM pool format: '{spec}'. Expected at least 'asset1:asset2:amount1:amount2'")
 
     idx = 0
 
@@ -227,10 +224,7 @@ def parse_amm_pool(spec: str) -> ParsedAMMPool:
         currency = parts[idx]
         issuer = parts[idx + 1]
         if len(currency) != STANDARD_CURRENCY_LEN and len(currency) != HEX_CURRENCY_LEN:
-            raise ParseError(
-                f"Invalid asset1 currency '{currency}': "
-                f"must be 3 chars, 40 hex chars, or 'XRP'"
-            )
+            raise ParseError(f"Invalid asset1 currency '{currency}': must be 3 chars, 40 hex chars, or 'XRP'")
         asset1 = ParsedAsset(
             currency=currency.upper() if len(currency) == STANDARD_CURRENCY_LEN else currency,
             issuer=issuer,
@@ -250,10 +244,7 @@ def parse_amm_pool(spec: str) -> ParsedAMMPool:
         currency = parts[idx]
         issuer = parts[idx + 1]
         if len(currency) != STANDARD_CURRENCY_LEN and len(currency) != HEX_CURRENCY_LEN:
-            raise ParseError(
-                f"Invalid asset2 currency '{currency}': "
-                f"must be 3 chars, 40 hex chars, or 'XRP'"
-            )
+            raise ParseError(f"Invalid asset2 currency '{currency}': must be 3 chars, 40 hex chars, or 'XRP'")
         asset2 = ParsedAsset(
             currency=currency.upper() if len(currency) == STANDARD_CURRENCY_LEN else currency,
             issuer=issuer,
@@ -268,8 +259,7 @@ def parse_amm_pool(spec: str) -> ParsedAMMPool:
     remaining = parts[idx:]
     if len(remaining) < ASSET_PARTS:
         raise ParseError(
-            f"Missing amounts in AMM pool spec. "
-            f"Got {len(remaining)} remaining parts after assets, need at least 2"
+            f"Missing amounts in AMM pool spec. Got {len(remaining)} remaining parts after assets, need at least 2"
         )
 
     amount1 = remaining[0]
@@ -337,10 +327,7 @@ def parse_mpt_spec(spec: str) -> ParsedMPT:
     """
     parts = spec.split(":")
     if len(parts) < MIN_MPT_PARTS:
-        raise ParseError(
-            f"Invalid MPT format: '{spec}'. "
-            f"Expected at least 'issuer:sequence', got {len(parts)} part(s)"
-        )
+        raise ParseError(f"Invalid MPT format: '{spec}'. Expected at least 'issuer:sequence', got {len(parts)} part(s)")
 
     issuer = parts[0]
     if not issuer:
@@ -386,17 +373,13 @@ def parse_mpt_spec(spec: str) -> ParsedMPT:
         except ValueError as e:
             raise ParseError(f"Invalid transfer_fee '{parts[5]}': must be an integer") from e
         if not 0 <= transfer_fee <= MAX_MPT_TRANSFER_FEE:
-            raise ParseError(
-                f"transfer_fee must be 0-{MAX_MPT_TRANSFER_FEE}, got {transfer_fee}"
-            )
+            raise ParseError(f"transfer_fee must be 0-{MAX_MPT_TRANSFER_FEE}, got {transfer_fee}")
 
     metadata: str | None = None
     if len(parts) > 6 and parts[6]:  # noqa: PLR2004
         metadata = parts[6].upper()
         if len(metadata) % 2 != 0 or not all(c in "0123456789ABCDEF" for c in metadata):
-            raise ParseError(
-                f"metadata must be a valid hex string, got '{parts[6]}'"
-            )
+            raise ParseError(f"metadata must be a valid hex string, got '{parts[6]}'")
 
     return ParsedMPT(
         issuer=issuer,
@@ -406,4 +389,20 @@ def parse_mpt_spec(spec: str) -> ParsedMPT:
         asset_scale=asset_scale,
         transfer_fee=transfer_fee,
         metadata=metadata,
+    )
+
+
+def build_amm_pool_config(spec: ParsedAMMPool):
+    """Convert a ParsedAMMPool to AMMPoolConfig. Avoids duplicating this logic across CLI commands."""
+    from generate_ledger.ledger import AMMPoolConfig  # noqa: PLC0415
+
+    return AMMPoolConfig(
+        asset1_currency=spec.asset1.currency,
+        asset1_issuer=spec.asset1.issuer,
+        asset1_amount=spec.amount1,
+        asset2_currency=spec.asset2.currency,
+        asset2_issuer=spec.asset2.issuer,
+        asset2_amount=spec.amount2,
+        trading_fee=spec.fee,
+        creator=spec.creator,
     )

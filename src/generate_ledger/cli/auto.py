@@ -16,6 +16,7 @@ _CLICK_TYPES = {
     Path: click.Path(path_type=Path),
 }
 
+
 def _click_type_for(model_cls: type, model_field: str) -> click.ParamType:
     # Pydantic v2
     try:
@@ -24,12 +25,13 @@ def _click_type_for(model_cls: type, model_field: str) -> click.ParamType:
         ann = str
     return _CLICK_TYPES.get(ann, click.STRING)
 
+
 def build_command_from_defaults(
     *,
     command_name: str,
-    command_key: str,                # e.g. "compose-write" -> look up in CLI_DEFAULTS
-    model_cls: type,                 # e.g. ComposeConfig
-    state_attr: str,                 # e.g. "compose" (so we can read ctx.obj.compose)
+    command_key: str,  # e.g. "compose-write" -> look up in CLI_DEFAULTS
+    model_cls: type,  # e.g. ComposeConfig
+    state_attr: str,  # e.g. "compose" (so we can read ctx.obj.compose)
     runner: Callable[[Any, dict[str, Any], Any | None], None],
     extra_options: list[click.Option] | None = None,  # non-model options (like output_file if treated specially)
 ) -> click.Command:
@@ -41,12 +43,12 @@ def build_command_from_defaults(
         field = meta["field"]
         # Flags: support aliases if provided; else derive a long flag from the CLI key
         aliases = meta.get("aliases") or []
-        long_flag = f"--{cli_opt.replace('_','-')}"
+        long_flag = f"--{cli_opt.replace('_', '-')}"
         flags = [*aliases, long_flag]
         ptype = _click_type_for(model_cls, field)
         param_kwargs = {
             "type": ptype,
-            "default": None,        # let ctx.default_map fill actual defaults
+            "default": None,  # let ctx.default_map fill actual defaults
             "show_default": False,
         }
         if env := meta.get("env"):
@@ -65,6 +67,7 @@ def build_command_from_defaults(
         if ctx.obj is None:
             # only used in odd invocations; normal flow sets this in root callback
             from generate_ledger.config import ComposeConfig, LedgerConfig  # noqa: PLC0415
+
             ctx.obj = SimpleNamespace(compose=ComposeConfig(), ledger=LedgerConfig())
 
         state = ctx.obj

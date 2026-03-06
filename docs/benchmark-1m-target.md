@@ -170,12 +170,12 @@ memory to ~3–4 GB but requires refactoring `json.dump()` to a streaming writer
 First segment completed. Gateway topology generation is implemented and working.
 
 ```bash
-gen ledger -n 10000 --algo ed25519 \
+gen ledger --accounts 10000 --algo ed25519 \
     --gateways 4 --assets-per-gateway 4 \
     --gateway-currencies "USD,EUR,GBP,JPY,BTC,ETH,CNY,MXN,CAD,AUD,CHF,KRW,SGD,HKD,NOK,SEK" \
     --gateway-coverage 0.5 --gateway-connectivity 0.5 \
     --gateway-seed 42 \
-    -o /tmp/benchmark-10k
+    --output-dir /tmp/benchmark-10k
 ```
 
 | Metric              | Estimated    | Actual       |
@@ -209,25 +209,25 @@ is memory (all objects in a Python dict before JSON dump).
 
 ```bash
 # 10K benchmark (WORKING)
-gen ledger -n 10000 --algo ed25519 \
+gen ledger --accounts 10000 --algo ed25519 \
     --gateways 4 --assets-per-gateway 4 \
     --gateway-coverage 0.5 --gateway-connectivity 0.5 \
     --gateway-seed 42 \
-    -o /tmp/benchmark-10k
+    --output-dir /tmp/benchmark-10k
 
 # 100K benchmark (next segment)
-gen ledger -n 100000 --algo ed25519 \
+gen ledger --accounts 100000 --algo ed25519 \
     --gateways 4 --assets-per-gateway 4 \
     --gateway-coverage 0.5 --gateway-connectivity 0.5 \
     --gateway-seed 42 \
-    -o /tmp/benchmark-100k
+    --output-dir /tmp/benchmark-100k
 
 # 1M benchmark (final target)
-gen ledger -n 1000000 --algo ed25519 \
+gen ledger --accounts 1000000 --algo ed25519 \
     --gateways 4 --assets-per-gateway 4 \
     --gateway-coverage 0.5 --gateway-connectivity 0.5 \
     --gateway-seed 42 \
-    -o /tmp/benchmark-1m
+    --output-dir /tmp/benchmark-1m
 
 # Validate with rippled
 # (test if rippled can load the generated ledger.json)

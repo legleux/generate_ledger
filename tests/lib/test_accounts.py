@@ -1,7 +1,8 @@
 """Tests for gl.accounts — account generation and JSON export."""
+
 import json
 
-from gl.accounts import Account, AccountConfig, generate_accounts, write_accounts_json
+from generate_ledger.accounts import Account, AccountConfig, generate_accounts, write_accounts_json
 from tests.conftest import ALICE_ADDRESS, ALICE_SEED
 
 
@@ -56,11 +57,17 @@ class TestGenerateAccounts:
         for acct in accounts:
             assert acct.address.startswith("r")
 
-    def test_seeds_start_with_s(self):
-        cfg = AccountConfig(num_accounts=2)
+    def test_ed25519_seeds_start_with_sEd(self):
+        cfg = AccountConfig(num_accounts=2, algo="ed25519")
         accounts = generate_accounts(cfg)
         for acct in accounts:
-            assert acct.seed.startswith("s")
+            assert acct.seed.startswith("sEd"), f"ed25519 seed should start with 'sEd', got '{acct.seed[:4]}'"
+
+    def test_secp256k1_seeds_start_with_s_not_sEd(self):
+        cfg = AccountConfig(num_accounts=1, algo="secp256k1")
+        accounts = generate_accounts(cfg)
+        assert accounts[0].seed.startswith("s")
+        assert not accounts[0].seed.startswith("sEd")
 
     def test_unique_addresses(self):
         cfg = AccountConfig(num_accounts=5)
@@ -85,17 +92,15 @@ class TestGenerateAccounts:
 
     def test_ed25519_seed_is_wallet_importable(self):
         """Verify that seeds from the native ed25519 backend can be used
-        with xrpl-py's Wallet.from_seed() to recover the same address."""
-        from xrpl import CryptoAlgorithm
+        with xrpl-py's Wallet.from_seed() to recover the same address
+        WITHOUT explicitly passing the algorithm (auto-detected from sEd prefix)."""
         from xrpl.wallet import Wallet
 
         cfg = AccountConfig(num_accounts=3)
         accounts = generate_accounts(cfg)
         for acct in accounts:
-            wallet = Wallet.from_seed(acct.seed, algorithm=CryptoAlgorithm.ED25519)
-            assert wallet.address == acct.address, (
-                f"Wallet address mismatch: {wallet.address} != {acct.address}"
-            )
+            wallet = Wallet.from_seed(acct.seed)
+            assert wallet.address == acct.address, f"Wallet address mismatch: {wallet.address} != {acct.address}"
 
 
 class TestWriteAccountsJson:

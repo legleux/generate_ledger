@@ -1,6 +1,5 @@
 """Tests for generate_ledger.cli_defaults."""
 
-
 from generate_ledger.cli_defaults import (
     OptMeta,
     _normalize,
@@ -35,6 +34,7 @@ class TestNormalize:
 class TestDefaultsLeafFromCfg:
     def test_extracts_matching_fields(self):
         from generate_ledger.compose import ComposeConfig
+
         cfg = ComposeConfig()
         leaf = defaults_leaf_from_cfg(cfg, "compose-write")
         assert "validators" in leaf
@@ -42,6 +42,7 @@ class TestDefaultsLeafFromCfg:
 
     def test_path_converted_to_str(self):
         from generate_ledger.compose import ComposeConfig
+
         cfg = ComposeConfig()
         leaf = defaults_leaf_from_cfg(cfg, "compose-write")
         # compose_yml is a Path on the model, should be str in the leaf

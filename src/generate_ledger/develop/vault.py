@@ -11,8 +11,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from gl.accounts import Account
-    from gl.ledger import LedgerConfig
+    from generate_ledger.accounts import Account
+    from generate_ledger.ledger import LedgerConfig
 
 
 def generate_vault_objects(

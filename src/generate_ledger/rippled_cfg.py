@@ -31,21 +31,22 @@ def keygen_docker(cmd: Iterable[str] = ("docker", "run", "legleux/vkt")) -> tupl
 
 # ---------- Config & generator ----------
 
+
 @dataclass(slots=True)
 class RippledConfigSpec:
     # topology / naming
     num_validators: int = 5
-    validator_name: str = "val"       # directories: val0..val{N-1}
-    rippled_name: str = "rippled"     # non-validator node
+    validator_name: str = "val"  # directories: val0..val{N-1}
+    rippled_name: str = "rippled"  # non-validator node
     base_dir: Path = Path("testnet/volumes")
 
     # networking
     peer_port: int = 51235
 
     # economics (drops)
-    reference_fee: int = 10                    # 10 drops
-    account_reserve: int = int(0.2 * 1e6)      # 0.2 XRP
-    owner_reserve: int = int(1.0 * 1e6)        # 1 XRP
+    reference_fee: int = 10  # 10 drops
+    account_reserve: int = int(0.2 * 1e6)  # 0.2 XRP
+    owner_reserve: int = int(1.0 * 1e6)  # 1 XRP
     # template
     template_path: Path = Path(__file__).parent.resolve() / "rippled.cfg"
 

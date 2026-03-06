@@ -25,26 +25,45 @@ class TestLoadFeatures:
 
 class TestRippledWriteCommand:
     def test_basic_write(self, tmp_path):
-        result = runner.invoke(app, [
-            "-b", str(tmp_path), "-v", "2",
-        ])
+        result = runner.invoke(
+            app,
+            [
+                "-b",
+                str(tmp_path),
+                "-v",
+                "2",
+            ],
+        )
         assert result.exit_code == 0, result.output
         assert (tmp_path / "val0" / "rippled.cfg").exists()
         assert (tmp_path / "val1" / "rippled.cfg").exists()
 
     def test_with_features_from_release(self, tmp_path):
-        result = runner.invoke(app, [
-            "-b", str(tmp_path), "-v", "1",
-            "--features-from", "release",
-        ])
+        result = runner.invoke(
+            app,
+            [
+                "-b",
+                str(tmp_path),
+                "-v",
+                "1",
+                "--features-from",
+                "release",
+            ],
+        )
         assert result.exit_code == 0, result.output
         cfg_text = (tmp_path / "val0" / "rippled.cfg").read_text()
         assert "[features]" in cfg_text
 
     def test_zero_validators(self, tmp_path):
         """With 0 validators, should still produce the non-validator node."""
-        result = runner.invoke(app, [
-            "-b", str(tmp_path), "-v", "0",
-        ])
+        result = runner.invoke(
+            app,
+            [
+                "-b",
+                str(tmp_path),
+                "-v",
+                "0",
+            ],
+        )
         assert result.exit_code == 0, result.output
         assert (tmp_path / "rippled" / "rippled.cfg").exists()

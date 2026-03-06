@@ -1,10 +1,11 @@
 """Integration tests for gen_ledger_state — full pipeline through ledger generation."""
+
 import pytest
 
-from gl.accounts import Account, AccountConfig
-from gl.amendments import amendment_hash, get_amendments_for_profile
-from gl.gateways import GatewayConfig
-from gl.ledger import (
+from generate_ledger.accounts import Account, AccountConfig
+from generate_ledger.amendments import amendment_hash, get_amendments_for_profile
+from generate_ledger.gateways import GatewayConfig
+from generate_ledger.ledger import (
     AMMPoolConfig,
     ExplicitTrustline,
     FeeConfig,
@@ -15,7 +16,7 @@ from gl.ledger import (
     _resolve_account_to_object,
     gen_ledger_state,
 )
-from gl.trustlines import TrustlineConfig
+from generate_ledger.trustlines import TrustlineConfig
 from tests.conftest import ALICE_ADDRESS, ALICE_SEED, AMENDMENTS_INDEX, BOB_ADDRESS, BOB_SEED
 
 
@@ -156,12 +157,10 @@ class TestGenLedgerState:
 # Amendments in ledger output
 # ---------------------------------------------------------------------------
 
+
 def _get_amendments_entry(ledger: dict) -> dict:
     """Extract the single Amendments entry from generated ledger output."""
-    entries = [
-        e for e in ledger["ledger"]["accountState"]
-        if e.get("LedgerEntryType") == "Amendments"
-    ]
+    entries = [e for e in ledger["ledger"]["accountState"] if e.get("LedgerEntryType") == "Amendments"]
     assert len(entries) == 1, f"Expected 1 Amendments entry, found {len(entries)}"
     return entries[0]
 
@@ -185,7 +184,7 @@ class TestAmendmentsInLedger:
         assert len(entry["Amendments"]) > 0
 
     def test_release_profile_hashes(self, tmp_path):
-        """Release profile produces the exact set of enabled hashes from amendments_release.json."""
+        """Release profile produces the exact set of enabled hashes from amendments_mainnet.json."""
         cfg = LedgerConfig(
             account_cfg=AccountConfig(num_accounts=2),
             amendment_profile="release",
@@ -386,8 +385,7 @@ class TestMPTIntegration:
         issuer_address = issuances[0]["Issuer"]
 
         issuer_account = next(
-            e for e in state
-            if e.get("LedgerEntryType") == "AccountRoot" and e["Account"] == issuer_address
+            e for e in state if e.get("LedgerEntryType") == "AccountRoot" and e["Account"] == issuer_address
         )
         assert issuer_account["OwnerCount"] == 1
 
@@ -405,10 +403,7 @@ class TestMPTIntegration:
         issuer_addr = issuances[0]["Issuer"]
         issuance_idx = issuances[0]["index"]
 
-        dir_nodes = [
-            e for e in state
-            if e.get("LedgerEntryType") == "DirectoryNode" and e.get("Owner") == issuer_addr
-        ]
+        dir_nodes = [e for e in state if e.get("LedgerEntryType") == "DirectoryNode" and e.get("Owner") == issuer_addr]
         assert len(dir_nodes) == 1
         assert issuance_idx in dir_nodes[0]["Indexes"]
 
@@ -416,11 +411,13 @@ class TestMPTIntegration:
         """MPToken object created for a holder, with correct OwnerCount."""
         cfg = LedgerConfig(
             account_cfg=AccountConfig(num_accounts=3),
-            mpt_issuances=[MPTIssuanceConfig(
-                issuer="0",
-                sequence=2,
-                holders=[MPTHolderConfig(holder="1", amount="500")],
-            )],
+            mpt_issuances=[
+                MPTIssuanceConfig(
+                    issuer="0",
+                    sequence=2,
+                    holders=[MPTHolderConfig(holder="1", amount="500")],
+                )
+            ],
             base_dir=tmp_path,
         )
         ledger = gen_ledger_state(cfg)
@@ -433,8 +430,7 @@ class TestMPTIntegration:
         # Holder's OwnerCount should be 1
         holder_addr = mptokens[0]["Account"]
         holder_account = next(
-            e for e in state
-            if e.get("LedgerEntryType") == "AccountRoot" and e["Account"] == holder_addr
+            e for e in state if e.get("LedgerEntryType") == "AccountRoot" and e["Account"] == holder_addr
         )
         assert holder_account["OwnerCount"] == 1
 
@@ -442,14 +438,16 @@ class TestMPTIntegration:
         """OutstandingAmount on issuance is sum of all holder amounts."""
         cfg = LedgerConfig(
             account_cfg=AccountConfig(num_accounts=3),
-            mpt_issuances=[MPTIssuanceConfig(
-                issuer="0",
-                sequence=2,
-                holders=[
-                    MPTHolderConfig(holder="1", amount="300"),
-                    MPTHolderConfig(holder="2", amount="200"),
-                ],
-            )],
+            mpt_issuances=[
+                MPTIssuanceConfig(
+                    issuer="0",
+                    sequence=2,
+                    holders=[
+                        MPTHolderConfig(holder="1", amount="300"),
+                        MPTHolderConfig(holder="2", amount="200"),
+                    ],
+                )
+            ],
             base_dir=tmp_path,
         )
         ledger = gen_ledger_state(cfg)

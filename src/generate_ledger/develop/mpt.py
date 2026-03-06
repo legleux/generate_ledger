@@ -12,24 +12,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from gl.indices import mpt_id_to_hex, mpt_issuance_index, mptoken_index
+from generate_ledger.accounts import resolve_account_to_object
+from generate_ledger.indices import mpt_id_to_hex, mpt_issuance_index, mptoken_index
 
 if TYPE_CHECKING:
-    from gl.accounts import Account
-    from gl.ledger import LedgerConfig
+    from generate_ledger.accounts import Account
+    from generate_ledger.ledger import LedgerConfig
 
 
-def _resolve_account(ref: str, accounts: list[Account]) -> Account:
-    """Resolve an account index string or classic address to an Account object."""
-    if ref.isdigit():
-        idx = int(ref)
-        if 0 <= idx < len(accounts):
-            return accounts[idx]
-        raise ValueError(f"Account index {idx} out of range (have {len(accounts)} accounts)")
-    for acct in accounts:
-        if acct.address == ref:
-            return acct
-    raise ValueError(f"Account with address '{ref}' not found in accounts list")
+# Alias for local use; resolve_account_to_object is the canonical version in accounts.py
+_resolve_account = resolve_account_to_object
 
 
 def _build_issuance_object(
