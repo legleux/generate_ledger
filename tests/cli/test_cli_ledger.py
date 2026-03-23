@@ -1,14 +1,10 @@
-"""CLI tests for the 'ledger' command using Typer's test runner.
-
-The CLI hierarchy is: app -> ledger (group) -> ledger (command),
-so invocations need ["ledger", "ledger", ...].
-"""
+"""CLI tests for the 'gen ledger' command."""
 
 import json
 
 from typer.testing import CliRunner
 
-from generate_ledger.cli import app
+from generate_ledger.cli.ledger import app
 
 runner = CliRunner()
 
@@ -16,7 +12,7 @@ runner = CliRunner()
 class TestLedgerCliCommand:
     def test_basic_invocation(self, tmp_path):
         outdir = str(tmp_path / "out")
-        result = runner.invoke(app, ["ledger", "ledger", "--accounts", "2", "-o", outdir])
+        result = runner.invoke(app, ["--accounts", "2", "-o", outdir])
         assert result.exit_code == 0, result.output
 
     def test_with_trustline_flag(self, tmp_path):
@@ -24,8 +20,6 @@ class TestLedgerCliCommand:
         result = runner.invoke(
             app,
             [
-                "ledger",
-                "ledger",
                 "--accounts",
                 "2",
                 "-o",
@@ -41,8 +35,6 @@ class TestLedgerCliCommand:
         result = runner.invoke(
             app,
             [
-                "ledger",
-                "ledger",
                 "--accounts",
                 "2",
                 "-o",
@@ -60,8 +52,6 @@ class TestLedgerCliCommand:
         result = runner.invoke(
             app,
             [
-                "ledger",
-                "ledger",
                 "--accounts",
                 "2",
                 "-o",
@@ -74,7 +64,7 @@ class TestLedgerCliCommand:
 
     def test_output_is_valid_json(self, tmp_path):
         outdir = tmp_path / "out"
-        result = runner.invoke(app, ["ledger", "ledger", "--accounts", "2", "-o", str(outdir)])
+        result = runner.invoke(app, ["--accounts", "2", "-o", str(outdir)])
         assert result.exit_code == 0, result.output
         ledger_file = outdir / "ledger.json"
         assert ledger_file.exists()
@@ -87,8 +77,6 @@ class TestLedgerCliCommand:
         result = runner.invoke(
             app,
             [
-                "ledger",
-                "ledger",
                 "--accounts",
                 "3",
                 "-o",
@@ -109,8 +97,6 @@ class TestLedgerCliCommand:
         result = runner.invoke(
             app,
             [
-                "ledger",
-                "ledger",
                 "--accounts",
                 "3",
                 "-o",
@@ -135,8 +121,6 @@ class TestLedgerCliCommand:
         result = runner.invoke(
             app,
             [
-                "ledger",
-                "ledger",
                 "--accounts",
                 "2",
                 "-o",

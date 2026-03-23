@@ -13,7 +13,6 @@ from generate_ledger.cli_defaults import (
 )
 from generate_ledger.config import ComposeConfig, LedgerConfig
 
-from . import app as typer_root_app  # your Typer root (for other features)
 from .auto_cmd import app as auto_typer_app
 from .compose_click import compose, write_cmd  # generated Click group + command
 from .ledger import app as ledger_typer_app  # ledger generation commands
@@ -70,6 +69,3 @@ cli.add_command(get_command(rippled_typer_app), name="rippled")
 
 # mount unified auto command
 cli.add_command(get_command(auto_typer_app), name="auto")
-
-# mount your Typer app (converted to Click) under its own namespace if you have others
-cli.add_command(get_command(typer_root_app), name="typer")  # optional; or mount specific sub-apps

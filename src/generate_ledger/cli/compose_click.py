@@ -9,7 +9,7 @@ import click
 from generate_ledger.compose import write_compose_file
 from generate_ledger.config import ComposeConfig
 
-from .auto import build_command_from_defaults  # your generator
+from .click_builder import build_command_from_defaults
 
 
 def _runner(base_cfg: ComposeConfig, overrides: dict[str, Any], output_file: Path | str | None):

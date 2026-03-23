@@ -1,7 +1,7 @@
 [project]
 name = "generate-ledger"
 version = "0.0.5"
-description = "Add your description here"
+description = "Generate custom XRPL genesis ledgers and test network environments"
 readme = "README.md"
 authors = [
     { name = "Michael Legleux", email = "legleux@gmail.com" }
@@ -10,9 +10,6 @@ requires-python = ">=3.13"
 dependencies = [
     "base58>=2.1.1",
     "click>=8.2.1",
-    "complexipy>=5.2.0",
-    "httpx>=0.28.1",
-    "platformdirs>=4.3.8",
     "pydantic>=2.11.7",
     "pydantic-settings>=2.10.1",
     "ruamel-yaml>=0.18.14",
@@ -67,6 +64,7 @@ known-first-party = ["generate_ledger", "gl"]
 dev = [
   {include-group = "lint"},
   {include-group = "test"},
+  "complexipy>=5.2.0",
   "radon>=6.0.1",
 ]
 lint = [

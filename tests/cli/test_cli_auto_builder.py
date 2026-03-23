@@ -1,10 +1,10 @@
-"""Tests for generate_ledger.cli.auto.build_command_from_defaults."""
+"""Tests for generate_ledger.cli.click_builder.build_command_from_defaults."""
 
 from types import SimpleNamespace
 
 import click
 
-from generate_ledger.cli.auto import build_command_from_defaults
+from generate_ledger.cli.click_builder import build_command_from_defaults
 from generate_ledger.compose import ComposeConfig
 from generate_ledger.ledger import LedgerConfig
 

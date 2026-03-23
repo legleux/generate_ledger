@@ -18,7 +18,7 @@ from generate_ledger.trustlines import TrustlineConfig
 app = typer.Typer(help="Commands to generate custom ledger.json files.")
 
 
-@app.command()
+@app.callback(invoke_without_command=True)
 def ledger(
     # Account options
     num_accounts: int = typer.Option(

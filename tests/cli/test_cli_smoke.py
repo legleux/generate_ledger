@@ -1,7 +1,7 @@
-from typer.testing import CliRunner
+from click.testing import CliRunner
 
 from generate_ledger import __app_name__
-from generate_ledger.cli import app
+from generate_ledger.cli.main import cli as app
 
 runner = CliRunner()
 

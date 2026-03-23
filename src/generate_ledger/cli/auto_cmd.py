@@ -7,7 +7,7 @@ import typer
 app = typer.Typer(help="Generate a complete testnet (ledger + rippled configs + docker-compose).")
 
 
-@app.command()
+@app.callback(invoke_without_command=True)
 def auto(
     # Output
     output_dir: Path = typer.Option(
