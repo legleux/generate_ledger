@@ -70,23 +70,22 @@ The main data flow is in `ledger.py:gen_ledger_state()`:
 4. **`amm.py`** — Generates AMM pool objects (AMM entry, pseudo-account, LP tokens, asset trustlines). Uses shared builders from `trustlines.py` and constants from `constants.py`
 5. **`amendments.py`** — Loads amendment hashes (profile-based with auto-fetch: release queries mainnet RPC, develop fetches features.macro from GitHub, custom loads user JSON)
 6. **`develop/`** — Optional package for pre-release objects (MPT, Vault stubs); absent on `main` branch
-7. **`ledger_builder.py:assemble_ledger_json()`** — Assembles all objects into final `ledger.json` structure with DirectoryNode consolidation, OwnerCount tracking, and genesis account balance calculation
+7. **`ledger_builder.py:assemble_ledger_json()`** — Assembles all objects into final `ledger.json` structure; delegates DirectoryNode consolidation and OwnerCount tracking to `directory_nodes.py`
+8. **`directory_nodes.py`** — DirectoryNode consolidation: merges per-object directory entries into per-account directories with sorted Indexes
 
 ### XRPL Crypto Primitives
 
-`crypto.py` provides `sha512_half()` and `ripesha()`. `indices.py` builds on these to compute ledger object indices (AccountRoot, RippleState, AMM, etc.) using XRPL's hash prefix scheme (e.g., `0x0061` for AccountRoot, `0x0041` for AMM).
+`crypto.py` provides `sha512_half()`, `ripesha()`, and `sign_and_hash_txn()` (shared transaction signing). `indices.py` builds on these to compute ledger object indices (AccountRoot, RippleState, AMM, etc.) using XRPL's hash prefix scheme (e.g., `0x0061` for AccountRoot, `0x0041` for AMM).
 
 ### CLI Structure
 
-Entry point: `gen` (Click root group in `cli/main.py`, defined in `pyproject.toml` → `generate_ledger.cli.main:cli`). Flat subcommands at root level: `ledger`, `auto`, `rippled`, `compose`. Invoking `gen` with no subcommand defaults to `compose write`.
+Entry point: `gen` (Click root group in `cli/main.py`, defined in `pyproject.toml` → `generate_ledger.cli.main:cli`). Invoking `gen` with no subcommand runs the full 3-step pipeline (ledger + rippled configs + docker-compose). Subcommands `ledger` and `rippled` run individual steps.
 
 Key CLI modules:
-- **`cli/main.py`** — Click root group, mounts all subcommands
-- **`cli/ledger.py`** — `gen ledger` command (Typer app, mounted via `get_command`)
-- **`cli/auto_cmd.py`** — `gen auto` command (Typer app, mounted via `get_command`)
-- **`cli/compose_click.py`** — `gen compose` group (Click)
-- **`cli/rippled_cfg.py`** — `gen rippled` command (Typer app, mounted via `get_command`)
-- **`cli/click_builder.py`** — Shared Click command builder utilities (renamed from `auto.py`)
+- **`cli/main.py`** — Typer root app with full pipeline as default action; mounts sub-apps via `add_typer()`
+- **`cli/ledger.py`** — `gen ledger` command (Typer app) — ledger.json generation only
+- **`cli/rippled_cfg.py`** — `gen rippled` command (Typer app) — rippled.cfg generation only
+- **`cli/shared_options.py`** — Shared config-building and pipeline logic (used by root and `gen ledger`)
 - **`cli/parsers.py`** — CLI option parsing for colon-delimited formats (trustlines, AMM pools, MPT specs)
 
 ### Configuration
@@ -177,7 +176,10 @@ See the detailed TODO list and milestones in the [spec files](specs/001-xrpl-led
 4. **Clean packaging** — ~~Real description in pyproject.toml~~, automatic PyPI deployment (publish workflow exists but only targets TestPyPI)
 5. **Branch-per-profile amendment strategy** — Use a `release` branch that tracks the latest major rippled release amendments, and `main`/`develop` for latest develop amendments. Each branch owns its curated amendment list, eliminating the need for runtime GitHub fetching and keeping profiles in sync with their corresponding rippled branches.
 6. **Enforce complexity limits** — Add complexipy/radon as CI gate (currently reporting only). Remaining issue: `assemble_ledger_json` (68 cognitive). Others resolved: `gen_ledger_state` (19→3), `ledger` CLI (21→9), `parse_mpt_spec` (27→10), `parse_amm_pool` (29→11).
-7. **Standardize CLI on single framework** — Currently mixed Click (main.py, compose_click.py, click_builder.py) and Typer (ledger.py, auto_cmd.py, rippled_cfg.py). Low priority.
+7. ~~**Standardize CLI on single framework**~~ — **Done.** All subcommands use Typer; root group uses Click for help rendering. Deleted `compose_click.py`, `click_builder.py`, `cli_defaults.py`, `auto_cmd.py`. Bare `gen` runs full pipeline.
 8. **Remove `--algo` from CLI** — Default to ed25519, don't expose algorithm selection on the simple command line. Keep it as a config-file-only option.
 9. **Split into sub-packages** — The package has three core concerns: ledger generation (`ledger.py`, `ledger_builder.py`, `accounts.py`, `trustlines.py`, `amm.py`, `amendments.py`), network topology configs (`rippled_cfg.py`), and docker compose (`compose.py`). Consider splitting into `generate_ledger.ledger`, `generate_ledger.network`, `generate_ledger.compose` sub-packages.
 10. **Clean up compose.py** — Multiple FIXMEs and TODOs: volume mount logic, port exposure for multiple nodes, image entrypoint assumption, ledger file loading for hubs.
+11. **`--compress` flag** — Write `ledger.json.gz` using stdlib `gzip` for storage/transport. 1M accounts: 327 MB → 70 MB. Decompress just-in-time for rippled.
+12. **Faster serialization** — At 1M accounts, JSON serialization is the bottleneck (~13s of 16s total). Options: `orjson` (Rust, ~5-10x faster, drop-in), streaming JSON write, or parallel dict assembly. `orjson` is the quickest win.
+13. **Binary ledger format** — Investigate writing rippled's native binary ledger format directly instead of JSON. Eliminates serialization overhead entirely and avoids rippled having to parse 327 MB of JSON on startup.

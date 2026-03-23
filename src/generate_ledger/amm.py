@@ -8,13 +8,10 @@ Generates AMM pools with:
 """
 
 import math
-from binascii import unhexlify
 from dataclasses import dataclass
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from xrpl import CryptoAlgorithm
-from xrpl.core.binarycodec import encode, encode_for_signing
-from xrpl.core.keypairs import sign
 from xrpl.models.transactions import AMMCreate
 from xrpl.wallet import Wallet
 
@@ -22,12 +19,11 @@ from generate_ledger.accounts import Account
 from generate_ledger.constants import (
     AMM_ACCOUNT_FLAGS,
     LSF_AMM_NODE,
-    LSF_DEFAULT_RIPPLE,  # noqa: F401 (re-exported for backward compat)
-    LSF_DEPOSIT_AUTH,  # noqa: F401 (re-exported for backward compat)
-    LSF_DISABLE_MASTER,  # noqa: F401 (re-exported for backward compat)
-    TXN_PREFIX,
+    LSF_DEFAULT_RIPPLE,  # noqa: F401 (re-exported, used by tests)
+    LSF_DEPOSIT_AUTH,  # noqa: F401 (re-exported, used by tests)
+    LSF_DISABLE_MASTER,  # noqa: F401 (re-exported, used by tests)
 )
-from generate_ledger.crypto import sha512_half
+from generate_ledger.crypto import sign_and_hash_txn
 from generate_ledger.indices import amm_account_id, amm_index, amm_lpt_currency, owner_dir, ripple_state_index
 from generate_ledger.trustlines import build_directory_node, build_ripple_state, order_low_high
 
@@ -146,15 +142,7 @@ def generate_ammcreate_txn_id(
         fee=fee,
     )
 
-    # Sign the transaction
-    signing_payload_hex = encode_for_signing(amm_create.to_xrpl())
-    signature_hex = sign(bytes.fromhex(signing_payload_hex), wallet.private_key)
-    signed_dict = {**amm_create.to_xrpl(), "TxnSignature": signature_hex}
-    tx_blob = encode(signed_dict)
-
-    # Compute transaction ID
-    txn_id = sha512_half(TXN_PREFIX + unhexlify(tx_blob)).hex().upper()
-    return txn_id
+    return sign_and_hash_txn(amm_create, creator.seed, getattr(creator, "algorithm", "secp256k1"))
 
 
 def generate_amm_objects(

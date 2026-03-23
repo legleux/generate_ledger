@@ -11,36 +11,18 @@ class TestRootCli:
     def test_help_lists_subcommands(self):
         result = runner.invoke(cli, ["--help"])
         assert result.exit_code == 0
-        for name in ("compose", "ledger", "rippled", "auto"):
+        for name in ("ledger", "rippled"):
             assert name in result.output
 
-    def test_no_args_defaults_to_compose_write(self, tmp_path, monkeypatch):
-        """Running with no subcommand should invoke compose write."""
+    def test_no_args_runs_full_pipeline(self, tmp_path, monkeypatch):
+        """Running with no subcommand should run the full 3-step pipeline."""
         monkeypatch.setenv("GL_BASE_DIR", str(tmp_path))
-        result = runner.invoke(cli, [])
-        assert result.exit_code == 0
-        assert "Wrote" in result.output or "Writing" in result.output
+        result = runner.invoke(cli, ["-o", str(tmp_path), "--accounts", "2", "-v", "2"])
+        assert result.exit_code == 0, result.output
+        assert "Step 1/3" in result.output
+        assert (tmp_path / "ledger.json").exists()
 
     def test_ledgend_flag(self):
         result = runner.invoke(cli, ["--ledgend"])
         assert result.exit_code == 0
-        # Should print the decompressed logo
         assert len(result.output) > 10
-
-    def test_output_option_passthrough(self, tmp_path, monkeypatch):
-        """The -o flag should be accepted at the root level."""
-        monkeypatch.setenv("GL_BASE_DIR", str(tmp_path))
-        out = tmp_path / "custom-compose.yml"
-        result = runner.invoke(cli, ["-o", str(out)])
-        assert result.exit_code == 0
-
-    def test_compose_subcommand(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("GL_BASE_DIR", str(tmp_path))
-        result = runner.invoke(cli, ["compose", "write"])
-        assert result.exit_code == 0
-
-    def test_context_initializes_state(self, tmp_path, monkeypatch):
-        """The root callback should create SimpleNamespace with compose and ledger configs."""
-        monkeypatch.setenv("GL_BASE_DIR", str(tmp_path))
-        result = runner.invoke(cli, ["--help"])
-        assert result.exit_code == 0

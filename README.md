@@ -16,23 +16,27 @@ Output: `ledger.json`, `accounts.json`, validator configs, and `docker-compose.y
 
 ## Performance
 
-With the default ed25519 algorithm and PyNaCl backend:
+### Full `ledger.json` Generation (accounts only, ed25519)
 
-| Scenario | Accounts | Trustlines | AMM | Validators | Time |
-|----------|----------|------------|-----|------------|------|
-| Ledger only | 5,000 | — | — | — | **1.6s** |
-| Ledger only | 10,000 | — | — | — | **1.5s** |
-| Ledger + trustlines | 1,000 | 10 | — | — | **1.2s** |
-| Ledger + trustlines + AMM | 5,000 | 50 | 1 pool | — | **2.3s** |
-| Full environment (`gen auto`) | 5,000 | — | — | 5 | **1.2s** |
+| Accounts | CPU (PyNaCl) | GPU (CuPy) | Speedup | File size |
+|----------|-------------|------------|---------|-----------|
+| 1,000 | 1.5s | 2.2s | 0.7x | 342 KB |
+| 10,000 | 2.0s | 2.4s | 0.8x | 3.3 MB |
+| 100,000 | 8.0s | 3.6s | **2.2x** | 33 MB |
+| 250,000 | 16.4s | 5.6s | **2.9x** | 82 MB |
+| 500,000 | 31.6s | 8.7s | **3.6x** | 164 MB |
+| 1,000,000 | 63.6s | 15.6s | **4.1x** | 327 MB |
 
-> Account generation: **~22,500 accounts/sec** (ed25519 + PyNaCl) vs ~60/sec with the xrpl-py fallback — a **279x speedup**. See [scripts/README.md](scripts/README.md) for detailed crypto backend benchmarks.
+CPU time scales linearly (~63ms per 1,000 accounts). GPU time is sub-linear,  kernel launch overhead is fixed, so the per-account cost drops at scale. GPU crossover is around 50k accounts.
+
+> Benchmarked on 16-core AMD 5950X + RTX 5090. At 1M accounts the bottleneck is JSON serialization + disk I/O, not account generation (GPU generates 1M accounts in ~2s).
 
 ### Crypto Backend Performance
 
 | Algorithm | Backend | Rate | vs. fallback |
 |-----------|---------|------|--------------|
-| ed25519 | PyNaCl (libsodium) | **22,568/sec** | 279x |
+| ed25519 | CuPy/CUDA (GPU) | **~485,000/sec** | ~6,000x |
+| ed25519 | PyNaCl (libsodium) | **~22,500/sec** | 279x |
 | secp256k1 | coincurve (libsecp256k1) | ~15,000/sec | 250x |
 | secp256k1 | fastecdsa (GMP) | 878/sec | 14x |
 | either | xrpl-py (fallback) | 60–80/sec | 1x |

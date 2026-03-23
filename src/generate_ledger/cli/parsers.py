@@ -77,6 +77,21 @@ class ParsedMPT:
     metadata: str | None = None  # Hex-encoded metadata blob
 
 
+def _validate_currency(currency: str, label: str = "currency") -> str:
+    """Validate a currency code and normalize to uppercase if standard 3-char code.
+
+    Raises ParseError if the currency is empty or has invalid length.
+    Returns the (possibly uppercased) currency string.
+    """
+    if not currency:
+        raise ParseError(f"{label} cannot be empty")
+    if len(currency) != STANDARD_CURRENCY_LEN and len(currency) != HEX_CURRENCY_LEN:
+        raise ParseError(
+            f"Invalid {label} '{currency}': must be 3 characters (standard) or 40 hex characters (non-standard)"
+        )
+    return currency.upper() if len(currency) == STANDARD_CURRENCY_LEN else currency
+
+
 def parse_trustline(spec: str) -> ParsedTrustline:
     """
     Parse a trustline specification.
@@ -108,12 +123,7 @@ def parse_trustline(spec: str) -> ParsedTrustline:
         raise ParseError("account1 cannot be empty")
     if not account2:
         raise ParseError("account2 cannot be empty")
-    if not currency:
-        raise ParseError("currency cannot be empty")
-    if len(currency) != STANDARD_CURRENCY_LEN and len(currency) != HEX_CURRENCY_LEN:
-        raise ParseError(
-            f"Invalid currency '{currency}': must be 3 characters (standard) or 40 hex characters (non-standard)"
-        )
+    currency = _validate_currency(currency)
 
     try:
         limit = int(limit_str)
@@ -125,7 +135,7 @@ def parse_trustline(spec: str) -> ParsedTrustline:
     return ParsedTrustline(
         account1=account1,
         account2=account2,
-        currency=currency.upper() if len(currency) == STANDARD_CURRENCY_LEN else currency,
+        currency=currency,
         limit=limit,
     )
 
@@ -159,17 +169,12 @@ def _parse_asset(spec: str) -> ParsedAsset:
 
     currency, issuer = parts
 
-    if not currency:
-        raise ParseError("currency cannot be empty")
-    if len(currency) != STANDARD_CURRENCY_LEN and len(currency) != HEX_CURRENCY_LEN:
-        raise ParseError(
-            f"Invalid currency '{currency}': must be 3 characters (standard) or 40 hex characters (non-standard)"
-        )
+    currency = _validate_currency(currency)
     if not issuer:
         raise ParseError("issuer cannot be empty for issued currency")
 
     return ParsedAsset(
-        currency=currency.upper() if len(currency) == STANDARD_CURRENCY_LEN else currency,
+        currency=currency,
         issuer=issuer,
     )
 
@@ -182,11 +187,9 @@ def _parse_asset_at(parts: list[str], idx: int, label: str) -> tuple[ParsedAsset
         return ParsedAsset(currency=None, issuer=None), idx + 1
     if idx + 1 >= len(parts):
         raise ParseError(f"Missing issuer for {label} currency '{parts[idx]}'")
-    currency = parts[idx]
-    if len(currency) != STANDARD_CURRENCY_LEN and len(currency) != HEX_CURRENCY_LEN:
-        raise ParseError(f"Invalid {label} currency '{currency}': must be 3 chars, 40 hex chars, or 'XRP'")
+    currency = _validate_currency(parts[idx], label=f"{label} currency")
     return ParsedAsset(
-        currency=currency.upper() if len(currency) == STANDARD_CURRENCY_LEN else currency,
+        currency=currency,
         issuer=parts[idx + 1],
     ), idx + 2
 

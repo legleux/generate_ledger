@@ -1,17 +1,12 @@
 import random
-from binascii import unhexlify
 from dataclasses import dataclass
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from xrpl import CryptoAlgorithm
-from xrpl.core.binarycodec import encode, encode_for_signing
-from xrpl.core.keypairs import sign
 from xrpl.models.transactions import TrustSet
-from xrpl.wallet import Wallet
 
 from generate_ledger.accounts import Account
-from generate_ledger.constants import NEUTRAL_ISSUER, TXN_PREFIX
-from generate_ledger.crypto import sha512_half
+from generate_ledger.constants import NEUTRAL_ISSUER
+from generate_ledger.crypto import sign_and_hash_txn
 from generate_ledger.indices import owner_dir, ripple_state_index
 
 
@@ -47,7 +42,6 @@ class TrustlineConfig(BaseSettings):
 
 def generate_trustset_txn_id(
     account: Account,
-    wallet: Wallet,
     limit_amount: dict,
     sequence: int,
     fee: str = "123",
@@ -58,6 +52,13 @@ def generate_trustset_txn_id(
     This creates a signed TrustSet transaction and computes its hash,
     which is used as the PreviousTxnID for directory nodes.
     """
+    from xrpl import CryptoAlgorithm  # noqa: PLC0415
+    from xrpl.wallet import Wallet  # noqa: PLC0415
+
+    is_ed = getattr(account, "algorithm", "secp256k1") == "ed25519"
+    algo = CryptoAlgorithm.ED25519 if is_ed else CryptoAlgorithm.SECP256K1
+    wallet = Wallet.from_seed(account.seed, algorithm=algo)
+
     ts_txn = TrustSet(
         account=account.address,
         limit_amount=limit_amount,
@@ -66,15 +67,7 @@ def generate_trustset_txn_id(
         fee=fee,
     )
 
-    # Sign the transaction
-    signing_payload_hex = encode_for_signing(ts_txn.to_xrpl())
-    signature_hex = sign(bytes.fromhex(signing_payload_hex), wallet.private_key)
-    signed_dict = {**ts_txn.to_xrpl(), "TxnSignature": signature_hex}
-    tx_blob = encode(signed_dict)
-
-    # Compute transaction ID
-    txn_id = sha512_half(TXN_PREFIX + unhexlify(tx_blob)).hex().upper()
-    return txn_id
+    return sign_and_hash_txn(ts_txn, account.seed, getattr(account, "algorithm", "secp256k1"))
 
 
 def generate_trustline_objects(
@@ -86,16 +79,11 @@ def generate_trustline_objects(
     2. DirectoryNode for account_a
     3. DirectoryNode for account_b
     """
-    # Create wallets to generate transaction ID
-    is_ed = getattr(account_b, "algorithm", "secp256k1") == "ed25519"
-    algo = CryptoAlgorithm.ED25519 if is_ed else CryptoAlgorithm.SECP256K1
-    wallet_b = Wallet.from_seed(account_b.seed, algorithm=algo)
-
     # Prepare the limit amount for the TrustSet transaction
     limit_amount = {"currency": currency, "issuer": account_a.address, "value": str(limit)}
 
     # Generate TrustSet transaction ID (used for DirectoryNode PreviousTxnID)
-    txn_id = generate_trustset_txn_id(account_b, wallet_b, limit_amount, sequence=4)
+    txn_id = generate_trustset_txn_id(account_b, limit_amount, sequence=4)
 
     # Calculate the RippleState index
     rsi = ripple_state_index(account_a.address, account_b.address, currency)

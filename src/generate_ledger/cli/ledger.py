@@ -4,31 +4,16 @@ from pathlib import Path
 
 import typer
 
-from generate_ledger.accounts import AccountConfig
-from generate_ledger.cli.parsers import (
-    ParseError,
-    build_amm_pool_config,
-    parse_amm_pool,
-    parse_mpt_spec,
-    parse_trustline,
+from generate_ledger.cli.parsers import parse_mpt_spec
+from generate_ledger.cli.shared_options import (
+    build_ledger_config,
+    parse_amm_pool_specs,
+    parse_specs,
+    parse_trustline_specs,
 )
-from generate_ledger.ledger import ExplicitTrustline, LedgerConfig, MPTIssuanceConfig, write_ledger_file
-from generate_ledger.trustlines import TrustlineConfig
+from generate_ledger.ledger import MPTIssuanceConfig, write_ledger_file
 
 app = typer.Typer(help="Commands to generate custom ledger.json files.")
-
-
-def _parse_specs(raw_specs: list[str] | None, parser, converter) -> list:
-    """Parse a list of CLI spec strings into config objects, raising BadParameter on error."""
-    if not raw_specs:
-        return []
-    result = []
-    for spec in raw_specs:
-        try:
-            result.append(converter(parser(spec)))
-        except ParseError as e:
-            raise typer.BadParameter(str(e)) from e
-    return result
 
 
 @app.callback(invoke_without_command=True)
@@ -143,13 +128,9 @@ def ledger(
     """
     outdir.mkdir(parents=True, exist_ok=True)
 
-    explicit_trustlines = _parse_specs(
-        trustline,
-        parse_trustline,
-        lambda p: ExplicitTrustline(account1=p.account1, account2=p.account2, currency=p.currency, limit=p.limit),
-    )
-    amm_pools = _parse_specs(amm_pool, parse_amm_pool, build_amm_pool_config)
-    mpt_issuances = _parse_specs(
+    explicit_trustlines = parse_trustline_specs(trustline)
+    amm_pools = parse_amm_pool_specs(amm_pool)
+    mpt_issuances = parse_specs(
         mpt,
         parse_mpt_spec,
         lambda p: MPTIssuanceConfig(
@@ -163,52 +144,32 @@ def ledger(
         ),
     )
 
-    # Parse currencies
-    currency_list = [c.strip().upper() for c in currencies.split(",") if c.strip()]
-
-    # Build config
-    from generate_ledger.gateways import GatewayConfig  # noqa: PLC0415
-    from generate_ledger.ledger import FeeConfig  # noqa: PLC0415
-
-    gateway_currency_list = [c.strip().upper() for c in gateway_currencies.split(",") if c.strip()]
-    config_kwargs: dict = dict(
-        account_cfg=AccountConfig(
-            num_accounts=num_accounts + gateways,
-            balance=balance,
-            algo=algo,
-            use_gpu=gpu,
-        ),
-        fee_cfg=FeeConfig(
-            base_fee_drops=base_fee,
-            reserve_base_drops=reserve_base,
-            reserve_increment_drops=reserve_inc,
-        ),
-        trustlines=TrustlineConfig(
-            num_trustlines=num_trustlines,
-            currencies=currency_list,
-            default_limit=str(trustline_limit),
-        ),
-        explicit_trustlines=explicit_trustlines,
-        gateway_cfg=GatewayConfig(
-            num_gateways=gateways,
-            assets_per_gateway=assets_per_gateway,
-            currencies=gateway_currency_list,
-            coverage=gateway_coverage,
-            connectivity=gateway_connectivity,
-            seed=gateway_seed,
-        ),
-        amm_pools=amm_pools,
-        mpt_issuances=mpt_issuances,
+    config = build_ledger_config(
         base_dir=outdir,
+        num_accounts=num_accounts,
+        gateways=gateways,
+        balance=balance,
+        algo=algo,
+        gpu=gpu,
+        gateway_currencies=gateway_currencies,
+        assets_per_gateway=assets_per_gateway,
+        gateway_coverage=gateway_coverage,
+        gateway_connectivity=gateway_connectivity,
+        gateway_seed=gateway_seed,
+        explicit_trustlines=explicit_trustlines,
+        amm_pools=amm_pools,
+        amendment_profile=amendment_profile,
+        amendment_source=amendment_source,
+        num_trustlines=num_trustlines,
+        currencies=currencies,
+        trustline_limit=trustline_limit,
+        enable_amendments=enable_amendment,
+        disable_amendments=disable_amendment,
+        mpt_issuances=mpt_issuances,
+        base_fee=base_fee,
+        reserve_base=reserve_base,
+        reserve_inc=reserve_inc,
     )
-    config_kwargs["amendment_profile"] = amendment_profile
-    if amendment_source is not None:
-        config_kwargs["amendment_profile_source"] = amendment_source
-    if enable_amendment:
-        config_kwargs["enable_amendments"] = enable_amendment
-    if disable_amendment:
-        config_kwargs["disable_amendments"] = disable_amendment
-    config = LedgerConfig(**config_kwargs)
 
     # Generate and write ledger
     output_file = write_ledger_file(config=config)

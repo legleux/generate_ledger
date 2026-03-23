@@ -2,11 +2,9 @@ import json
 from collections.abc import Iterable
 from pathlib import Path
 
-from pydantic import PositiveInt
-
-from generate_ledger.accounts import generate_accounts
 from generate_ledger.constants import LSF_DEFAULT_RIPPLE
-from generate_ledger.indices import account_root_index, owner_dir
+from generate_ledger.directory_nodes import consolidate_directory_nodes
+from generate_ledger.indices import account_root_index
 
 GENESIS_ADDRESS = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh"
 TOTAL_COINS_DROPS = int(100e9 * 1e6)  # 100 billion XRP in drops
@@ -21,11 +19,6 @@ def amendments_to_ledger_entry(amendment_hashes: list[str]) -> dict:
         # Amendments index is always this
         "index": "7DB0788C020F02780A673DC74757F23823FA3014C1866E72CC4CD8B226CD6EF4",
     }
-
-
-def generate_account_creds(num_accounts: PositiveInt):
-    accts = generate_accounts(num_accounts)
-    return accts
 
 
 def account_root_entry(
@@ -56,28 +49,6 @@ def account_root_entry(
     return entry
 
 
-def _make_owner_dir_entry(address: str, object_index: str) -> dict:
-    """Create a minimal DirectoryNode entry for a single object in an account's owner dir."""
-    dir_idx = owner_dir(address)
-    return {
-        "Flags": 0,
-        "Indexes": [object_index],
-        "LedgerEntryType": "DirectoryNode",
-        "Owner": address,
-        "RootIndex": dir_idx,
-        "index": dir_idx,
-    }
-
-
-def _merge_dir_node(directory_nodes: dict, entry: dict) -> None:
-    """Merge a DirectoryNode entry into the consolidated directory_nodes dict."""
-    owner = entry["Owner"]
-    if owner in directory_nodes:
-        directory_nodes[owner]["Indexes"].extend(entry["Indexes"])
-    else:
-        directory_nodes[owner] = entry.copy()
-
-
 def assemble_ledger_json(
     *,
     accounts: Iterable[tuple[str, str]],
@@ -106,13 +77,9 @@ def assemble_ledger_json(
     state: list[dict] = []
     amm_issuers = amm_issuers or set()
 
-    #  Track which accounts have trustlines for OwnerCount
-    account_owner_counts = {}
-
+    # Build AccountRoot entries
     for a in accounts:
-        # Set lsfDefaultRipple flag for AMM token issuers
         flags = LSF_DEFAULT_RIPPLE if a.address in amm_issuers else 0
-
         state.append(
             account_root_entry(
                 address=a.address,
@@ -121,111 +88,27 @@ def assemble_ledger_json(
                 prev_txn_id="0" * 64,
                 prev_txn_lgr_seq=0,
                 sequence=2,
-                owner_count=0,  # Will update below if trustlines exist
+                owner_count=0,
                 precomputed_index=getattr(a, "account_root_idx", None),
             )
         )
         balances_total += default_acct_balance
-        account_owner_counts[a.address] = 0
 
-    # Add trustlines and consolidate directory nodes
-    directory_nodes = {}  # owner -> DirectoryNode dict
-
-    if trustline_objects:
-        for tl_obj in trustline_objects:
-            # Add RippleState
-            state.append(tl_obj.ripple_state)
-
-            # Consolidate DirectoryNodes by owner
-            for dn in [tl_obj.directory_node_a, tl_obj.directory_node_b]:
-                owner = dn["Owner"]
-                if owner in directory_nodes:
-                    # Merge Indexes arrays
-                    directory_nodes[owner]["Indexes"].extend(dn["Indexes"])
-                else:
-                    directory_nodes[owner] = dn.copy()
-
-            # Update owner counts
-            owner_a = tl_obj.directory_node_a["Owner"]
-            owner_b = tl_obj.directory_node_b["Owner"]
-            account_owner_counts[owner_a] = account_owner_counts.get(owner_a, 0) + 1
-            account_owner_counts[owner_b] = account_owner_counts.get(owner_b, 0) + 1
-
-    # Add AMM objects
-    if amm_objects:
-        for amm_obj in amm_objects:
-            # Add AMM ledger object
-            state.append(amm_obj.amm)
-
-            # Add AMM pseudo-account
-            state.append(amm_obj.amm_account)
-
-            # Consolidate DirectoryNode for AMM account
-            dn = amm_obj.directory_node
-            owner = dn["Owner"]
-            if owner in directory_nodes:
-                directory_nodes[owner]["Indexes"].extend(dn["Indexes"])
-            else:
-                directory_nodes[owner] = dn.copy()
-
-            # Add LP token trustline if present
-            if amm_obj.lp_token_trustline:
-                state.append(amm_obj.lp_token_trustline)
-
-            # Add asset trustlines (deposited tokens held by AMM)
-            if amm_obj.asset_trustlines:
-                for asset_tl in amm_obj.asset_trustlines:
-                    state.append(asset_tl)
-
-            # Consolidate issuer directories for asset trustlines
-            # (RippleState must be in BOTH parties' directories)
-            if amm_obj.issuer_directories:
-                for issuer_dn in amm_obj.issuer_directories:
-                    issuer_owner = issuer_dn["Owner"]
-                    if issuer_owner in directory_nodes:
-                        directory_nodes[issuer_owner]["Indexes"].extend(issuer_dn["Indexes"])
-                    else:
-                        directory_nodes[issuer_owner] = issuer_dn.copy()
-
-            # Consolidate creator's LP token directory if present
-            if amm_obj.creator_lp_directory:
-                creator_dn = amm_obj.creator_lp_directory
-                creator_owner = creator_dn["Owner"]
-                if creator_owner in directory_nodes:
-                    directory_nodes[creator_owner]["Indexes"].extend(creator_dn["Indexes"])
-                else:
-                    directory_nodes[creator_owner] = creator_dn.copy()
-                # Update creator's owner count
-                account_owner_counts[creator_owner] = account_owner_counts.get(creator_owner, 0) + 1
-
-    # Add extra objects (from develop/ builders or other sources)
-    # MPTokenIssuance and MPToken objects get DirectoryNode entries and OwnerCount updates.
-    if extra_objects:
-        for obj in extra_objects:
-            state.append(obj)
-            le_type = obj.get("LedgerEntryType")
-            if le_type == "MPTokenIssuance":
-                issuer = obj["Issuer"]
-                _merge_dir_node(directory_nodes, _make_owner_dir_entry(issuer, obj["index"]))
-                account_owner_counts[issuer] = account_owner_counts.get(issuer, 0) + 1
-            elif le_type == "MPToken":
-                holder = obj["Account"]
-                _merge_dir_node(directory_nodes, _make_owner_dir_entry(holder, obj["index"]))
-                account_owner_counts[holder] = account_owner_counts.get(holder, 0) + 1
-
-    # Sort Indexes in each DirectoryNode (XRPL serialization requires sorted STVector256)
-    for dn in directory_nodes.values():
-        dn["Indexes"].sort()
-
-    # Add consolidated DirectoryNodes to state
+    # Consolidate all DirectoryNodes and collect state entries
+    extra_state, directory_nodes, owner_counts = consolidate_directory_nodes(
+        trustline_objects=trustline_objects,
+        amm_objects=amm_objects,
+        extra_objects=extra_objects,
+    )
+    state.extend(extra_state)
     state.extend(directory_nodes.values())
 
     # Update OwnerCount in AccountRoot entries
     for entry in state:
         if entry.get("LedgerEntryType") == "AccountRoot":
             address = entry["Account"]
-            if address in account_owner_counts:
-                entry["OwnerCount"] = account_owner_counts[address]
+            if address in owner_counts:
+                entry["OwnerCount"] = owner_counts[address]
 
     genesis_balance = max(total_coins_drops - balances_total, 0)
     state.insert(

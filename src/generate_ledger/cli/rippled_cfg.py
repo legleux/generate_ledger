@@ -44,7 +44,7 @@ def _load_features(features_from: str | None) -> list[str] | None:
     return [a.name for a in amendments if a.enabled]
 
 
-@app.command("write")
+@app.callback(invoke_without_command=True)
 def write(
     template_path: Path = typer.Option(
         _BUNDLED_TEMPLATE,

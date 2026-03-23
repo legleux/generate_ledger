@@ -1,22 +1,25 @@
+"""Root CLI — ``gen`` generates a complete XRPL testnet by default.
+
+Subcommands (``gen ledger``, ``gen rippled``) run individual pipeline steps.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
-from types import SimpleNamespace
 
-import click
+import typer
 from typer.main import get_command
 
-from generate_ledger.cli_defaults import (
-    defaults_leaf_from_cfg,
-    merge_default_maps,
-    nest_default_map,
-)
-from generate_ledger.config import ComposeConfig, LedgerConfig
+from .ledger import app as ledger_app
+from .rippled_cfg import app as rippled_app
 
-from .auto_cmd import app as auto_typer_app
-from .compose_click import compose, write_cmd  # generated Click group + command
-from .ledger import app as ledger_typer_app  # ledger generation commands
-from .rippled_cfg import app as rippled_typer_app
+app = typer.Typer(
+    invoke_without_command=True,
+    no_args_is_help=False,
+    help="Generate custom XRPL genesis ledgers and test network environments.",
+)
+app.add_typer(ledger_app, name="ledger")
+app.add_typer(rippled_app, name="rippled")
 
 
 def _print_ledgend() -> None:
@@ -24,48 +27,96 @@ def _print_ledgend() -> None:
     from importlib.resources import files  # noqa: PLC0415
 
     data = files("generate_ledger.data").joinpath("ledgend.bin").read_bytes()
-    click.echo(zlib.decompress(data).decode("utf-8"))
+    typer.echo(zlib.decompress(data).decode("utf-8"))
 
 
-@click.group(invoke_without_command=True, no_args_is_help=False)
-@click.option("-o", "--output-file", type=click.Path(path_type=Path), default=None)
-@click.option("--ledgend", is_flag=True, hidden=True, help="Show the ledgen(d) logo.")
-@click.pass_context
-def cli(ctx: click.Context, output_file: Path | None, ledgend: bool):
+@app.callback(invoke_without_command=True)
+def root(
+    ctx: typer.Context,
+    output_dir: Path = typer.Option(Path("testnet"), "--output-dir", "-o", help="Root output directory."),
+    validators: int = typer.Option(5, "--validators", "-v", min=1, help="Number of validator nodes."),
+    num_accounts: int = typer.Option(1000, "--accounts", help="Number of regular (non-gateway) accounts."),
+    balance: str = typer.Option(str(100_000_000_000), "--balance", "-b", help="Default account balance in drops."),
+    algo: str = typer.Option("ed25519", "--algo", help="Key algorithm: ed25519 (default) or secp256k1."),
+    gpu: bool = typer.Option(False, "--gpu", help="GPU-accelerated account generation."),
+    trustline: list[str] | None = typer.Option(
+        None, "--trustline", "-t", help="Trustline: 'acct1:acct2:currency:limit'. Repeatable."
+    ),
+    gateways: int = typer.Option(4, "--gateways", help="Number of gateway accounts. 0 = disabled."),
+    assets_per_gateway: int = typer.Option(4, "--assets-per-gateway", help="Assets per gateway."),
+    gateway_currencies: str = typer.Option("USD,CNY,BTC,ETH", "--gateway-currencies", help="Currency pool."),
+    gateway_coverage: float = typer.Option(1.0, "--gateway-coverage", help="Fraction of accounts with trustlines."),
+    gateway_connectivity: float = typer.Option(1.0, "--gateway-connectivity", help="Fraction of gateways connected."),
+    gateway_seed: int | None = typer.Option(None, "--gateway-seed", help="RNG seed for reproducibility."),
+    amm_pool: list[str] | None = typer.Option(
+        None, "--amm-pool", "-a", help="AMM pool: 'asset1:asset2:amt1:amt2[:fee[:creator]]'."
+    ),
+    amendment_profile: str = typer.Option("release", "--amendment-profile", help="release, develop, or custom."),
+    amendment_source: str | None = typer.Option(None, "--amendment-source", help="Path to features.macro or JSON."),
+    peer_port: int = typer.Option(51235, "--peer-port", help="Peer port for [ips_fixed]."),
+    amendment_majority_time: str | None = typer.Option(None, "--amendment-majority-time"),
+    base_fee: int = typer.Option(121, "--base-fee", help="Base fee (drops)."),
+    reserve_base: int = typer.Option(2_000_000, "--reserve-base", help="Reserve base (drops)."),
+    reserve_inc: int = typer.Option(666, "--reserve-inc", help="Reserve increment (drops)."),
+    image: str = typer.Option("rippleci/xrpld:develop", "--image", help="Docker image for rippled nodes."),
+    ledgend: bool = typer.Option(False, "--ledgend", hidden=True, help="Show the ledgen(d) logo."),
+):
+    """Generate a complete XRPL testnet: ledger.json, rippled configs, and docker-compose.yml."""
     if ledgend:
         _print_ledgend()
-        ctx.exit(0)
+        raise typer.Exit()
+
+    if ctx.invoked_subcommand is not None:
         return
 
-    # init state once
-    if ctx.obj is None:
-        state = SimpleNamespace(
-            compose=ComposeConfig(),
-            ledger=LedgerConfig(),
-        )
-        ctx.obj = state
-        # defaults (single source of truth)
-        compose_leaf = defaults_leaf_from_cfg(state.compose, "compose-write")
-        ctx.default_map = merge_default_maps(
-            nest_default_map(("compose", "write"), compose_leaf),
-        )
+    from generate_ledger.cli.shared_options import (  # noqa: PLC0415
+        build_ledger_config,
+        parse_amm_pool_specs,
+        parse_trustline_specs,
+        run_full_pipeline,
+    )
 
-    # default action: run `compose write`
-    if ctx.invoked_subcommand is None:
-        kwargs = {}
-        if output_file is not None:
-            kwargs["output_file"] = output_file
-        return ctx.invoke(write_cmd, **kwargs)
+    if amendment_source:
+        amendment_profile = "custom" if amendment_source.endswith(".json") else "develop"
+
+    explicit_trustlines = parse_trustline_specs(trustline)
+    amm_pools = parse_amm_pool_specs(amm_pool)
+
+    ledger_config = build_ledger_config(
+        base_dir=output_dir,
+        num_accounts=num_accounts,
+        gateways=gateways,
+        balance=balance,
+        algo=algo,
+        gpu=gpu,
+        gateway_currencies=gateway_currencies,
+        assets_per_gateway=assets_per_gateway,
+        gateway_coverage=gateway_coverage,
+        gateway_connectivity=gateway_connectivity,
+        gateway_seed=gateway_seed,
+        explicit_trustlines=explicit_trustlines,
+        amm_pools=amm_pools,
+        amendment_profile=amendment_profile,
+        amendment_source=amendment_source,
+        base_fee=base_fee,
+        reserve_base=reserve_base,
+        reserve_inc=reserve_inc,
+    )
+
+    run_full_pipeline(
+        output_dir=output_dir,
+        ledger_config=ledger_config,
+        amendment_profile=amendment_profile,
+        amendment_source=amendment_source,
+        validators=validators,
+        peer_port=peer_port,
+        amendment_majority_time=amendment_majority_time,
+        base_fee=base_fee,
+        reserve_base=reserve_base,
+        reserve_inc=reserve_inc,
+        image=image,
+    )
 
 
-# mount the generated Click "compose" group
-cli.add_command(compose, name="compose")
-
-# mount the ledger group directly at root level
-cli.add_command(get_command(ledger_typer_app), name="ledger")
-
-# mount rippled config generation
-cli.add_command(get_command(rippled_typer_app), name="rippled")
-
-# mount unified auto command
-cli.add_command(get_command(auto_typer_app), name="auto")
+# Click-compatible entry point for pyproject.toml
+cli = get_command(app)

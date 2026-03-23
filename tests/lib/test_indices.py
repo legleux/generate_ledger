@@ -18,8 +18,6 @@ from generate_ledger.indices import (
     amm_account_id,
     amm_index,
     amm_lpt_currency,
-    currency_code_to_bytes,
-    currency_code_to_hex,
     make_mpt_id,
     mpt_id_to_hex,
     mpt_issuance_index,
@@ -121,21 +119,6 @@ class TestCurrencyConversion:
     def test_invalid_length_raises(self):
         with pytest.raises(ValueError):
             _currency_to_160("TOOLONG")
-
-    def test_currency_code_to_bytes(self):
-        result = currency_code_to_bytes("USD")
-        assert len(result) == 20
-        assert result[:3] == b"USD"
-        assert result[3:] == bytes(17)
-
-    def test_currency_code_to_hex(self):
-        result = currency_code_to_hex("USD")
-        assert len(result) == 40  # 20 bytes = 40 hex chars
-        assert result[:6] == "555344"  # "USD" in hex
-
-    def test_currency_code_too_long(self):
-        with pytest.raises(ValueError, match="too long"):
-            currency_code_to_bytes("A" * 21)
 
 
 # ---------------------------------------------------------------------------

@@ -1,8 +1,6 @@
 """Tests for gl.trustlines — trustline object generation."""
 
 import pytest
-from xrpl import CryptoAlgorithm
-from xrpl.wallet import Wallet
 
 from generate_ledger.accounts import Account
 from generate_ledger.trustlines import (
@@ -45,24 +43,21 @@ class TestTrustlineConfig:
 # ---------------------------------------------------------------------------
 class TestGenerateTrustsetTxnId:
     def test_returns_64_hex(self, bob):
-        wallet = Wallet.from_seed(bob.seed, algorithm=CryptoAlgorithm.SECP256K1)
         limit_amount = {"currency": "USD", "issuer": ALICE_ADDRESS, "value": "1000000"}
-        txn_id = generate_trustset_txn_id(bob, wallet, limit_amount, sequence=4)
+        txn_id = generate_trustset_txn_id(bob, limit_amount, sequence=4)
         assert len(txn_id) == 64
         assert all(c in "0123456789ABCDEF" for c in txn_id)
 
     def test_deterministic(self, bob):
-        wallet = Wallet.from_seed(bob.seed, algorithm=CryptoAlgorithm.SECP256K1)
         limit_amount = {"currency": "USD", "issuer": ALICE_ADDRESS, "value": "1000000"}
-        txn_id1 = generate_trustset_txn_id(bob, wallet, limit_amount, sequence=4)
-        txn_id2 = generate_trustset_txn_id(bob, wallet, limit_amount, sequence=4)
+        txn_id1 = generate_trustset_txn_id(bob, limit_amount, sequence=4)
+        txn_id2 = generate_trustset_txn_id(bob, limit_amount, sequence=4)
         assert txn_id1 == txn_id2
 
     def test_different_sequences_differ(self, bob):
-        wallet = Wallet.from_seed(bob.seed, algorithm=CryptoAlgorithm.SECP256K1)
         limit_amount = {"currency": "USD", "issuer": ALICE_ADDRESS, "value": "1000000"}
-        txn_id1 = generate_trustset_txn_id(bob, wallet, limit_amount, sequence=4)
-        txn_id2 = generate_trustset_txn_id(bob, wallet, limit_amount, sequence=5)
+        txn_id1 = generate_trustset_txn_id(bob, limit_amount, sequence=4)
+        txn_id2 = generate_trustset_txn_id(bob, limit_amount, sequence=5)
         assert txn_id1 != txn_id2
 
 

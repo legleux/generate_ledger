@@ -1,55 +1,45 @@
-"""CLI tests for the 'auto' command using Typer's test runner."""
+"""CLI tests for the root command (full pipeline: ledger + rippled + compose)."""
 
 import json
 
-from typer.testing import CliRunner
+from click.testing import CliRunner
 
-from generate_ledger.cli.auto_cmd import app
+from generate_ledger.cli.main import cli
 
 runner = CliRunner()
 
 
-class TestAutoCommand:
+class TestFullPipeline:
     def test_basic_invocation(self, tmp_path):
-        result = runner.invoke(app, ["-o", str(tmp_path), "-v", "2", "--accounts", "3"])
+        result = runner.invoke(cli, ["-o", str(tmp_path), "-v", "2", "--accounts", "3"])
         assert result.exit_code == 0, result.output
         assert (tmp_path / "ledger.json").exists()
         assert (tmp_path / "accounts.json").exists()
         assert (tmp_path / "volumes").is_dir()
 
     def test_ledger_output_valid_json(self, tmp_path):
-        runner.invoke(app, ["-o", str(tmp_path), "-v", "2", "--accounts", "2"])
+        runner.invoke(cli, ["-o", str(tmp_path), "-v", "2", "--accounts", "2"])
         data = json.loads((tmp_path / "ledger.json").read_text())
         assert "ledger" in data
         assert "accountState" in data["ledger"]
 
     def test_validator_configs_created(self, tmp_path):
-        result = runner.invoke(app, ["-o", str(tmp_path), "-v", "3", "--accounts", "2"])
+        result = runner.invoke(cli, ["-o", str(tmp_path), "-v", "3", "--accounts", "2"])
         assert result.exit_code == 0, result.output
         volumes = tmp_path / "volumes"
-        # Should have val0, val1, val2, and rippled
         assert (volumes / "val0" / "rippled.cfg").exists()
         assert (volumes / "val1" / "rippled.cfg").exists()
         assert (volumes / "val2" / "rippled.cfg").exists()
 
     def test_compose_file_created(self, tmp_path):
-        result = runner.invoke(app, ["-o", str(tmp_path), "-v", "2", "--accounts", "2"])
+        result = runner.invoke(cli, ["-o", str(tmp_path), "-v", "2", "--accounts", "2"])
         assert result.exit_code == 0, result.output
         assert (tmp_path / "docker-compose.yml").exists()
 
     def test_with_trustline(self, tmp_path):
         result = runner.invoke(
-            app,
-            [
-                "-o",
-                str(tmp_path),
-                "-v",
-                "2",
-                "--accounts",
-                "3",
-                "-t",
-                "0:1:USD:1000000000",
-            ],
+            cli,
+            ["-o", str(tmp_path), "-v", "2", "--accounts", "3", "-t", "0:1:USD:1000000000"],
         )
         assert result.exit_code == 0, result.output
         data = json.loads((tmp_path / "ledger.json").read_text())
@@ -59,7 +49,7 @@ class TestAutoCommand:
 
     def test_with_amm_pool(self, tmp_path):
         result = runner.invoke(
-            app,
+            cli,
             [
                 "-o",
                 str(tmp_path),
@@ -81,7 +71,7 @@ class TestAutoCommand:
 
     def test_custom_fees(self, tmp_path):
         result = runner.invoke(
-            app,
+            cli,
             [
                 "-o",
                 str(tmp_path),
@@ -106,23 +96,14 @@ class TestAutoCommand:
         assert fee["ReserveIncrementDrops"] == 500
 
     def test_step_messages_in_output(self, tmp_path):
-        result = runner.invoke(app, ["-o", str(tmp_path), "-v", "2", "--accounts", "2"])
+        result = runner.invoke(cli, ["-o", str(tmp_path), "-v", "2", "--accounts", "2"])
         assert "Step 1/3" in result.output
         assert "Step 2/3" in result.output
         assert "Step 3/3" in result.output
 
     def test_invalid_trustline_spec(self, tmp_path):
         result = runner.invoke(
-            app,
-            [
-                "-o",
-                str(tmp_path),
-                "-v",
-                "2",
-                "--accounts",
-                "2",
-                "-t",
-                "bad",
-            ],
+            cli,
+            ["-o", str(tmp_path), "-v", "2", "--accounts", "2", "-t", "bad"],
         )
         assert result.exit_code != 0
