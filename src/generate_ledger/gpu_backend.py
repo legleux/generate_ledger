@@ -22,6 +22,19 @@ from generate_ledger.crypto_backends import Algorithm, CryptoBackend
 _CUDA_DIR = Path(__file__).parent / "cuda"
 
 
+def _ensure_cuda_path() -> None:
+    """Auto-detect CUDA_PATH from the nvidia-cuda-nvcc pip wheel if not already set."""
+    if os.environ.get("CUDA_PATH"):
+        return
+    try:
+        import nvidia.cuda_nvcc  # noqa: PLC0415
+
+        nvcc_path = nvidia.cuda_nvcc.__path__[0]
+        os.environ["CUDA_PATH"] = nvcc_path
+    except (ImportError, IndexError):
+        pass
+
+
 def _load_cuda_source() -> str:
     """Load CUDA kernel source from the .cu file."""
     cu_path = _CUDA_DIR / "ed25519_accounts.cu"
@@ -36,6 +49,7 @@ class GpuEd25519Backend(CryptoBackend):
     """
 
     def __init__(self) -> None:
+        _ensure_cuda_path()
         import cupy as cp  # noqa: PLC0415
 
         self._cp = cp

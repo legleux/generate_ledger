@@ -51,13 +51,14 @@ All tiers fall back gracefully — if a backend isn't installed, the next tier d
 
 #### GPU setup
 
-The `gpu` dependency group installs CuPy and the CUDA toolkit as pip wheels (`nvidia-cuda-nvcc`, `nvidia-cuda-nvrtc`). You must set `CUDA_PATH` so CuPy can find the compiler:
+The `gpu` dependency group installs CuPy and the CUDA toolkit as pre-built pip wheels — no system CUDA install needed. Just an NVIDIA GPU with drivers.
 
 ```bash
-export CUDA_PATH=.venv/lib/python3.14/site-packages/nvidia/cuda_nvcc
+uv sync --group gpu
+uv run pytest  # GPU tests run automatically
 ```
 
-Without this, `GpuEd25519Backend` will fail with `RuntimeError: Failed to auto-detect CUDA root directory`. GPU tests automatically skip when CUDA is not available.
+`CUDA_PATH` is auto-detected from the installed `nvidia-cuda-nvcc` wheel. GPU tests skip gracefully when the GPU group isn't installed or no GPU is available.
 
 ## Install
 
@@ -191,7 +192,7 @@ gen ledger --accounts 10 --enable-amendment SomeFeature --disable-amendment Claw
 
 The `--amendment-source` option accepts a path to any `features.macro` file, so you can point it at your local rippled checkout to pick up amendments from any branch.
 
-**Important distinction:** `features.macro` defines what amendments a rippled build *supports* — not what is *enabled on a live network*. Amendments are enabled on mainnet only after reaching 80% validator consensus, which can lag weeks or months behind a release. The `release` profile queries a mainnet node (falling back to a bundled snapshot) to get the actual enabled set. The `develop` profile enables all supported amendments, matching the behavior of a freshly started test network. #TODO: find some link in the docs to refer ato also
+**Important distinction:** `features.macro` defines what amendments a rippled build *supports* — not what is *enabled on a live network*. Amendments are enabled on mainnet only after reaching 80% validator consensus, which can lag weeks or months behind a release. The `release` profile queries a mainnet node (falling back to a bundled snapshot) to get the actual enabled set. The `develop` profile enables all supported amendments, matching the behavior of a freshly started test network.
 
 ### Fee Configuration
 
@@ -266,14 +267,15 @@ This is handled automatically by `gen auto` and `gen validators`.
 ## Development
 
 ```bash
-# Run tests (GPU tests skip automatically if CUDA unavailable)
-pytest
+# Run tests (GPU tests skip automatically if GPU group not installed)
+uv run pytest
 
 # Run tests with GPU backend
-CUDA_PATH=.venv/lib/python3.14/site-packages/nvidia/cuda_nvcc pytest
+uv sync --group gpu
+uv run pytest
 
 # Lint
-ruff check .
+uv run ruff check .
 
 # Build locally (sdist + wheel → dist/)
 uv build

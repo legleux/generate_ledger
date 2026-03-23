@@ -34,6 +34,7 @@ class AccountConfig(BaseSettings):
     num_accounts: PositiveInt = 2
     algo: str = "ed25519"  # "ed25519" or "secp256k1"
     balance: str = str(100_000_000000)  # 100k XRP
+    use_gpu: bool = False
 
 
 def generate_accounts(config: AccountConfig | None = None, *, use_gpu: bool = False) -> list[Account]:
@@ -47,9 +48,10 @@ def generate_accounts(config: AccountConfig | None = None, *, use_gpu: bool = Fa
     generation for ed25519 (~10x faster than PyNaCl for large batches).
     """
     cfg = config or AccountConfig()
+    gpu = use_gpu or cfg.use_gpu
     algo = Algorithm(cfg.algo)
-    backend = get_backend(algo, use_gpu=use_gpu)
-    _, name = backend_info(algo, use_gpu=use_gpu)
+    backend = get_backend(algo, use_gpu=gpu)
+    _, name = backend_info(algo, use_gpu=gpu)
     print(f"Generating {cfg.num_accounts} accounts ({cfg.algo}, backend={name}).")
 
     # Use full GPU generation if available (includes precomputed indices)

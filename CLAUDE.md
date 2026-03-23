@@ -30,7 +30,18 @@ ruff check . --fix
 # CLI entry point (after uv sync)
 gen ledger --accounts 10 --output-dir ./out
 gen auto --accounts 50 --validators 5 --output-dir ./testnet
+
+# Serve docs locally
+uv run mkdocs serve
 ```
+
+### Documentation
+
+Built with mkdocs-material. Source in `docs/`, config in `mkdocs.yml`, build output in `site/` (gitignored).
+
+- `uv run mkdocs serve` — live preview at http://127.0.0.1:8000
+- `uv run mkdocs build` — static site to `site/`
+- Pages: index, quickstart, CLI reference, library API, amendments, development
 
 ## Architecture
 
@@ -47,7 +58,7 @@ from generate_ledger.amendments import get_enabled_amendment_hashes
 ### Shared Modules
 
 - **`constants.py`** — Centralized XRPL flag constants (`LSF_DEFAULT_RIPPLE`, `AMM_ACCOUNT_FLAGS`, `TXN_PREFIX`, `NEUTRAL_ISSUER`) used across trustlines, AMM, and ledger_builder
-- **`ledger_types.py`** — Config types extracted from `ledger.py`: `ExplicitTrustline`, `FeeConfig`, `MPTIssuanceConfig`, `MPTHolderConfig`, `AMMPoolConfig` (re-exported from `gl.ledger` for backward compat)
+- **`ledger_types.py`** — Config types extracted from `ledger.py`: `ExplicitTrustline`, `FeeConfig`, `MPTIssuanceConfig`, `MPTHolderConfig`, `AMMPoolConfig` (re-exported from `generate_ledger.ledger` for backward compat)
 
 ### Core Pipeline
 
@@ -67,7 +78,16 @@ The main data flow is in `ledger.py:gen_ledger_state()`:
 
 ### CLI Structure
 
-Entry point: `gen` (defined in `pyproject.toml` → `generate_ledger.cli.main:cli`). Subcommands: `ledger`, `validators`, `compose`, `auto`. CLI option parsing for colon-delimited formats (trustlines, AMM pools) lives in `cli/parsers.py`.
+Entry point: `gen` (Click root group in `cli/main.py`, defined in `pyproject.toml` → `generate_ledger.cli.main:cli`). Flat subcommands at root level: `ledger`, `auto`, `rippled`, `compose`. Invoking `gen` with no subcommand defaults to `compose write`.
+
+Key CLI modules:
+- **`cli/main.py`** — Click root group, mounts all subcommands
+- **`cli/ledger.py`** — `gen ledger` command (Typer app, mounted via `get_command`)
+- **`cli/auto_cmd.py`** — `gen auto` command (Typer app, mounted via `get_command`)
+- **`cli/compose_click.py`** — `gen compose` group (Click)
+- **`cli/rippled_cfg.py`** — `gen rippled` command (Typer app, mounted via `get_command`)
+- **`cli/click_builder.py`** — Shared Click command builder utilities (renamed from `auto.py`)
+- **`cli/parsers.py`** — CLI option parsing for colon-delimited formats (trustlines, AMM pools, MPT specs)
 
 ### Configuration
 
@@ -135,7 +155,7 @@ See `docs/library-usage.md` for full usage guide.
 - Gateway topology (star/mesh), fast trustline generation, lsfDefaultRipple on issuers
 - MPT (Multi-Purpose Tokens) — implemented in `develop/mpt.py` (develop branch only)
 - Fast ed25519 account generation via PyNaCl (~22k/sec), GPU backend via CuPy (~580k/sec)
-- Test suite: ~434 tests across unit, CLI, and integration (GPU tests auto-skip without CUDA)
+- Test suite: ~446 tests across unit, CLI, and integration (GPU tests auto-skip without CUDA)
 
 ### Planned (v2.0)
 - Vault/Lending — stub in `develop/vault.py`, raises `NotImplementedError`
@@ -154,6 +174,10 @@ See the detailed TODO list and milestones in the [spec files](specs/001-xrpl-led
 1. **Live validation** — Verify generated ledgers boot on rippled and amendments are actually active (not just correct JSON)
 2. **Test AMM fixes** — Verify 2026-01-28 lsfAMMNode flag fix and account derivation fix work end-to-end
 3. **Vault/Lending** — Implement `develop/vault.py` (currently raises `NotImplementedError`)
-4. **Clean packaging** — Real description in pyproject.toml, automatic PyPI deployment
+4. **Clean packaging** — ~~Real description in pyproject.toml~~, automatic PyPI deployment (publish workflow exists but only targets TestPyPI)
 5. **Branch-per-profile amendment strategy** — Use a `release` branch that tracks the latest major rippled release amendments, and `main`/`develop` for latest develop amendments. Each branch owns its curated amendment list, eliminating the need for runtime GitHub fetching and keeping profiles in sync with their corresponding rippled branches.
-6. **Enforce complexity limits** — Add complexipy/radon to CI or pre-commit. Current hotspots: `assemble_ledger_json` (68 cognitive), `parse_mpt_spec` (27), `parse_amm_pool` (29), `ledger` CLI (21), `gen_ledger_state` (19). Target: break these down to under 15.
+6. **Enforce complexity limits** — Add complexipy/radon as CI gate (currently reporting only). Remaining issue: `assemble_ledger_json` (68 cognitive). Others resolved: `gen_ledger_state` (19→3), `ledger` CLI (21→9), `parse_mpt_spec` (27→10), `parse_amm_pool` (29→11).
+7. **Standardize CLI on single framework** — Currently mixed Click (main.py, compose_click.py, click_builder.py) and Typer (ledger.py, auto_cmd.py, rippled_cfg.py). Low priority.
+8. **Remove `--algo` from CLI** — Default to ed25519, don't expose algorithm selection on the simple command line. Keep it as a config-file-only option.
+9. **Split into sub-packages** — The package has three core concerns: ledger generation (`ledger.py`, `ledger_builder.py`, `accounts.py`, `trustlines.py`, `amm.py`, `amendments.py`), network topology configs (`rippled_cfg.py`), and docker compose (`compose.py`). Consider splitting into `generate_ledger.ledger`, `generate_ledger.network`, `generate_ledger.compose` sub-packages.
+10. **Clean up compose.py** — Multiple FIXMEs and TODOs: volume mount logic, port exposure for multiple nodes, image entrypoint assumption, ledger file loading for hubs.

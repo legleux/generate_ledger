@@ -18,6 +18,19 @@ from generate_ledger.trustlines import TrustlineConfig
 app = typer.Typer(help="Commands to generate custom ledger.json files.")
 
 
+def _parse_specs(raw_specs: list[str] | None, parser, converter) -> list:
+    """Parse a list of CLI spec strings into config objects, raising BadParameter on error."""
+    if not raw_specs:
+        return []
+    result = []
+    for spec in raw_specs:
+        try:
+            result.append(converter(parser(spec)))
+        except ParseError as e:
+            raise typer.BadParameter(str(e)) from e
+    return result
+
+
 @app.callback(invoke_without_command=True)
 def ledger(
     # Account options
@@ -28,6 +41,7 @@ def ledger(
         str(100_000_000000), "--balance", "-b", help="Default account balance in drops (default: 100k XRP)."
     ),
     algo: str = typer.Option("ed25519", "--algo", help="Key algorithm: ed25519 (fast, default) or secp256k1."),
+    gpu: bool = typer.Option(False, "--gpu", help="Use GPU for account generation (requires --group gpu)."),
     # Output options
     outdir: Path = typer.Option(Path("testnet"), "--output-dir", "-o", help="Output directory."),
     # Trustline options
@@ -129,52 +143,25 @@ def ledger(
     """
     outdir.mkdir(parents=True, exist_ok=True)
 
-    # Parse trustline specs
-    explicit_trustlines = []
-    if trustline:
-        for spec in trustline:
-            try:
-                parsed = parse_trustline(spec)
-                explicit_trustlines.append(
-                    ExplicitTrustline(
-                        account1=parsed.account1,
-                        account2=parsed.account2,
-                        currency=parsed.currency,
-                        limit=parsed.limit,
-                    )
-                )
-            except ParseError as e:
-                raise typer.BadParameter(str(e)) from e
-
-    # Parse AMM pool specs
-    amm_pools = []
-    if amm_pool:
-        for spec in amm_pool:
-            try:
-                parsed = parse_amm_pool(spec)
-                amm_pools.append(build_amm_pool_config(parsed))
-            except ParseError as e:
-                raise typer.BadParameter(str(e)) from e
-
-    # Parse MPT issuance specs
-    mpt_issuances = []
-    if mpt:
-        for spec in mpt:
-            try:
-                parsed = parse_mpt_spec(spec)
-                mpt_issuances.append(
-                    MPTIssuanceConfig(
-                        issuer=parsed.issuer,
-                        sequence=parsed.sequence,
-                        max_amount=parsed.max_amount,
-                        flags=parsed.flags,
-                        asset_scale=parsed.asset_scale,
-                        transfer_fee=parsed.transfer_fee,
-                        metadata=parsed.metadata,
-                    )
-                )
-            except ParseError as e:
-                raise typer.BadParameter(str(e)) from e
+    explicit_trustlines = _parse_specs(
+        trustline,
+        parse_trustline,
+        lambda p: ExplicitTrustline(account1=p.account1, account2=p.account2, currency=p.currency, limit=p.limit),
+    )
+    amm_pools = _parse_specs(amm_pool, parse_amm_pool, build_amm_pool_config)
+    mpt_issuances = _parse_specs(
+        mpt,
+        parse_mpt_spec,
+        lambda p: MPTIssuanceConfig(
+            issuer=p.issuer,
+            sequence=p.sequence,
+            max_amount=p.max_amount,
+            flags=p.flags,
+            asset_scale=p.asset_scale,
+            transfer_fee=p.transfer_fee,
+            metadata=p.metadata,
+        ),
+    )
 
     # Parse currencies
     currency_list = [c.strip().upper() for c in currencies.split(",") if c.strip()]
@@ -189,6 +176,7 @@ def ledger(
             num_accounts=num_accounts + gateways,
             balance=balance,
             algo=algo,
+            use_gpu=gpu,
         ),
         fee_cfg=FeeConfig(
             base_fee_drops=base_fee,

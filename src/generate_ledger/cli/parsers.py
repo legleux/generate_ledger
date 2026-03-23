@@ -174,6 +174,40 @@ def _parse_asset(spec: str) -> ParsedAsset:
     )
 
 
+def _parse_asset_at(parts: list[str], idx: int, label: str) -> tuple[ParsedAsset, int]:
+    """Parse an asset from parts starting at idx. Returns (asset, new_idx)."""
+    if idx >= len(parts):
+        raise ParseError(f"Missing {label} in AMM pool spec")
+    if parts[idx].upper() == "XRP":
+        return ParsedAsset(currency=None, issuer=None), idx + 1
+    if idx + 1 >= len(parts):
+        raise ParseError(f"Missing issuer for {label} currency '{parts[idx]}'")
+    currency = parts[idx]
+    if len(currency) != STANDARD_CURRENCY_LEN and len(currency) != HEX_CURRENCY_LEN:
+        raise ParseError(f"Invalid {label} currency '{currency}': must be 3 chars, 40 hex chars, or 'XRP'")
+    return ParsedAsset(
+        currency=currency.upper() if len(currency) == STANDARD_CURRENCY_LEN else currency,
+        issuer=parts[idx + 1],
+    ), idx + 2
+
+
+def _parse_optional_int(
+    parts: list[str], idx: int, name: str, *, lo: int | None = None, hi: int | None = None
+) -> int | None:
+    """Parse an optional integer field from parts[idx], with optional range validation."""
+    if idx >= len(parts) or not parts[idx]:
+        return None
+    try:
+        val = int(parts[idx])
+    except ValueError as e:
+        raise ParseError(f"Invalid {name} '{parts[idx]}': must be an integer") from e
+    if lo is not None and val < lo:
+        raise ParseError(f"{name} must be >= {lo}, got {val}")
+    if hi is not None and val > hi:
+        raise ParseError(f"{name} must be <= {hi}, got {val}")
+    return val
+
+
 def parse_amm_pool(spec: str) -> ParsedAMMPool:
     """
     Parse an AMM pool specification.
@@ -202,60 +236,15 @@ def parse_amm_pool(spec: str) -> ParsedAMMPool:
         ParseError: If the format is invalid
     """
     parts = spec.split(":")
-
-    # Minimum parts: asset1 + asset2 + amount1 + amount2
-    # Asset can be "XRP" (1 part) or "currency:issuer" (2 parts)
-    # So minimum is 4 parts (XRP:XRP:amt1:amt2) - but XRP/XRP is invalid
-    # Typical: XRP:USD:issuer:amt1:amt2 = 5 parts
-    # Or: USD:issuer1:EUR:issuer2:amt1:amt2 = 6 parts
-
     if len(parts) < MIN_AMM_PARTS:
         raise ParseError(f"Invalid AMM pool format: '{spec}'. Expected at least 'asset1:asset2:amount1:amount2'")
 
-    idx = 0
+    asset1, idx = _parse_asset_at(parts, 0, "asset1")
+    asset2, idx = _parse_asset_at(parts, idx, "asset2")
 
-    # Parse asset1
-    if parts[idx].upper() == "XRP":
-        asset1 = ParsedAsset(currency=None, issuer=None)
-        idx += 1
-    else:
-        if idx + 1 >= len(parts):
-            raise ParseError(f"Missing issuer for asset1 currency '{parts[idx]}'")
-        currency = parts[idx]
-        issuer = parts[idx + 1]
-        if len(currency) != STANDARD_CURRENCY_LEN and len(currency) != HEX_CURRENCY_LEN:
-            raise ParseError(f"Invalid asset1 currency '{currency}': must be 3 chars, 40 hex chars, or 'XRP'")
-        asset1 = ParsedAsset(
-            currency=currency.upper() if len(currency) == STANDARD_CURRENCY_LEN else currency,
-            issuer=issuer,
-        )
-        idx += 2
-
-    # Parse asset2
-    if idx >= len(parts):
-        raise ParseError("Missing asset2 in AMM pool spec")
-
-    if parts[idx].upper() == "XRP":
-        asset2 = ParsedAsset(currency=None, issuer=None)
-        idx += 1
-    else:
-        if idx + 1 >= len(parts):
-            raise ParseError(f"Missing issuer for asset2 currency '{parts[idx]}'")
-        currency = parts[idx]
-        issuer = parts[idx + 1]
-        if len(currency) != STANDARD_CURRENCY_LEN and len(currency) != HEX_CURRENCY_LEN:
-            raise ParseError(f"Invalid asset2 currency '{currency}': must be 3 chars, 40 hex chars, or 'XRP'")
-        asset2 = ParsedAsset(
-            currency=currency.upper() if len(currency) == STANDARD_CURRENCY_LEN else currency,
-            issuer=issuer,
-        )
-        idx += 2
-
-    # Both assets can't be XRP
     if asset1.currency is None and asset2.currency is None:
         raise ParseError("Both assets cannot be XRP")
 
-    # Parse amounts
     remaining = parts[idx:]
     if len(remaining) < ASSET_PARTS:
         raise ParseError(
@@ -264,33 +253,16 @@ def parse_amm_pool(spec: str) -> ParsedAMMPool:
 
     amount1 = remaining[0]
     amount2 = remaining[1]
-
-    try:
-        int(amount1)  # Validate it's a number
-    except ValueError as e:
-        raise ParseError(f"Invalid amount1 '{amount1}': must be a number") from e
-
-    try:
-        int(amount2)  # Validate it's a number
-    except ValueError as e:
-        raise ParseError(f"Invalid amount2 '{amount2}': must be a number") from e
-
-    # Parse optional fee
-    fee = 500  # Default: 0.5%
-    if len(remaining) >= MIN_AMM_PARTS_WITH_FEE:
+    for val, name in [(amount1, "amount1"), (amount2, "amount2")]:
         try:
-            fee = int(remaining[2])
+            int(val)
         except ValueError as e:
-            raise ParseError(f"Invalid fee '{remaining[2]}': must be an integer") from e
-        if fee < 0 or fee > MAX_FEE_BPS:
-            raise ParseError(f"Fee must be 0-1000 basis points, got {fee}")
+            raise ParseError(f"Invalid {name} '{val}': must be a number") from e
 
-    # Parse optional creator
-    creator = None
-    if len(remaining) >= MIN_AMM_PARTS_WITH_CREATOR:
-        creator = remaining[3]
-        if not creator:
-            raise ParseError("Creator cannot be empty if specified")
+    fee = _parse_optional_int(remaining, 2, "fee", lo=0, hi=MAX_FEE_BPS) or 500
+    creator = remaining[3] if len(remaining) >= MIN_AMM_PARTS_WITH_CREATOR and remaining[3] else None
+    if len(remaining) >= MIN_AMM_PARTS_WITH_CREATOR and not remaining[3]:
+        raise ParseError("Creator cannot be empty if specified")
 
     return ParsedAMMPool(
         asset1=asset1,
@@ -333,47 +305,16 @@ def parse_mpt_spec(spec: str) -> ParsedMPT:
     if not issuer:
         raise ParseError("issuer cannot be empty")
 
-    try:
-        sequence = int(parts[1])
-    except ValueError as e:
-        raise ParseError(f"Invalid sequence '{parts[1]}': must be an integer") from e
-    if sequence < 1:
-        raise ParseError(f"sequence must be >= 1, got {sequence}")
+    sequence = _parse_optional_int(parts, 1, "sequence", lo=1)
+    if sequence is None:
+        raise ParseError(f"Invalid sequence '{parts[1]}': must be an integer")
 
-    max_amount: str | None = None
-    if len(parts) > 2 and parts[2]:  # noqa: PLR2004
-        try:
-            val = int(parts[2])
-        except ValueError as e:
-            raise ParseError(f"Invalid max_amount '{parts[2]}': must be an integer") from e
-        if val <= 0:
-            raise ParseError(f"max_amount must be positive, got {val}")
-        max_amount = parts[2]
+    max_amount_val = _parse_optional_int(parts, 2, "max_amount", lo=1)
+    max_amount = parts[2] if max_amount_val is not None else None
 
-    flags = 0
-    if len(parts) > 3 and parts[3]:  # noqa: PLR2004
-        try:
-            flags = int(parts[3])
-        except ValueError as e:
-            raise ParseError(f"Invalid flags '{parts[3]}': must be an integer") from e
-
-    asset_scale: int | None = None
-    if len(parts) > 4 and parts[4]:  # noqa: PLR2004
-        try:
-            asset_scale = int(parts[4])
-        except ValueError as e:
-            raise ParseError(f"Invalid asset_scale '{parts[4]}': must be an integer") from e
-        if not 0 <= asset_scale <= 255:  # noqa: PLR2004
-            raise ParseError(f"asset_scale must be 0-255, got {asset_scale}")
-
-    transfer_fee: int | None = None
-    if len(parts) > 5 and parts[5]:  # noqa: PLR2004
-        try:
-            transfer_fee = int(parts[5])
-        except ValueError as e:
-            raise ParseError(f"Invalid transfer_fee '{parts[5]}': must be an integer") from e
-        if not 0 <= transfer_fee <= MAX_MPT_TRANSFER_FEE:
-            raise ParseError(f"transfer_fee must be 0-{MAX_MPT_TRANSFER_FEE}, got {transfer_fee}")
+    flags = _parse_optional_int(parts, 3, "flags") or 0
+    asset_scale = _parse_optional_int(parts, 4, "asset_scale", lo=0, hi=255)
+    transfer_fee = _parse_optional_int(parts, 5, "transfer_fee", lo=0, hi=MAX_MPT_TRANSFER_FEE)
 
     metadata: str | None = None
     if len(parts) > 6 and parts[6]:  # noqa: PLR2004

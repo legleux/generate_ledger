@@ -81,3 +81,21 @@ class TestGpuBatchGeneration:
         seed, addr = results[0]
         assert seed.startswith("sEd")
         assert addr.startswith("r")
+
+    def test_million_accounts(self):
+        """Generate 1M accounts on GPU and verify correctness of a sample."""
+        from xrpl import CryptoAlgorithm
+        from xrpl.wallet import Wallet
+
+        backend = GpuEd25519Backend()
+        results = backend.generate_accounts_batch(1_000_000)
+        assert len(results) == 1_000_000
+
+        # All unique
+        addresses = {addr for _, addr in results}
+        assert len(addresses) == 1_000_000
+
+        # Spot-check 10 random seeds are wallet-importable
+        for seed, address in results[::100_000]:
+            wallet = Wallet.from_seed(seed, algorithm=CryptoAlgorithm.ED25519)
+            assert wallet.address == address

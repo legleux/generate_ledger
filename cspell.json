@@ -10,7 +10,8 @@
   "ignorePaths": [
     "uv.lock",
     "tests/data/",
-    "samples/"
+    "samples/",
+    "mkdocs.yml"
   ],
   "ignoreRegExpList": [
     "/0x[0-9a-fA-F]+/g",

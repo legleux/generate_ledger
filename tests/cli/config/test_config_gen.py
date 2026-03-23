@@ -1,20 +1,11 @@
 from pathlib import Path
 
-import pytest
 from click.testing import CliRunner
 
 from generate_ledger import __app_name__
 from generate_ledger.cli.main import cli as app
 
 runner = CliRunner()
-
-
-@pytest.mark.skip(reason="config command not implemented yet")
-def test_cli_config_help():
-    r = runner.invoke(app, ["config", "--help"], prog_name=__app_name__)
-    assert r.exit_code == 0, r.output
-    assert __app_name__ in r.output
-    assert "config" in r.output
 
 
 def test_rippled_write(tmp_path: Path):

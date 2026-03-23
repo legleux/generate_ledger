@@ -10,20 +10,21 @@ jobs:
   commit-message:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
         with:
           fetch-depth: 0
-      - uses: webiny/action-conventional-commits@v1.3.0
+      - uses: webiny/action-conventional-commits@4ae80bc67b0b2e72a4d091a7b18eb4ecc7db68c8 # v1.3.0
 
   lint:
     runs-on: ubuntu-latest
     container: ghcr.io/astral-sh/uv:python3.13-bookworm
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
       - run: uv sync --group lint
       - run: uv run ruff check .
 
   test:
+    needs: [commit-message, lint, complexity]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -32,7 +33,7 @@ jobs:
         os: [bookworm, trixie]
     container: ghcr.io/astral-sh/uv:python3.${{ matrix.version }}-${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
       - name: Install dependencies
         run: |
           uv sync --group dev --group fast ||
@@ -43,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     container: ghcr.io/astral-sh/uv:python3.13-bookworm
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
       - run: uv sync
       - name: Run complexipy
         run: |
@@ -74,7 +75,7 @@ jobs:
           cat radon-mi-report.txt >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
       - name: Upload complexity reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
           name: complexity-reports
           path: |

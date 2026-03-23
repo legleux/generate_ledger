@@ -26,8 +26,9 @@ for v in "${VERSIONS[@]}"; do
             # Start a container that stays alive, copy source in, then exec tests
             docker run -d --name "$name" -w /work "ghcr.io/astral-sh/uv:${tag}" \
                 sleep infinity > /dev/null 2>&1
-            docker cp "$(pwd)/." "${name}:/work"
-            docker exec "$name" rm -rf /work/.venv /work/.git
+            for f in src tests pyproject.toml uv.lock README.md; do
+                docker cp "$(pwd)/$f" "${name}:/work/$f" 2>/dev/null
+            done
 
             docker exec "$name" sh -c '
                 if ! uv sync --group dev --group fast; then
@@ -53,6 +54,23 @@ done
 echo ""
 echo "Waiting for ${#PIDS[@]} jobs..."
 echo ""
+
+# Save cursor position, then poll with redraw
+tput sc 2>/dev/null || true
+while true; do
+    alive=0
+    for pid in "${PIDS[@]}"; do
+        kill -0 "$pid" 2>/dev/null && alive=$((alive + 1))
+    done
+    [ "$alive" -eq 0 ] && break
+
+    # Restore cursor and clear to end of screen, then print
+    tput rc 2>/dev/null && tput ed 2>/dev/null || true
+    echo "  ${alive}/${#PIDS[@]} running:"
+    docker ps --filter "name=gl-test-" --format "    {{.Names}}" 2>/dev/null | sed 's/gl-test-//g'
+    sleep 2
+done
+tput rc 2>/dev/null && tput ed 2>/dev/null || true
 
 for pid in "${PIDS[@]}"; do
     wait "$pid" 2>/dev/null || true

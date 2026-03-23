@@ -133,6 +133,46 @@ def _build_amm_specs(pool_configs: list[AMMPoolConfig], accounts: list[Account])
     return specs
 
 
+def _collect_amm_issuers(amm_specs: list[AMMSpec], gateway_issuers: set[str]) -> set[str]:
+    """Collect all issuer addresses that need lsfDefaultRipple (AMM issuers + gateways)."""
+    issuers: set[str] = set(gateway_issuers)
+    for spec in amm_specs:
+        if spec.asset1.issuer:
+            issuers.add(spec.asset1.issuer)
+        if spec.asset2.issuer:
+            issuers.add(spec.asset2.issuer)
+    return issuers
+
+
+def _load_develop_objects(cfg: "LedgerConfig", accounts: list[Account]) -> list[dict]:
+    """Discover and invoke develop object builders (if develop/ is present)."""
+    try:
+        from generate_ledger.develop import get_develop_builders  # noqa: PLC0415
+
+        builders = get_develop_builders()
+        if not builders:
+            return []
+
+        from generate_ledger.amendments import get_amendments_for_profile  # noqa: PLC0415
+
+        enabled_names = {
+            a.name
+            for a in get_amendments_for_profile(
+                profile=cfg.amendment_profile or "release",
+                source=cfg.amendment_profile_source,
+            )
+            if a.enabled
+        }
+        objects: list[dict] = []
+        for builder_info in builders.values():
+            required = builder_info.get("required_amendment")
+            if required is None or required in enabled_names:
+                objects.extend(builder_info["builder"](accounts=accounts, config=cfg))
+        return objects
+    except ImportError:
+        return []
+
+
 def gen_ledger_state(config: LedgerConfig | None = None, *, write_accounts: bool = True) -> dict:
     """Generate a complete XRPL genesis ledger as a dict.
 
@@ -167,14 +207,7 @@ def gen_ledger_state(config: LedgerConfig | None = None, *, write_accounts: bool
     amm_specs = _build_amm_specs(cfg.amm_pools, accounts)
     amm_objects = [generate_amm_objects(spec) for spec in amm_specs] if amm_specs else None
 
-    # Collect issuers that need lsfDefaultRipple flag (AMM issuers + gateways)
-    amm_issuers: set[str] = set()
-    amm_issuers.update(gateway_issuers)
-    for spec in amm_specs:
-        if spec.asset1.issuer:
-            amm_issuers.add(spec.asset1.issuer)
-        if spec.asset2.issuer:
-            amm_issuers.add(spec.asset2.issuer)
+    amm_issuers = _collect_amm_issuers(amm_specs, gateway_issuers)
 
     # 5. Get amendment hashes (profile-based or legacy)
     amendment_hashes = get_enabled_amendment_hashes(
@@ -185,29 +218,7 @@ def gen_ledger_state(config: LedgerConfig | None = None, *, write_accounts: bool
     )
 
     # 6. Discover and invoke develop object builders (if develop/ is present)
-    extra_objects: list[dict] = []
-    try:
-        from generate_ledger.develop import get_develop_builders  # noqa: PLC0415
-
-        builders = get_develop_builders()
-        if builders:
-            from generate_ledger.amendments import get_amendments_for_profile  # noqa: PLC0415
-
-            enabled_names = {
-                a.name
-                for a in get_amendments_for_profile(
-                    profile=cfg.amendment_profile or "release",
-                    source=cfg.amendment_profile_source,
-                )
-                if a.enabled
-            }
-            for builder_info in builders.values():
-                required = builder_info.get("required_amendment")
-                if required is None or required in enabled_names:
-                    objects = builder_info["builder"](accounts=accounts, config=cfg)
-                    extra_objects.extend(objects)
-    except ImportError:
-        pass  # develop/ not present (release branch) — graceful no-op
+    extra_objects = _load_develop_objects(cfg, accounts)
 
     # 7. Assemble ledger with trustlines, AMMs, and extra objects
     ledger = ledger_builder.assemble_ledger_json(

@@ -41,6 +41,11 @@ def auto(
         "--algo",
         help="Key algorithm: ed25519 (fast, default) or secp256k1.",
     ),
+    gpu: bool = typer.Option(
+        False,
+        "--gpu",
+        help="Use GPU-accelerated account generation (requires uv sync --group gpu).",
+    ),
     # Ledger: trustlines
     trustline: list[str] | None = typer.Option(
         None,
@@ -200,7 +205,7 @@ def auto(
     gateway_currency_list = [c.strip().upper() for c in gateway_currencies.split(",") if c.strip()]
 
     ledger_config = LedgerConfig(
-        account_cfg=AccountConfig(num_accounts=num_accounts + gateways, balance=balance, algo=algo),
+        account_cfg=AccountConfig(num_accounts=num_accounts + gateways, balance=balance, algo=algo, use_gpu=gpu),
         fee_cfg=FeeConfig(
             base_fee_drops=base_fee,
             reserve_base_drops=reserve_base,

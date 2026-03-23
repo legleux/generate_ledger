@@ -1,6 +1,6 @@
 [project]
 name = "generate-ledger"
-version = "0.0.5"
+version = "0.0.6"
 description = "Generate custom XRPL genesis ledgers and test network environments"
 readme = "README.md"
 authors = [
@@ -66,6 +66,7 @@ dev = [
   {include-group = "test"},
   "complexipy>=5.2.0",
   "radon>=6.0.1",
+  "mkdocs-material>=9.6.0",
 ]
 lint = [
     "pre-commit>=4.2.0",

@@ -1,4 +1,4 @@
-# Using generate_ledger as a Library
+# Library API
 
 `generate_ledger` can be used as a Python library to programmatically create XRPL genesis ledgers without invoking the CLI.
 
@@ -15,7 +15,7 @@ from generate_ledger.ledger import LedgerConfig, gen_ledger_state
 
 # Generate a ledger dict in memory (no file I/O)
 ledger = gen_ledger_state(
-    LedgerConfig(amendment_profile="develop"),
+    LedgerConfig(amendment_profile="release"),
     write_accounts=False,
 )
 
@@ -83,7 +83,7 @@ config = LedgerConfig(
     ],
 
     # Amendments
-    amendment_profile="develop",   # "develop" (default), "release", or "custom"
+    amendment_profile="release",   # "release", "develop", or "custom"
     # amendment_profile_source="/path/to/features.macro",  # for develop/custom
     # enable_amendments=["SomeFeature"],
     # disable_amendments=["Clawback"],
@@ -95,12 +95,12 @@ config = LedgerConfig(
 
 ## API Reference
 
-### `gen_ledger_state(config, *, write_accounts=False) -> dict`
+### `gen_ledger_state(config, *, write_accounts=True) -> dict`
 
 Generate a complete ledger as a Python dict.
 
 - **`config`**: `LedgerConfig` instance (or `None` for defaults)
-- **`write_accounts`**: Set to `True` to write `accounts.json` to disk alongside ledger generation. Defaults to `False` (pure in-memory).
+- **`write_accounts`**: Set to `False` to skip writing `accounts.json` to disk. Use this when you only need the ledger data in memory.
 
 Returns a dict with the structure rippled expects for genesis ledger loading.
 

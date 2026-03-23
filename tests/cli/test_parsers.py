@@ -134,12 +134,12 @@ class TestParseAMMPool:
     def test_invalid_fee_out_of_range(self):
         with pytest.raises(ParseError) as exc_info:
             parse_amm_pool("XRP:USD:0:1000:1000:1001")
-        assert "must be 0-1000" in str(exc_info.value)
+        assert "fee" in str(exc_info.value).lower()
 
     def test_invalid_fee_negative(self):
         with pytest.raises(ParseError) as exc_info:
             parse_amm_pool("XRP:USD:0:1000:1000:-1")
-        assert "must be 0-1000" in str(exc_info.value)
+        assert "fee" in str(exc_info.value).lower()
 
     def test_invalid_missing_issuer(self):
         # USD:issuer:amount1 has only 3 parts, fails min parts check
@@ -224,7 +224,7 @@ class TestParseMptSpec:
             parse_mpt_spec("0:1:notanumber")
 
     def test_max_amount_zero_raises(self):
-        with pytest.raises(ParseError, match="max_amount must be positive"):
+        with pytest.raises(ParseError, match="max_amount"):
             parse_mpt_spec("0:1:0")
 
     def test_invalid_asset_scale_raises(self):
@@ -232,7 +232,7 @@ class TestParseMptSpec:
             parse_mpt_spec("0:1:::abc")
 
     def test_asset_scale_out_of_range_raises(self):
-        with pytest.raises(ParseError, match="asset_scale must be 0-255"):
+        with pytest.raises(ParseError, match="asset_scale"):
             parse_mpt_spec("0:1:::256")
 
     def test_transfer_fee_out_of_range_raises(self):
