@@ -33,7 +33,10 @@ jobs:
     container: ghcr.io/astral-sh/uv:python3.${{ matrix.version }}-${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - run: uv sync --group dev --group fast
+      - name: Install dependencies
+        run: |
+          uv sync --group dev --group fast ||
+          (rm -rf .venv && uv sync --group dev && echo "::warning::fast backends unavailable on this platform")
       - run: uv run pytest
 
   complexity:

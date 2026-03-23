@@ -14,11 +14,10 @@
   ],
   "ignoreRegExpList": [
     "/0x[0-9a-fA-F]+/g",
-    // Hex literals like 0x00800000 as XRPL flag constants
     "/[0-9a-fA-F]{8,}/g",
-    // Long hex strings like amendment hashes, indices in SHA512Half outputs everywhere
-    "/r[a-zA-Z1-9]{24,34}/g", "/s[a-zA-Z1-9]{20,32}/g"
-    // XRPL addresses and seeds like rHb9C.../ssyEb... Accounts/Seeds tests/fixtures
+    "/r[a-zA-Z1-9]{24,34}/g",
+    "/s[a-zA-Z1-9]{20,32}/g",
+    "/\\w*Backend\\w*/g"
   ],
   "words": [
     "addopts",
@@ -55,7 +54,6 @@
     "incharge",
     "initargs",
     "isnegative",
-    "kend",
     "keygen",
     "keylet",
     "keylets",
@@ -74,12 +72,10 @@
     "mptokens",
     "mpts",
     "nacl",
-    "nativ",
     "nftoffer",
     "nftoken",
     "noinline",
     "notanumber",
-    "remint",
     "nudb",
     "nvcc",
     "nvrtc",
@@ -97,6 +93,7 @@
     "pytestmark",
     "pythonunbuffered",
     "recip",
+    "remint",
     "ripemd",
     "ripesha",
     "rippleci",
@@ -137,6 +134,12 @@
       "ignoreRegExpList": [
         "/ULL/g",
         "/__\\w+/g"
+      ]
+    },
+    {
+      "filename": "**/*.sh",
+      "ignoreRegExpList": [
+        "/[A-Z_]{2,}/g"
       ]
     },
     {
