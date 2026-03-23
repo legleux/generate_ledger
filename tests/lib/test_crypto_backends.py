@@ -1,4 +1,6 @@
-"""Tests for gl.crypto_backends — fast crypto backend selection and correctness."""
+"""Tests for generate_ledger.crypto_backends — fast crypto backend selection and correctness."""
+
+import pytest
 
 from generate_ledger.crypto_backends import (
     Algorithm,
@@ -9,6 +11,20 @@ from generate_ledger.crypto_backends import (
     get_backend,
     hex_to_base58_seed,
 )
+
+try:
+    import nacl  # noqa: F401
+
+    _HAS_PYNACL = True
+except ImportError:
+    _HAS_PYNACL = False
+
+try:
+    import coincurve  # noqa: F401
+
+    _HAS_COINCURVE = True
+except ImportError:
+    _HAS_COINCURVE = False
 
 
 class TestAlgorithm:
@@ -44,6 +60,7 @@ class TestHexToBase58Seed:
         assert s1 != s2
 
 
+@pytest.mark.skipif(not _HAS_PYNACL, reason="PyNaCl not installed")
 class TestNativeEd25519Backend:
     def test_algorithm(self):
         backend = NativeEd25519Backend()
@@ -89,6 +106,7 @@ class TestFallbackBackend:
         assert address.startswith("r")
 
 
+@pytest.mark.skipif(not _HAS_COINCURVE, reason="coincurve not installed")
 class TestNativeSecp256k1Backend:
     def test_algorithm(self):
         backend = NativeSecp256k1Backend()
@@ -120,21 +138,33 @@ class TestNativeSecp256k1Backend:
 
 
 class TestGetBackend:
+    @pytest.mark.skipif(not _HAS_PYNACL, reason="PyNaCl not installed")
     def test_ed25519_returns_native(self):
         backend = get_backend(Algorithm.ED25519)
         assert isinstance(backend, NativeEd25519Backend)
 
+    @pytest.mark.skipif(not _HAS_COINCURVE, reason="coincurve not installed")
     def test_secp256k1_returns_native(self):
         backend = get_backend(Algorithm.SECP256K1)
         assert isinstance(backend, NativeSecp256k1Backend)
 
+    def test_ed25519_returns_fallback_without_native(self):
+        backend = get_backend(Algorithm.ED25519)
+        assert backend is not None
+
+    def test_secp256k1_returns_fallback_without_native(self):
+        backend = get_backend(Algorithm.SECP256K1)
+        assert backend is not None
+
 
 class TestBackendInfo:
+    @pytest.mark.skipif(not _HAS_PYNACL, reason="PyNaCl not installed")
     def test_ed25519_native(self):
         is_native, name = backend_info(Algorithm.ED25519)
         assert is_native is True
         assert name == "pynacl"
 
+    @pytest.mark.skipif(not _HAS_COINCURVE, reason="coincurve not installed")
     def test_secp256k1_native(self):
         is_native, name = backend_info(Algorithm.SECP256K1)
         assert is_native is True

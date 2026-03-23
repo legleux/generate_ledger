@@ -2,6 +2,18 @@
 
 Generate custom XRPL genesis ledgers and complete test network environments — accounts, trustlines, AMM pools, validator configs, and docker-compose — in seconds.
 
+## Quickstart
+
+```bash
+git clone https://github.com/legleux/generate_ledger.git
+cd generate_ledger
+uv sync
+uv run gen ledger --accounts 10 -o ./out        # just a ledger
+uv run gen auto --accounts 50 -v 5 -o ./testnet  # ledger + validators + docker-compose
+```
+
+Output: `ledger.json`, `accounts.json`, validator configs, and `docker-compose.yml` — ready to boot a test network.
+
 ## Performance
 
 With the default ed25519 algorithm and PyNaCl backend:

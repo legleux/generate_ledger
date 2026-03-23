@@ -26,13 +26,14 @@ jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         version: [12, 13, 14]
         os: [bookworm, trixie]
     container: ghcr.io/astral-sh/uv:python3.${{ matrix.version }}-${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - run: uv sync --group dev
+      - run: uv sync --group dev --group fast
       - run: uv run pytest
 
   complexity:
