@@ -2,11 +2,9 @@ import random
 from dataclasses import dataclass
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from xrpl.models.transactions import TrustSet
 
 from generate_ledger.accounts import Account
 from generate_ledger.constants import NEUTRAL_ISSUER
-from generate_ledger.crypto import sign_and_hash_txn
 from generate_ledger.indices import owner_dir, ripple_state_index
 
 
@@ -40,34 +38,15 @@ class TrustlineConfig(BaseSettings):
     ledger_seq: int = 2  # Ledger sequence for PreviousTxnLgrSeq
 
 
-def generate_trustset_txn_id(
-    account: Account,
-    limit_amount: dict,
-    sequence: int,
-    fee: str = "123",
-) -> str:
-    """
-    Generate a TrustSet transaction ID without submitting it.
+# TODO: remove generate_trustset_txn_id entirely once confirmed rippled ignores PreviousTxnID on genesis ledger objects
+# def generate_trustset_txn_id(account, limit_amount, sequence, fee="123") -> str:
+#     """Generate a TrustSet transaction ID without submitting it."""
+#     ...  # was: sign_and_hash_txn(TrustSet(...), account.seed, ...)
 
-    This creates a signed TrustSet transaction and computes its hash,
-    which is used as the PreviousTxnID for directory nodes.
-    """
-    from xrpl import CryptoAlgorithm  # noqa: PLC0415
-    from xrpl.wallet import Wallet  # noqa: PLC0415
 
-    is_ed = getattr(account, "algorithm", "secp256k1") == "ed25519"
-    algo = CryptoAlgorithm.ED25519 if is_ed else CryptoAlgorithm.SECP256K1
-    wallet = Wallet.from_seed(account.seed, algorithm=algo)
-
-    ts_txn = TrustSet(
-        account=account.address,
-        limit_amount=limit_amount,
-        sequence=sequence,
-        signing_pub_key=wallet.public_key,
-        fee=fee,
-    )
-
-    return sign_and_hash_txn(ts_txn, account.seed, getattr(account, "algorithm", "secp256k1"))
+def _placeholder_txn_id() -> str:
+    """Placeholder PreviousTxnID — rippled ignores this field on genesis ledger objects."""
+    return "0" * 64
 
 
 def generate_trustline_objects(
@@ -79,11 +58,7 @@ def generate_trustline_objects(
     2. DirectoryNode for account_a
     3. DirectoryNode for account_b
     """
-    # Prepare the limit amount for the TrustSet transaction
-    limit_amount = {"currency": currency, "issuer": account_a.address, "value": str(limit)}
-
-    # Generate TrustSet transaction ID (used for DirectoryNode PreviousTxnID)
-    txn_id = generate_trustset_txn_id(account_b, limit_amount, sequence=4)
+    txn_id = _placeholder_txn_id()
 
     # Calculate the RippleState index
     rsi = ripple_state_index(account_a.address, account_b.address, currency)

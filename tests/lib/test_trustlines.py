@@ -8,7 +8,6 @@ from generate_ledger.trustlines import (
     TrustlineObjects,
     generate_trustline_objects,
     generate_trustlines,
-    generate_trustset_txn_id,
 )
 from tests.conftest import ALICE_ADDRESS, ALICE_SEED, BOB_ADDRESS, BOB_SEED
 
@@ -36,29 +35,6 @@ class TestTrustlineConfig:
         assert cfg.currencies == ["USD", "EUR", "GBP"]
         assert cfg.default_limit == str(int(100e9))
         assert cfg.ledger_seq == 2
-
-
-# ---------------------------------------------------------------------------
-# generate_trustset_txn_id
-# ---------------------------------------------------------------------------
-class TestGenerateTrustsetTxnId:
-    def test_returns_64_hex(self, bob):
-        limit_amount = {"currency": "USD", "issuer": ALICE_ADDRESS, "value": "1000000"}
-        txn_id = generate_trustset_txn_id(bob, limit_amount, sequence=4)
-        assert len(txn_id) == 64
-        assert all(c in "0123456789ABCDEF" for c in txn_id)
-
-    def test_deterministic(self, bob):
-        limit_amount = {"currency": "USD", "issuer": ALICE_ADDRESS, "value": "1000000"}
-        txn_id1 = generate_trustset_txn_id(bob, limit_amount, sequence=4)
-        txn_id2 = generate_trustset_txn_id(bob, limit_amount, sequence=4)
-        assert txn_id1 == txn_id2
-
-    def test_different_sequences_differ(self, bob):
-        limit_amount = {"currency": "USD", "issuer": ALICE_ADDRESS, "value": "1000000"}
-        txn_id1 = generate_trustset_txn_id(bob, limit_amount, sequence=4)
-        txn_id2 = generate_trustset_txn_id(bob, limit_amount, sequence=5)
-        assert txn_id1 != txn_id2
 
 
 # ---------------------------------------------------------------------------

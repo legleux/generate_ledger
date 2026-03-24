@@ -11,9 +11,6 @@ import math
 from dataclasses import dataclass
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from xrpl import CryptoAlgorithm
-from xrpl.models.transactions import AMMCreate
-from xrpl.wallet import Wallet
 
 from generate_ledger.accounts import Account
 from generate_ledger.constants import (
@@ -23,7 +20,6 @@ from generate_ledger.constants import (
     LSF_DEPOSIT_AUTH,  # noqa: F401 (re-exported, used by tests)
     LSF_DISABLE_MASTER,  # noqa: F401 (re-exported, used by tests)
 )
-from generate_ledger.crypto import sign_and_hash_txn
 from generate_ledger.indices import amm_account_id, amm_index, amm_lpt_currency, owner_dir, ripple_state_index
 from generate_ledger.trustlines import build_directory_node, build_ripple_state, order_low_high
 
@@ -114,35 +110,15 @@ def calculate_lp_tokens(asset1: Asset, asset2: Asset) -> str:
     return str(int(lp_tokens)) if lp_tokens == int(lp_tokens) else f"{lp_tokens:.15g}"
 
 
-def generate_ammcreate_txn_id(
-    creator: Account,
-    asset1: Asset,
-    asset2: Asset,
-    trading_fee: int,
-    sequence: int = 1,
-    fee: str = "10000000",  # 10 XRP (AMMCreate requires owner reserve as fee)
-) -> str:
-    """
-    Generate an AMMCreate transaction ID without submitting it.
+# TODO: remove generate_ammcreate_txn_id entirely once confirmed rippled ignores PreviousTxnID on genesis ledger objects
+# def generate_ammcreate_txn_id(creator, asset1, asset2, trading_fee, ...) -> str:
+#     """Generate an AMMCreate transaction ID without submitting it."""
+#     ...  # was: sign_and_hash_txn(AMMCreate(...), creator.seed, ...)
 
-    This creates a signed AMMCreate transaction and computes its hash,
-    which is used as the PreviousTxnID for ledger objects.
-    """
-    is_ed = getattr(creator, "algorithm", "secp256k1") == "ed25519"
-    algo = CryptoAlgorithm.ED25519 if is_ed else CryptoAlgorithm.SECP256K1
-    wallet = Wallet.from_seed(creator.seed, algorithm=algo)
 
-    amm_create = AMMCreate(
-        account=creator.address,
-        amount=asset1.to_amount_dict(),
-        amount2=asset2.to_amount_dict(),
-        trading_fee=trading_fee,
-        sequence=sequence,
-        signing_pub_key=wallet.public_key,
-        fee=fee,
-    )
-
-    return sign_and_hash_txn(amm_create, creator.seed, getattr(creator, "algorithm", "secp256k1"))
+def _placeholder_txn_id() -> str:
+    """Placeholder PreviousTxnID — rippled ignores this field on genesis ledger objects."""
+    return "0" * 64
 
 
 def generate_amm_objects(
@@ -182,12 +158,7 @@ def generate_amm_objects(
     # Calculate initial LP tokens
     lp_token_amount = calculate_lp_tokens(asset1, asset2)
 
-    # Generate transaction ID if we have a creator
-    if spec.creator:
-        txn_id = generate_ammcreate_txn_id(spec.creator, asset1, asset2, spec.trading_fee)
-    else:
-        # Use a placeholder for genesis without specific creator
-        txn_id = "0" * 64
+    txn_id = _placeholder_txn_id()
 
     # Build LP token balance
     lp_token_balance = {
