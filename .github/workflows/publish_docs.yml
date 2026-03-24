@@ -32,6 +32,9 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
+      - name: Run tests
+        run: uv run pytest -x -q
+
       - name: Build docs
         run: uv run mkdocs build --strict
 
