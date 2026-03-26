@@ -50,7 +50,7 @@ With the default ed25519 algorithm and PyNaCl backend:
 | Ledger + trustlines + AMM | 5,000    | 50         | 1 pool | --         | **2.3s** |
 | Full environment (`gen`)  | 5,000    | --         | --     | 5          | **1.2s** |
 
-Account generation runs at approximately **22,500 accounts/sec** with ed25519 + PyNaCl, compared to ~60/sec with the xrpl-py fallback -- a 279x speedup.
+Account generation runs at approximately **25,000 accounts/sec** with ed25519 + PyNaCl, compared to ~60/sec with the xrpl-py fallback -- a ~350x speedup.
 
 ## Crypto Backend Tiers
 
@@ -58,9 +58,9 @@ Backends are tiered and fall back gracefully:
 
 | Tier        | Dependencies              | Install               | What you get                            |
 | ----------- | ------------------------- | --------------------- | --------------------------------------- |
-| **Default** | PyNaCl, coincurve         | `uv sync`             | ~22k/sec ed25519, ~15k/sec secp256k1    |
+| **Default** | PyNaCl, coincurve         | `uv sync`             | ~25k/sec ed25519, ~7.4k/sec secp256k1   |
 | **Minimal** | xrpl-py only              | _(auto-fallback)_     | ~60-80 accounts/sec, no native deps     |
-| **GPU**     | CuPy, CUDA toolkit wheels | `uv sync --group gpu` | ~580k/sec ed25519 (requires NVIDIA GPU) |
+| **GPU**     | CuPy, CUDA toolkit wheels | `uv sync --group gpu` | ~110k/sec ed25519 (requires NVIDIA GPU) |
 
 All tiers fall back gracefully -- if a backend is not installed, the next tier down is used automatically.
 

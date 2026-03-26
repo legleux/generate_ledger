@@ -7,7 +7,7 @@ Generate custom XRPL genesis ledgers and complete test network environments — 
 - `ledgen` - My initial thought but maybe prone to typos aad or misunderstanding?
 - `xrpl-genesis` - Genesis ledger is automatic, `xrpl-pre-genesis` more accurate?
 - `ledgectl` - Doesn't really control.
-- `ledgergen` - Boooring.
+- `ledgergen` - Boring.
 - `ledgerforge` - Heavy
 
 ## Quickstart
@@ -38,25 +38,24 @@ uv run gen ledger --accounts 50 --output-dir ./testnet \
 
 | Accounts  | CPU (PyNaCl) | GPU (CuPy) | Speedup  | File size |
 | --------- | ------------ | ---------- | -------- | --------- |
-| 1,000     | 1.5s         | 2.2s       | 0.7x     | 342 KB    |
-| 10,000    | 2.0s         | 2.4s       | 0.8x     | 3.3 MB    |
-| 100,000   | 8.0s         | 3.6s       | **2.2x** | 33 MB     |
-| 250,000   | 16.4s        | 5.6s       | **2.9x** | 82 MB     |
-| 500,000   | 31.6s        | 8.7s       | **3.6x** | 164 MB    |
-| 1,000,000 | 63.6s        | 15.6s      | **4.1x** | 327 MB    |
+| 1,000     | 0.3s         | 0.7s       | 0.4x     | 0.3 MB    |
+| 10,000    | 0.6s         | 0.1s       | **6x**   | 3.3 MB    |
+| 100,000   | 5.3s         | 0.7s       | **7.6x** | 33 MB     |
+| 250,000   | 13.3s        | 2.2s       | **6x**   | 82 MB     |
+| 500,000   | 26.0s        | 3.1s       | **8.4x** | 163 MB    |
+| 1,000,000 | 52.1s        | 6.1s       | **8.5x** | 326 MB    |
 
-CPU time scales linearly (~63ms per 1,000 accounts). GPU time is sub-linear, kernel launch overhead is fixed, so the per-account cost drops at scale. GPU crossover is around 50k accounts.
+CPU time scales linearly (~52ms per 1,000 accounts). GPU time is sub-linear — kernel launch overhead is fixed, so the per-account cost drops at scale. GPU crossover is around 5k accounts.
 
-> Benchmarked on 16-core AMD 5950X + RTX 5090. At 1M accounts the bottleneck is JSON serialization + disk I/O, not account generation (GPU generates 1M accounts in ~2s).
+> Benchmarked on 16-core AMD 5950X + RTX 5090, Python 3.14. At 1M accounts the bottleneck is JSON serialization, not account generation (GPU generates 1M accounts in ~2s).
 
 ### Crypto Backend Performance
 
 | Algorithm | Backend                  | Rate             | vs. fallback |
 | --------- | ------------------------ | ---------------- | ------------ |
-| ed25519   | CuPy/CUDA (GPU)          | **~485,000/sec** | ~6,000x      |
-| ed25519   | PyNaCl (libsodium)       | **~22,500/sec**  | 279x         |
-| secp256k1 | coincurve (libsecp256k1) | ~15,000/sec      | 250x         |
-| secp256k1 | fastecdsa (GMP)          | 878/sec          | 14x          |
+| ed25519   | CuPy/CUDA (GPU)          | **~110,000/sec** | ~1,500x      |
+| ed25519   | PyNaCl (libsodium)       | **~25,000/sec**  | 350x         |
+| secp256k1 | coincurve (libsecp256k1) | ~7,400/sec       | 100x         |
 | either    | xrpl-py (fallback)       | 60–80/sec        | 1x           |
 
 ### Backend Tiers
@@ -65,9 +64,9 @@ Backends are tiered and fall back gracefully:
 
 | Tier        | Dependencies              | Install               | What you get                            |
 | ----------- | ------------------------- | --------------------- | --------------------------------------- |
-| **Default** | PyNaCl, coincurve         | `uv sync`             | ~22k/sec ed25519, ~15k/sec secp256k1    |
+| **Default** | PyNaCl, coincurve         | `uv sync`             | ~25k/sec ed25519, ~7.4k/sec secp256k1   |
 | **Minimal** | xrpl-py only              | _(auto-fallback)_     | ~60–80 accounts/sec, no native deps     |
-| **GPU**     | CuPy, CUDA toolkit wheels | `uv sync --group gpu` | ~580k/sec ed25519 (requires NVIDIA GPU) |
+| **GPU**     | CuPy, CUDA toolkit wheels | `uv sync --group gpu` | ~110k/sec ed25519 (requires NVIDIA GPU) |
 
 #### GPU setup
 

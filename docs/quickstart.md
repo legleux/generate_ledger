@@ -47,9 +47,9 @@ on the number of validators and hubs configured.
 ### Crypto backends
 
 The fast crypto backends (PyNaCl, coincurve) are included in the default `dev` dependency
-group, so `uv sync` gives you ~22k accounts/sec out of the box.
+group, so `uv sync` gives you ~25k accounts/sec out of the box.
 
-For GPU-accelerated generation (~580k accounts/sec), install the GPU group and pass `--gpu`:
+For GPU-accelerated generation (~110k accounts/sec), install the GPU group and pass `--gpu`:
 
 ```bash
 uv sync --group gpu    # + CuPy, CUDA toolkit (requires NVIDIA GPU)
@@ -83,15 +83,6 @@ uv run gen --accounts 50 --validators 5 --output-dir ./my-testnet
 ```bash
 uv run gen ledger --accounts 100 --output-dir ./out \
   --gateways 4 --assets-per-gateway 3 --gateway-coverage 0.8
-```
-
-## Algorithm Selection
-
-By default, accounts are generated using the ed25519 algorithm with PyNaCl for maximum speed. You can switch to secp256k1 if needed:
-
-```bash
-uv run gen ledger --accounts 1000 --algo ed25519    # ~22k/sec with PyNaCl (default)
-uv run gen ledger --accounts 1000 --algo secp256k1  # ~60/sec with xrpl-py fallback
 ```
 
 ## What Next

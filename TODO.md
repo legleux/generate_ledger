@@ -8,7 +8,7 @@ Every object type should have an associated test that:
 
 1. Generates the network with the objects required in the `ledger.json`
 2. Starts the network
-3. Confirms txns using those generated objects succeed (e.g. using a generated account, a `Payment` txn can be sent)
+3. Confirms transactions using those generated objects succeed (e.g. using a generated account, a `Payment` transaction can be sent)
 
 ### Live validation
 
@@ -20,7 +20,7 @@ Verify generated ledgers actually boot on xrpld and amendments are active — no
 
 ### Refactor `consolidate_directory_nodes` → protocol-based
 
-Cognitive complexity 33 (threshold 15). Introduce `LedgerObjectGroup` protocol so each object type handles its own state entries, directory entries, and owner counts. New object types just implement the protocol instead of adding branches. Plan: `docs/consolidate_directory_nodes.md`.
+Cognitive complexity 33 (threshold 15). Introduce `LedgerObjectGroup` protocol so each object type handles its own state entries, directory entries, and owner counts. New object types just implement the protocol instead of adding branches. Plan: `plans/consolidate_directory_nodes.md`.
 
 ### Refactor config generation
 
@@ -68,7 +68,7 @@ Use a `release` branch that tracks the latest major xrpld release amendments, an
 
 ### Enforce complexity limits in CI
 
-Add complexipy/radon as CI gate (currently reporting only). Current hotspot: `consolidate_directory_nodes` (33 cognitive). See `docs/complexity.md` for baseline.
+Add complexipy/radon as CI gate (currently reporting only). Current hotspot: `consolidate_directory_nodes` (33 cognitive). See `plans/complexity.md` for baseline.
 
 ### Performance: `--compress` flag
 

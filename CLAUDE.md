@@ -28,8 +28,9 @@ ruff check .
 ruff check . --fix
 
 # CLI entry point (after uv sync)
-gen ledger --accounts 10 --output-dir ./out
-gen auto --accounts 50 --validators 5 --output-dir ./testnet
+uv run gen                                      # full testnet
+uv run gen ledger --accounts 10 --output-dir ./out  # just a ledger
+uv run gen xrpld --validators 5                 # just xrpld configs
 
 # Serve docs locally
 uv run mkdocs serve
@@ -79,7 +80,7 @@ The main data flow is in `ledger.py:gen_ledger_state()`:
 
 ### CLI Structure
 
-Entry point: `gen` (Click root group in `cli/main.py`, defined in `pyproject.toml` → `generate_ledger.cli.main:cli`). Invoking `gen` with no subcommand runs the full 3-step pipeline (ledger + xrpld configs + docker-compose). Subcommands `ledger` and `xrpld` run individual steps.
+Entry point: `gen` (Typer app in `cli/main.py`, exported as Click-compatible via `get_command()` in `pyproject.toml` → `generate_ledger.cli.main:cli`). Invoking `gen` with no subcommand runs the full 3-step pipeline (ledger + xrpld configs + docker-compose). Subcommands `ledger` and `xrpld` run individual steps.
 
 Key CLI modules:
 
@@ -157,20 +158,14 @@ See `docs/library-usage.md` for full usage guide.
 - Amendment system: profiles (release/develop/custom), features.macro parser, per-amendment overrides, auto-fetch from GitHub (develop) and mainnet RPC (release) with offline fallbacks
 - Gateway topology (star/mesh), fast trustline generation, lsfDefaultRipple on issuers
 - MPT (Multi-Purpose Tokens) — implemented in `develop/mpt.py` (develop branch only)
-- Fast ed25519 account generation via PyNaCl (~22k/sec), GPU backend via CuPy (~580k/sec)
-- Test suite: ~446 tests across unit, CLI, and integration (GPU tests auto-skip without CUDA)
+- Fast ed25519 account generation via PyNaCl (~25k/sec), GPU backend via CuPy (~110k/sec)
+- Test suite: ~415 tests across unit, CLI, and integration (GPU tests auto-skip without CUDA)
 
 ### Planned (v2.0)
 
 - Vault/Lending — stub in `develop/vault.py`, raises `NotImplementedError`
 - Pre-created Offers in genesis ledger
 - Package rename to "ledgen"
-
-### Key Spec Files
-
-- `specs/001-xrpl-ledger-generator/spec.md`
-- `specs/001-xrpl-ledger-generator/tasks.md`
-- `specs/001-xrpl-ledger-generator/plan.md`
 
 ## TODOs
 
