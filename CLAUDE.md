@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Project Does
 
-`generate_ledger` generates custom XRPL genesis ledgers and complete test network environments — accounts, trustlines, AMM pools, validator configs, and docker-compose — in seconds. It produces `ledger.json` files that bootstrap rippled nodes with pre-funded accounts and enabled amendments.
+`generate_ledger` generates custom XRPL genesis ledgers and complete test network environments — accounts, trustlines, AMM pools, validator configs, and docker-compose — in seconds. It produces `ledger.json` files that bootstrap xrpld nodes with pre-funded accounts and enabled amendments.
 
 ## Commands
 
@@ -79,12 +79,13 @@ The main data flow is in `ledger.py:gen_ledger_state()`:
 
 ### CLI Structure
 
-Entry point: `gen` (Click root group in `cli/main.py`, defined in `pyproject.toml` → `generate_ledger.cli.main:cli`). Invoking `gen` with no subcommand runs the full 3-step pipeline (ledger + rippled configs + docker-compose). Subcommands `ledger` and `rippled` run individual steps.
+Entry point: `gen` (Click root group in `cli/main.py`, defined in `pyproject.toml` → `generate_ledger.cli.main:cli`). Invoking `gen` with no subcommand runs the full 3-step pipeline (ledger + xrpld configs + docker-compose). Subcommands `ledger` and `xrpld` run individual steps.
 
 Key CLI modules:
+
 - **`cli/main.py`** — Typer root app with full pipeline as default action; mounts sub-apps via `add_typer()`
 - **`cli/ledger.py`** — `gen ledger` command (Typer app) — ledger.json generation only
-- **`cli/rippled_cfg.py`** — `gen rippled` command (Typer app) — rippled.cfg generation only
+- **`cli/xrpld_cfg.py`** — `gen xrpld` command (Typer app) — xrpld.cfg generation only
 - **`cli/shared_options.py`** — Shared config-building and pipeline logic (used by root and `gen ledger`)
 - **`cli/parsers.py`** — CLI option parsing for colon-delimited formats (trustlines, AMM pools, MPT specs)
 
@@ -95,6 +96,7 @@ Key CLI modules:
 ### Library API
 
 The package can be used programmatically (not just via CLI). Key entry points:
+
 - `gen_ledger_state(config, *, write_accounts=False) -> dict` — pure in-memory ledger generation
 - `write_ledger_file(output_file, config, *, quiet=True) -> Path` — write to disk without console output
 
@@ -128,7 +130,7 @@ See `docs/library-usage.md` for full usage guide.
 - `alice_account` / `bob_account` — Deterministic accounts with known addresses/seeds
 - `sample_amendment_hashes` — Loads from test fixture `tests/data/amendments_develop.json`
 - `MAINNET_AMENDMENT_COUNT`, `MAINNET_RETIRED_COUNT`, etc. — Derived from `amendments_mainnet.json` at import time so tests stay in sync with data
-- Known-good index constants: `GENESIS_INDEX`, `ALICE_INDEX`, `BOB_INDEX`, `AMENDMENTS_INDEX` (verified against running rippled)
+- Known-good index constants: `GENESIS_INDEX`, `ALICE_INDEX`, `BOB_INDEX`, `AMENDMENTS_INDEX` (verified against running xrpld)
 
 ### Test Organization
 
@@ -139,6 +141,7 @@ See `docs/library-usage.md` for full usage guide.
 ## Working Principles
 
 **CLAUDE.md Maintenance**: This file MUST be updated when:
+
 - New modules are added to the project structure
 - Significant architectural changes are made
 - Commands or workflows change
@@ -146,6 +149,7 @@ See `docs/library-usage.md` for full usage guide.
 ## Project Status
 
 ### Complete
+
 - Accounts + Trustlines generation (US1)
 - Validator configs + UNL (US2)
 - Docker compose generation (US3)
@@ -157,29 +161,17 @@ See `docs/library-usage.md` for full usage guide.
 - Test suite: ~446 tests across unit, CLI, and integration (GPU tests auto-skip without CUDA)
 
 ### Planned (v2.0)
+
 - Vault/Lending — stub in `develop/vault.py`, raises `NotImplementedError`
 - Pre-created Offers in genesis ledger
 - Package rename to "ledgen"
 
 ### Key Spec Files
+
 - `specs/001-xrpl-ledger-generator/spec.md`
 - `specs/001-xrpl-ledger-generator/tasks.md`
 - `specs/001-xrpl-ledger-generator/plan.md`
 
 ## TODOs
 
-See the detailed TODO list and milestones in the [spec files](specs/001-xrpl-ledger-generator/). Priority items:
-
-1. **Live validation** — Verify generated ledgers boot on rippled and amendments are actually active (not just correct JSON)
-2. **Test AMM fixes** — Verify 2026-01-28 lsfAMMNode flag fix and account derivation fix work end-to-end
-3. **Vault/Lending** — Implement `develop/vault.py` (currently raises `NotImplementedError`)
-4. **Clean packaging** — ~~Real description in pyproject.toml~~, automatic PyPI deployment (publish workflow exists but only targets TestPyPI)
-5. **Branch-per-profile amendment strategy** — Use a `release` branch that tracks the latest major rippled release amendments, and `main`/`develop` for latest develop amendments. Each branch owns its curated amendment list, eliminating the need for runtime GitHub fetching and keeping profiles in sync with their corresponding rippled branches.
-6. **Enforce complexity limits** — Add complexipy/radon as CI gate (currently reporting only). Remaining issue: `assemble_ledger_json` (68 cognitive). Others resolved: `gen_ledger_state` (19→3), `ledger` CLI (21→9), `parse_mpt_spec` (27→10), `parse_amm_pool` (29→11).
-7. ~~**Standardize CLI on single framework**~~ — **Done.** All subcommands use Typer; root group uses Click for help rendering. Deleted `compose_click.py`, `click_builder.py`, `cli_defaults.py`, `auto_cmd.py`. Bare `gen` runs full pipeline.
-8. **Remove `--algo` from CLI** — Default to ed25519, don't expose algorithm selection on the simple command line. Keep it as a config-file-only option.
-9. **Split into sub-packages** — The package has three core concerns: ledger generation (`ledger.py`, `ledger_builder.py`, `accounts.py`, `trustlines.py`, `amm.py`, `amendments.py`), network topology configs (`rippled_cfg.py`), and docker compose (`compose.py`). Consider splitting into `generate_ledger.ledger`, `generate_ledger.network`, `generate_ledger.compose` sub-packages.
-10. **Clean up compose.py** — Multiple FIXMEs and TODOs: volume mount logic, port exposure for multiple nodes, image entrypoint assumption, ledger file loading for hubs.
-11. **`--compress` flag** — Write `ledger.json.gz` using stdlib `gzip` for storage/transport. 1M accounts: 327 MB → 70 MB. Decompress just-in-time for rippled.
-12. **Faster serialization** — At 1M accounts, JSON serialization is the bottleneck (~13s of 16s total). Options: `orjson` (Rust, ~5-10x faster, drop-in), streaming JSON write, or parallel dict assembly. `orjson` is the quickest win.
-13. **Binary ledger format** — Investigate writing rippled's native binary ledger format directly instead of JSON. Eliminates serialization overhead entirely and avoids rippled having to parse 327 MB of JSON on startup.
+See [TODO.md](TODO.md) for the prioritized, consolidated task list.

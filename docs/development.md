@@ -10,13 +10,9 @@ cd generate_ledger
 uv sync
 ```
 
-To install optional fast crypto backends:
+This installs all development dependencies including the fast crypto backends (PyNaCl, coincurve).
 
-```bash
-uv sync --group fast   # PyNaCl + coincurve
-```
-
-To install GPU backends (requires NVIDIA GPU):
+To also install GPU backends (requires NVIDIA GPU):
 
 ```bash
 uv sync --group gpu    # CuPy + CUDA toolkit wheels
@@ -45,11 +41,11 @@ addopts = "-rP --cov --cov-report=term-missing:skip-covered"
 
 ### Test Organization
 
-| Directory | Contents |
-|-----------|----------|
-| `tests/lib/` | Unit tests for core modules (indices, accounts, trustlines, AMM, amendments, etc.) |
-| `tests/cli/` | CLI smoke tests and parser tests |
-| `tests/integration/` | Full pipeline tests through `gen_ledger_state()` |
+| Directory            | Contents                                                                           |
+| -------------------- | ---------------------------------------------------------------------------------- |
+| `tests/lib/`         | Unit tests for core modules (indices, accounts, trustlines, AMM, amendments, etc.) |
+| `tests/cli/`         | CLI smoke tests and parser tests                                                   |
+| `tests/integration/` | Full pipeline tests through `gen_ledger_state()`                                   |
 
 ### Key Test Fixtures
 
@@ -131,9 +127,9 @@ See `scripts/README.md` for detailed benchmark documentation.
 
 ## Branch Strategy
 
-| Branch | Contents |
-|--------|----------|
-| `main` | Release-ready code. No `develop/` package. |
+| Branch    | Contents                                                                       |
+| --------- | ------------------------------------------------------------------------------ |
+| `main`    | Release-ready code. No `develop/` package.                                     |
 | `develop` | Includes `develop/` subpackage with experimental object builders (MPT, Vault). |
 
 The `develop/` package uses graceful `ImportError` handling so `main` branch code never breaks when `develop/` is absent.

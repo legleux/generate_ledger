@@ -1,18 +1,8 @@
 {
   "version": "0.2",
   "language": "en",
-  "dictionaries": [
-    "python",
-    "softwareTerms",
-    "typescript",
-    "cpp"
-  ],
-  "ignorePaths": [
-    "uv.lock",
-    "tests/data/",
-    "samples/",
-    "mkdocs.yml"
-  ],
+  "dictionaries": ["python", "softwareTerms", "typescript", "cpp"],
+  "ignorePaths": ["uv.lock", "tests/data/", "samples/", "mkdocs.yml"],
   "ignoreRegExpList": [
     "/0x[0-9a-fA-F]+/g",
     "/[0-9a-fA-F]{8,}/g",
@@ -31,6 +21,7 @@
     "axyz",
     "basepoint",
     "binarycodec",
+    "boooring",
     "bitlen",
     "clawback",
     "coincurve",
@@ -49,6 +40,7 @@
     "frombytes",
     "fromhex",
     "healthcheck",
+    "hotspot",
     "hotspots",
     "httpx",
     "hwcd",
@@ -60,8 +52,11 @@
     "keylets",
     "keypair",
     "keypairs",
+    "ledgectl",
     "ledgen",
     "ledgend",
+    "ledgerforge",
+    "ledgergen",
     "ledgerentry",
     "ledgerfile",
     "legleux",
@@ -114,6 +109,7 @@
     "tobytes",
     "toolong",
     "topo",
+    "txns",
     "trixie",
     "trustline",
     "trustlines",
@@ -132,16 +128,11 @@
   "overrides": [
     {
       "filename": "**/*.cu",
-      "ignoreRegExpList": [
-        "/ULL/g",
-        "/__\\w+/g"
-      ]
+      "ignoreRegExpList": ["/ULL/g", "/__\\w+/g"]
     },
     {
       "filename": "**/*.sh",
-      "ignoreRegExpList": [
-        "/[A-Z_]{2,}/g"
-      ]
+      "ignoreRegExpList": ["/[A-Z_]{2,}/g"]
     },
     {
       "filename": "**/.gitignore",
