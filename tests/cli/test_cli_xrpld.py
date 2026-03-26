@@ -1,8 +1,8 @@
-"""Tests for the rippled config CLI (generate_ledger.cli.rippled_cfg)."""
+"""Tests for the xrpld config CLI (generate_ledger.cli.xrpld_cfg)."""
 
 from typer.testing import CliRunner
 
-from generate_ledger.cli.rippled_cfg import _load_features, app
+from generate_ledger.cli.xrpld_cfg import _load_features, app
 
 runner = CliRunner()
 
@@ -23,7 +23,7 @@ class TestLoadFeatures:
         assert "FlowCross" in result
 
 
-class TestRippledWriteCommand:
+class TestXrpldWriteCommand:
     def test_basic_write(self, tmp_path):
         result = runner.invoke(
             app,
@@ -35,8 +35,8 @@ class TestRippledWriteCommand:
             ],
         )
         assert result.exit_code == 0, result.output
-        assert (tmp_path / "val0" / "rippled.cfg").exists()
-        assert (tmp_path / "val1" / "rippled.cfg").exists()
+        assert (tmp_path / "val0" / "xrpld.cfg").exists()
+        assert (tmp_path / "val1" / "xrpld.cfg").exists()
 
     def test_with_features_from_release(self, tmp_path):
         result = runner.invoke(
@@ -51,7 +51,7 @@ class TestRippledWriteCommand:
             ],
         )
         assert result.exit_code == 0, result.output
-        cfg_text = (tmp_path / "val0" / "rippled.cfg").read_text()
+        cfg_text = (tmp_path / "val0" / "xrpld.cfg").read_text()
         assert "[features]" in cfg_text
 
     def test_zero_validators(self, tmp_path):
@@ -66,4 +66,20 @@ class TestRippledWriteCommand:
             ],
         )
         assert result.exit_code == 0, result.output
-        assert (tmp_path / "rippled" / "rippled.cfg").exists()
+        assert (tmp_path / "xrpld" / "xrpld.cfg").exists()
+
+    def test_log_level_option(self, tmp_path):
+        result = runner.invoke(
+            app,
+            [
+                "-b",
+                str(tmp_path),
+                "-v",
+                "1",
+                "--log-level",
+                "debug",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        cfg_text = (tmp_path / "val0" / "xrpld.cfg").read_text()
+        assert '"severity": "debug"' in cfg_text

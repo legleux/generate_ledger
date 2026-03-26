@@ -2,10 +2,10 @@
 
 Generates MPTokenIssuance and MPToken ledger objects for pre-populating
 a genesis ledger.  This module lives in ``develop/`` because MPT requires
-the ``MPTokensV1`` amendment which is only available in rippled's develop
+the ``MPTokensV1`` amendment which is only available in xrpld's develop
 branch.
 
-Reference: XLS-33d, rippled Indexes.cpp (keylet::mptIssuance / keylet::mptoken)
+Reference: XLS-33d, xrpld Indexes.cpp (keylet::mptIssuance / keylet::mptoken)
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ def _build_issuance_object(
 ) -> dict:
     """Build an MPTokenIssuance ledger object dict.
 
-    Fields match what rippled's MPTokenIssuanceCreate sets on the SLE:
+    Fields match what xrpld's MPTokenIssuanceCreate sets on the SLE:
         sfFlags, sfIssuer, sfOutstandingAmount, sfOwnerNode, sfSequence
     plus optional: sfMaximumAmount, sfAssetScale, sfTransferFee, sfMPTokenMetadata
     """

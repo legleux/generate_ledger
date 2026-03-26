@@ -1,4 +1,4 @@
-"""CLI tests for the root command (full pipeline: ledger + rippled + compose)."""
+"""CLI tests for the root command (full pipeline: ledger + xrpld + compose)."""
 
 import json
 
@@ -27,9 +27,9 @@ class TestFullPipeline:
         result = runner.invoke(cli, ["-o", str(tmp_path), "-v", "3", "--accounts", "2"])
         assert result.exit_code == 0, result.output
         volumes = tmp_path / "volumes"
-        assert (volumes / "val0" / "rippled.cfg").exists()
-        assert (volumes / "val1" / "rippled.cfg").exists()
-        assert (volumes / "val2" / "rippled.cfg").exists()
+        assert (volumes / "val0" / "xrpld.cfg").exists()
+        assert (volumes / "val1" / "xrpld.cfg").exists()
+        assert (volumes / "val2" / "xrpld.cfg").exists()
 
     def test_compose_file_created(self, tmp_path):
         result = runner.invoke(cli, ["-o", str(tmp_path), "-v", "2", "--accounts", "2"])

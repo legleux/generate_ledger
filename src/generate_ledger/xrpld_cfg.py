@@ -1,9 +1,12 @@
+import logging
 import subprocess
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
 import xrpl
+
+log = logging.getLogger(__name__)
 
 # ---------- Key generation strategies ----------
 
@@ -33,11 +36,11 @@ def keygen_docker(cmd: Iterable[str] = ("docker", "run", "legleux/vkt")) -> tupl
 
 
 @dataclass(slots=True)
-class RippledConfigSpec:
+class XrpldConfigSpec:
     # topology / naming
     num_validators: int = 5
     validator_name: str = "val"  # directories: val0..val{N-1}
-    rippled_name: str = "rippled"  # non-validator node
+    xrpld_name: str = "xrpld"  # non-validator node
     base_dir: Path = Path("testnet/volumes")
 
     # networking
@@ -48,7 +51,7 @@ class RippledConfigSpec:
     account_reserve: int = int(0.2 * 1e6)  # 0.2 XRP
     owner_reserve: int = int(1.0 * 1e6)  # 1 XRP
     # template
-    template_path: Path = Path(__file__).parent.resolve() / "rippled.cfg"
+    template_path: Path = Path(__file__).parent.resolve() / "xrpld.cfg"
 
     # key generation strategy
     keygen: KeygenFn = staticmethod(keygen_xrpl)  # noqa: RUF009
@@ -59,11 +62,18 @@ class RippledConfigSpec:
     # how long before amendments gain majority (e.g. "2 minutes")
     amendment_majority_time: str | None = None
 
+    # xrpld log level (trace, debug, info, warning, error, fatal)
+    log_level: str = "info"
+
+    VALID_LOG_LEVELS = frozenset({"trace", "debug", "info", "warning", "error", "fatal"})
+
     def validate(self) -> None:
         if self.num_validators < 0:
             raise ValueError("num_validators must be >= 0")
         if not self.template_path.is_file():
             raise FileNotFoundError(f"Template not found: {self.template_path}")
+        if self.log_level not in self.VALID_LOG_LEVELS:
+            raise ValueError(f"log_level must be one of {sorted(self.VALID_LOG_LEVELS)}, got '{self.log_level}'")
 
     # ---- content helpers ----
 
@@ -90,7 +100,7 @@ class RippledConfigSpec:
         """
         Build [ips_fixed].
         - For validator i, include all validators except self i.
-        - For the rippled (non-validator) node: include all validators.
+        - For the xrpld (non-validator) node: include all validators.
         """
         lines: list[str] = []
         for j in range(self.num_validators):
@@ -108,6 +118,11 @@ class RippledConfigSpec:
         """
         self.validate()
         template_str = self.template_path.read_text(encoding="utf-8")
+        # Apply log level (replace the default "info" in the template's [rpc_startup] block)
+        template_str = template_str.replace(
+            '{ "command": "log_level", "severity": "info" }',
+            f'{{ "command": "log_level", "severity": "{self.log_level}" }}',
+        )
 
         # Generate validator keys/tokens up front
         vt: list[tuple[PublicKey, ValidatorToken]] = [self.keygen() for _ in range(self.num_validators)]
@@ -134,7 +149,7 @@ class RippledConfigSpec:
                 )
             )
 
-        # non-validator rippled node
+        # non-validator xrpld node
         cfg = template_str
         cfg += self.ips_fixed_block(who_index=None)
         cfg += validator_pubkeys
@@ -144,7 +159,7 @@ class RippledConfigSpec:
 
         nodes.append(
             NodeConfig(
-                name=self.rippled_name,
+                name=self.xrpld_name,
                 is_validator=False,
                 config_text=cfg,
             )
@@ -159,12 +174,12 @@ class RippledConfigSpec:
         """
         result = self.build()
         written: list[Path] = []
-        print(f"Writing rippled configs to {self.base_dir.resolve()}")
+        log.info("Writing xrpld configs to %s", self.base_dir.resolve())
 
         for node in result.nodes:
             out_dir = self.base_dir / node.name
             out_dir.mkdir(parents=True, exist_ok=True)
-            out_file = out_dir / "rippled.cfg"
+            out_file = out_dir / "xrpld.cfg"
             out_file.write_text(node.config_text, encoding="utf-8")
             written.append(out_file)
 
@@ -192,7 +207,7 @@ class WriteResult:
 
 if __name__ == "__main__":
     # Minimal, explicit main; easy to swap to Typer/Click later.
-    spec = RippledConfigSpec(
+    spec = XrpldConfigSpec(
         num_validators=5,
         # keygen=keygen_docker,  # uncomment to use docker-based keygen
     )

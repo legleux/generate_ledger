@@ -1,7 +1,7 @@
 """Vault (single-asset lending) ledger object generation — placeholder.
 
 This module will implement Vault generation once the SingleAssetVault
-amendment ships in rippled's develop branch.
+amendment ships in xrpld's develop branch.
 
 Reference: XRPL Vault specification (XLS-65d)
 """

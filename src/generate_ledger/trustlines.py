@@ -38,14 +38,14 @@ class TrustlineConfig(BaseSettings):
     ledger_seq: int = 2  # Ledger sequence for PreviousTxnLgrSeq
 
 
-# TODO: remove generate_trustset_txn_id entirely once confirmed rippled ignores PreviousTxnID on genesis ledger objects
+# TODO: remove generate_trustset_txn_id entirely once confirmed xrpld ignores PreviousTxnID on genesis ledger objects
 # def generate_trustset_txn_id(account, limit_amount, sequence, fee="123") -> str:
 #     """Generate a TrustSet transaction ID without submitting it."""
 #     ...  # was: sign_and_hash_txn(TrustSet(...), account.seed, ...)
 
 
 def _placeholder_txn_id() -> str:
-    """Placeholder PreviousTxnID — rippled ignores this field on genesis ledger objects."""
+    """Placeholder PreviousTxnID — xrpld ignores this field on genesis ledger objects."""
     return "0" * 64
 
 
@@ -176,7 +176,7 @@ def generate_trustline_objects_fast(
     """Generate trustline objects without signing a TrustSet transaction.
 
     Uses the RippleState index as a synthetic PreviousTxnID.  This is valid
-    for genesis ledgers — rippled does not validate PreviousTxnID on bootstrap.
+    for genesis ledgers — xrpld does not validate PreviousTxnID on bootstrap.
     ~100x faster than generate_trustline_objects() because it skips
     Wallet.from_seed() and xrpl-py transaction signing.
     """

@@ -29,7 +29,7 @@ from tests.conftest import (
 # ---------------------------------------------------------------------------
 class TestAmendmentHash:
     def test_amm_hash_matches_known(self):
-        """AMM hash should match the known value from rippled."""
+        """AMM hash should match the known value from xrpld."""
         expected = "8CC0774A3BF66D1D22E76BBDA8E8A232E6B6313834301B3B23E8601196AE6455"
         assert amendment_hash("AMM") == expected
 

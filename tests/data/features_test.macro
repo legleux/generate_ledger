@@ -1,5 +1,5 @@
 // Minimal features.macro fixture for testing parse_features_macro()
-// Mimics the format of rippled's include/xrpl/protocol/detail/features.macro
+// Mimics the format of xrpld's include/xrpl/protocol/detail/features.macro
 
 // Active features
 XRPL_FEATURE(AMM,                   Supported::yes,  VoteBehavior::DefaultYes)

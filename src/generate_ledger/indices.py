@@ -200,7 +200,7 @@ def amm_lpt_currency(currency1: str | None, currency2: str | None) -> str:
 
     Formula: 0x03 + first_19_bytes_of(SHA512Half(min(cur1, cur2), max(cur1, cur2)))
 
-    This uses ONLY the currency codes (not issuers), matching rippled's ammLPTCurrency().
+    This uses ONLY the currency codes (not issuers), matching xrpld's ammLPTCurrency().
 
     For XRP, pass currency=None (will use 20 zero bytes).
     Returns the 40-character hex string of the LP token currency.
@@ -224,7 +224,7 @@ def amm_lpt_currency(currency1: str | None, currency2: str | None) -> str:
 def make_mpt_id(sequence: int, issuer_address: str) -> bytes:
     """Create the 24-byte MPT issuance ID (MPTID).
 
-    Formula (from rippled makeMptID):
+    Formula (from xrpld makeMptID):
         4-byte big-endian uint32 sequence + 20-byte AccountID
 
     This ID is used as both the MPTokenIssuanceID field value (as 48-char hex)
@@ -243,7 +243,7 @@ def mpt_id_to_hex(sequence: int, issuer_address: str) -> str:
 def mpt_issuance_index(sequence: int, issuer_address: str) -> str:
     """Compute the MPTokenIssuance ledger object index.
 
-    Formula (from rippled keylet::mptIssuance):
+    Formula (from xrpld keylet::mptIssuance):
         SHA512Half(0x007E + makeMptID(sequence, issuer))
 
     Namespace: MPTOKEN_ISSUANCE = '~' = 0x7E
@@ -255,7 +255,7 @@ def mpt_issuance_index(sequence: int, issuer_address: str) -> str:
 def mptoken_index(issuance_index_hex: str, holder_address: str) -> str:
     """Compute the MPToken ledger object index for a specific holder.
 
-    Formula (from rippled keylet::mptoken):
+    Formula (from xrpld keylet::mptoken):
         SHA512Half(0x0074 + issuanceKey(32 bytes) + holderAccountID(20 bytes))
 
     Namespace: MPTOKEN = 't' = 0x74

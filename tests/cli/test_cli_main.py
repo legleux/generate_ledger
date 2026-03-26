@@ -11,7 +11,7 @@ class TestRootCli:
     def test_help_lists_subcommands(self):
         result = runner.invoke(cli, ["--help"])
         assert result.exit_code == 0
-        for name in ("ledger", "rippled"):
+        for name in ("ledger", "xrpld"):
             assert name in result.output
 
     def test_no_args_runs_full_pipeline(self, tmp_path, monkeypatch):

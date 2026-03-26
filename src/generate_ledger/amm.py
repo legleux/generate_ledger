@@ -110,14 +110,14 @@ def calculate_lp_tokens(asset1: Asset, asset2: Asset) -> str:
     return str(int(lp_tokens)) if lp_tokens == int(lp_tokens) else f"{lp_tokens:.15g}"
 
 
-# TODO: remove generate_ammcreate_txn_id entirely once confirmed rippled ignores PreviousTxnID on genesis ledger objects
+# TODO: remove generate_ammcreate_txn_id entirely once confirmed xrpld ignores PreviousTxnID on genesis ledger objects
 # def generate_ammcreate_txn_id(creator, asset1, asset2, trading_fee, ...) -> str:
 #     """Generate an AMMCreate transaction ID without submitting it."""
 #     ...  # was: sign_and_hash_txn(AMMCreate(...), creator.seed, ...)
 
 
 def _placeholder_txn_id() -> str:
-    """Placeholder PreviousTxnID — rippled ignores this field on genesis ledger objects."""
+    """Placeholder PreviousTxnID — xrpld ignores this field on genesis ledger objects."""
     return "0" * 64
 
 
@@ -185,7 +185,7 @@ def generate_amm_objects(
     # Add auction slot and vote slots if creator specified
     if spec.creator:
         # Auction slot for creator
-        # Expiration must be >= TOTAL_TIME_SLOT_SECS (86400 = 24 hours) per rippled assertion
+        # Expiration must be >= TOTAL_TIME_SLOT_SECS (86400 = 24 hours) per xrpld assertion
         # Use a far-future value (year 2100 in Ripple epoch) to avoid expiration issues
         # Ripple epoch: seconds since Jan 1, 2000 00:00:00 UTC
         RIPPLE_EPOCH_FAR_FUTURE = 3155760000  # ~year 2100

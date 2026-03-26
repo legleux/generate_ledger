@@ -53,7 +53,7 @@ class Amendment:
 
 
 class AmendmentProfile(StrEnum):
-    RELEASE = "release"  # Curated JSON for latest official rippled release
+    RELEASE = "release"  # Curated JSON for latest official xrpld release
     DEVELOP = "develop"  # Parse from features.macro, enable DefaultYes + Supported::yes
     CUSTOM = "custom"  # User-provided JSON file
 
@@ -64,7 +64,7 @@ class AmendmentProfile(StrEnum):
 
 
 def amendment_hash(name: str) -> str:
-    """SHA512Half(name) as uppercase hex — matches rippled's Feature.cpp."""
+    """SHA512Half(name) as uppercase hex — matches xrpld's Feature.cpp."""
     return sha512_half(name.encode("ascii")).hex().upper()
 
 
@@ -154,7 +154,7 @@ def parse_features_macro_text(text: str) -> list[Amendment]:
 
 
 def parse_features_macro(path: str | Path) -> list[Amendment]:
-    """Parse rippled's features.macro file into a list of Amendments."""
+    """Parse xrpld's features.macro file into a list of Amendments."""
     return parse_features_macro_text(Path(path).read_text())
 
 
@@ -194,7 +194,7 @@ def resolve_develop_source(explicit_source: str | Path | None = None) -> list[Am
         "Could not load develop amendments. GitHub fetch failed and "
         "GL_FEATURES_MACRO is not set.\n"
         "Options:\n"
-        "  1. Set GL_FEATURES_MACRO=/path/to/rippled/.../features.macro\n"
+        "  1. Set GL_FEATURES_MACRO=/path/to/xrpld/.../features.macro\n"
         "  2. Use --amendment-source /path/to/features.macro\n"
         "  3. Use --amendment-profile release (curated mainnet amendments)"
     )
@@ -292,7 +292,7 @@ def resolve_release_source() -> list[Amendment]:
 
 
 def _amendments_from_raw_dict(raw: dict) -> list[Amendment]:
-    """Convert raw rippled 'feature' RPC response dict to Amendment list."""
+    """Convert raw xrpld 'feature' RPC response dict to Amendment list."""
     amendments: list[Amendment] = []
     for am_hash, info in raw.items():
         amendments.append(
@@ -376,7 +376,7 @@ def _get_amendments_from_file(amendments_file: str) -> dict:
 
 
 def _get_amendments_from_network(network: str | None = None) -> dict:
-    """Return raw amendment dict from network by calling rippled feature method."""
+    """Return raw amendment dict from network by calling xrpld feature method."""
     network = network or DEFAULT_NETWORK
     return _fetch_amendments(network=network)
 
@@ -390,7 +390,7 @@ def _get_amendments(source: str | None = None) -> dict:
 
 
 def _fetch_amendments(network: str = DEFAULT_NETWORK, timeout: int = 3) -> dict:
-    """Call rippled 'feature' method."""
+    """Call xrpld 'feature' method."""
     url = network_endpoint[network]
     payload = {"method": "feature"}
     data = json.dumps(payload).encode("utf-8")

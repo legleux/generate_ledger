@@ -1,4 +1,4 @@
-"""Integration test: validate parser against a real rippled features.macro.
+"""Integration test: validate parser against a real xrpld features.macro.
 
 Skipped when no real features.macro is available.  Set the env var
 ``FEATURES_MACRO_PATH`` to point at the file explicitly, or let the test
@@ -42,7 +42,7 @@ _real_macro = _find_real_macro()
 
 pytestmark = pytest.mark.skipif(
     _real_macro is None,
-    reason="No real features.macro found (set FEATURES_MACRO_PATH or clone rippled nearby)",
+    reason="No real features.macro found (set FEATURES_MACRO_PATH or clone xrpld nearby)",
 )
 
 

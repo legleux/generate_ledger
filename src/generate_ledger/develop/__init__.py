@@ -1,6 +1,6 @@
 """Pre-release (develop branch) ledger object registry.
 
-This package contains ledger objects that exist only in rippled's ``develop``
+This package contains ledger objects that exist only in xrpld's ``develop``
 branch and are not yet in any official release.  On the ``main`` branch of
 this repository the entire ``develop/`` directory is absent, and the
 ``ImportError`` raised when importing this package is caught gracefully in

@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 from pydantic import Field, PositiveInt, computed_field
@@ -5,6 +6,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedSeq
 from ruamel.yaml.scalarstring import DoubleQuotedScalarString as dq
+
+log = logging.getLogger(__name__)
 
 yaml = YAML()
 yaml.indent(mapping=2, sequence=4, offset=2)
@@ -28,7 +31,7 @@ class ComposeConfig(BaseSettings):
     validator_image_tag: str = "develop"
     validator_image: str = "rippleci/xrpld"
     num_hubs: PositiveInt = 1
-    hub_name: str = "rippled"
+    hub_name: str = "xrpld"
     hub_image: str = "rippleci/xrpld"
     hub_image_tag: str = "develop"
     # where outputs land by default (env var GL_BASE_DIR overrides)
@@ -52,12 +55,12 @@ def gen_compose_data(config: ComposeConfig | None = None):
     cfg = config or ComposeConfig()
     # debug log
     # print(f"generating {cfg.num_validators} validators")
-    entrypoint_cmd = "rippled"
+    entrypoint_cmd = "xrpld"
 
     load_command = {"command": make_flow_list([dq("--ledgerfile"), dq(cfg.ledger_file)])}
     net_command = {"command": make_flow_list([dq("--net")])}
     entrypoint = {"entrypoint": make_flow_list([dq(f"{entrypoint_cmd}")])}
-    # TODO: Image default entrypoint should already be "rippled"
+    # TODO: Image default entrypoint should already be "xrpld"
     hub_entrypoint = validator_entrypoint = entrypoint
     expose_hub_ports = True
     ### Try a simpler healthcheck
@@ -70,7 +73,7 @@ def gen_compose_data(config: ComposeConfig | None = None):
     # }
     healthcheck = {
         "healthcheck": {
-            "test": make_flow_list([dq("CMD"), dq("rippled"), dq("--silent"), dq("ping")]),
+            "test": make_flow_list([dq("CMD"), dq("xrpld"), dq("--silent"), dq("ping")]),
             "start_period": "10s",
             "interval": "10s",
         }
@@ -171,7 +174,7 @@ def write_compose_file(output_file: Path | None = None, config: ComposeConfig | 
     cfg = config or ComposeConfig()
     output_file = Path(output_file) if output_file else cfg.compose_yml
     output_file.parent.mkdir(exist_ok=True, parents=True)
-    print(f"Writing {cfg.compose_yml.name} to {output_file.resolve()}")
+    log.info("Writing %s to %s", cfg.compose_yml.name, output_file.resolve())
     # yaml.dump(gen_compose_data(cfg), output_file.open("w"))
     # return output_file
     with output_file.open("w") as f:

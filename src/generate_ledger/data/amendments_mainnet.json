@@ -297,7 +297,7 @@
     "name": "Batch",
     "enabled": false,
     "supported": false,
-    "note": "Develop-only in rippled 3.1.1; enabling causes amendment_blocked"
+    "note": "Develop-only in xrpld 3.1.1; enabling causes amendment_blocked"
   },
   "8CC0774A3BF66D1D22E76BBDA8E8A232E6B6313834301B3B23E8601196AE6455": {
     "name": "AMM",

@@ -1,7 +1,7 @@
 """Tests for gl.indices — cryptographic index calculations.
 
 Every other module depends on correct indices, so these are highest priority.
-Test vectors come from a running rippled node (tests/data/ledger/testnet/volumes/ledger.json).
+Test vectors come from a running xrpld node (tests/data/ledger/testnet/volumes/ledger.json).
 """
 
 import hashlib
@@ -122,7 +122,7 @@ class TestCurrencyConversion:
 
 
 # ---------------------------------------------------------------------------
-# account_root_index — verified against running rippled
+# account_root_index — verified against running xrpld
 # ---------------------------------------------------------------------------
 class TestAccountRootIndex:
     def test_genesis_index(self):

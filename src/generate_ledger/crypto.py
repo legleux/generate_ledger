@@ -21,7 +21,7 @@ def ripesha(data: bytes) -> bytes:
     return ripemd160.digest()
 
 
-# TODO: remove sign_and_hash_txn entirely once confirmed rippled ignores PreviousTxnID on genesis ledger objects
+# TODO: remove sign_and_hash_txn entirely once confirmed xrpld ignores PreviousTxnID on genesis ledger objects
 # def sign_and_hash_txn(txn, seed: str, algorithm: str = "secp256k1") -> str:
 #     """Sign an xrpl-py Transaction and return its transaction ID (SHA512Half hash)."""
 #     ...  # was: Wallet.from_seed → encode_for_signing → sign → encode → sha512_half(TXN_PREFIX + blob)

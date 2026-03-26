@@ -8,15 +8,15 @@ from generate_ledger.cli.main import cli as app
 runner = CliRunner()
 
 
-def test_rippled_write(tmp_path: Path):
-    tpl = tmp_path / "rippled.cfg"
+def test_xrpld_write(tmp_path: Path):
+    tpl = tmp_path / "xrpld.cfg"
     tpl.write_text("# base template\n", encoding="utf-8")
 
     outdir = tmp_path / "vols"
     r = runner.invoke(
         app,
         [
-            "rippled",
+            "xrpld",
             "--template-path",
             str(tpl),
             "--base-dir",
@@ -31,6 +31,6 @@ def test_rippled_write(tmp_path: Path):
     assert r.exit_code == 0, r.output
 
     # 3 validators + 1 non-validator
-    for name in ("val0", "val1", "val2", "rippled"):
-        cfg = outdir / name / "rippled.cfg"
+    for name in ("val0", "val1", "val2", "xrpld"):
+        cfg = outdir / name / "xrpld.cfg"
         assert cfg.exists(), f"missing {cfg}"

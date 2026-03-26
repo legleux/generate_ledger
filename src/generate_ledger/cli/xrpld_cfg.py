@@ -3,13 +3,13 @@ from pathlib import Path
 
 import typer
 
-from generate_ledger.rippled_cfg import (
-    RippledConfigSpec,
+from generate_ledger.xrpld_cfg import (
+    XrpldConfigSpec,
     keygen_docker,
     keygen_xrpl,
 )
 
-app = typer.Typer(help="Generate rippled.cfg files for validators + a non-validator node.")
+app = typer.Typer(help="Generate xrpld.cfg files for validators + a non-validator node.")
 
 
 class KeygenMode(StrEnum):
@@ -17,7 +17,7 @@ class KeygenMode(StrEnum):
     docker = "docker"
 
 
-_BUNDLED_TEMPLATE = Path(__file__).parent.parent / "rippled.cfg"
+_BUNDLED_TEMPLATE = Path(__file__).parent.parent / "xrpld.cfg"
 
 
 def _pick_keygen(mode: KeygenMode):
@@ -54,7 +54,7 @@ def write(
         file_okay=True,
         dir_okay=False,
         readable=True,
-        help="Path to base rippled.cfg template.",
+        help="Path to base xrpld.cfg template.",
     ),
     base_dir: Path = typer.Option(
         Path("testnet/volumes"),
@@ -65,7 +65,7 @@ def write(
     ),
     validators: int = typer.Option(5, "--validators", "-v", min=0, help="Number of validator nodes."),
     validator_name: str = typer.Option("val", "--validator-name", help="Prefix for validator node dirs (val0..)."),
-    rippled_name: str = typer.Option("rippled", "--rippled-name", help="Name for the non-validator node dir."),
+    xrpld_name: str = typer.Option("xrpld", "--xrpld-name", help="Name for the non-validator node dir."),
     peer_port: int = typer.Option(51235, "--peer-port", help="Port used in [ips_fixed] entries."),
     reference_fee: int = typer.Option(10, "--reference-fee", help="Voting: reference_fee (drops)."),
     account_reserve: int = typer.Option(int(0.2 * 1e6), "--account-reserve", help="Voting: account_reserve (drops)."),
@@ -83,16 +83,21 @@ def write(
         "--amendment-majority-time",
         help="Override amendment majority time (e.g. '2 minutes').",
     ),
+    log_level: str = typer.Option(
+        "info",
+        "--log-level",
+        help="xrpld log level: trace, debug, info, warning, error, fatal.",
+    ),
 ):
     """
-    Write per-node rippled.cfg files under BASE_DIR/{val0..valN-1,rippled}/rippled.cfg
+    Write per-node xrpld.cfg files under BASE_DIR/{val0..valN-1,xrpld}/xrpld.cfg
     """
     features = _load_features(features_from)
 
-    spec = RippledConfigSpec(
+    spec = XrpldConfigSpec(
         num_validators=validators,
         validator_name=validator_name,
-        rippled_name=rippled_name,
+        xrpld_name=xrpld_name,
         base_dir=base_dir,
         peer_port=peer_port,
         reference_fee=reference_fee,
@@ -102,6 +107,7 @@ def write(
         keygen=_pick_keygen(keygen),
         features=features,
         amendment_majority_time=amendment_majority_time,
+        log_level=log_level,
     )
 
     try:
