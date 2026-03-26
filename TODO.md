@@ -82,11 +82,40 @@ At 1M accounts, JSON serialization is the bottleneck (~13s of 16s). Options: `or
 
 Investigate writing xrpld's native binary ledger format directly instead of JSON. Eliminates serialization overhead entirely.
 
+### Performance: Free-threaded Python (no-GIL)
+
+Python 3.13t+ supports free-threaded mode (no GIL). PyNaCl/coincurve release the GIL during C calls, so `ThreadPoolExecutor` could replace `ProcessPoolExecutor` for CPU account generation — eliminating process spawn overhead (~2s for 50k accounts). Threading gave no speedup under GIL (tested 2026-03-26); re-test with `python3.13t` or `python3.14t` builds.
+
+### Performance: Rigorous benchmark suite
+
+Current timing numbers are ad-hoc one-off measurements. Need a proper benchmark suite that:
+
+- Runs multiple iterations and reports mean/standard deviation
+- Tests at key scale points (1k, 10k, 50k, 100k, 250k, 500k, 1M)
+- Compares all backends (xrpl-py, PyNaCl, coincurve, GPU) at each scale
+- Measures `generate_accounts()` separately from full `gen_ledger_state()` pipeline
+- Runs as part of CI or on-demand (not in the test suite — too slow)
+- Records results in a machine-readable format for regression tracking
+
+### Performance: Audit CUDA kernel
+
+The CUDA kernel (`src/generate_ledger/cuda/ed25519_accounts.cu`) implements SHA-512, SHA-256, RIPEMD-160, ed25519 scalar multiplication, and base58 encoding. Needs a security/correctness audit:
+
+- Verify ed25519 point arithmetic matches reference implementation (RFC 8032)
+- Verify SHA-512/256 and RIPEMD-160 produce correct digests for known test vectors
+- Verify base58check encoding matches xrpl-py output for all generated accounts
+- Check for GPU-specific issues: race conditions, shared memory correctness, warp divergence
+- Profile kernel occupancy and identify optimization opportunities
+
 ### Config file for `--trustline` / `--amm-pool` specs
 
 The colon-delimited CLI syntax (`--trustline "0:1:USD:1000000000"`) is fine for a few objects but unwieldy for complex setups. Accept a TOML/JSON/YAML config file defining trustlines, AMM pools, gateways, etc. in a structured format.
 
 ## Bugs
+
+### `--accounts N` creates N + default gateways
+
+`--accounts 100` with no `--gateways` flag creates 104 accounts because the default gateway count (4) is added on top. When the user explicitly sets `--accounts`, the default gateways should probably be suppressed (i.e., `--gateways 0` implied) unless `--gateways` is also explicitly provided. The bare `gen` with no arguments should keep the default gateways.
 
 ### Docker compose startup order
 

@@ -2,7 +2,9 @@
 
 import json
 import logging
+import os
 from collections.abc import Iterable
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -40,6 +42,16 @@ class AccountConfig(BaseSettings):
     use_gpu: bool = False
 
 
+_PARALLEL_THRESHOLD = 50_000  # Use multiprocessing above this count (process spawn overhead)
+
+
+def _generate_chunk(args: tuple[int, str]) -> list[tuple[str, str]]:
+    """Generate a chunk of accounts in a worker process. Must be top-level for pickling."""
+    count, algo_str = args
+    backend = get_backend(Algorithm(algo_str))
+    return [backend.generate_account() for _ in range(count)]
+
+
 def generate_accounts(config: AccountConfig | None = None, *, use_gpu: bool = False) -> list[Account]:
     """
     Generates n accounts (address + seed).
@@ -49,6 +61,9 @@ def generate_accounts(config: AccountConfig | None = None, *, use_gpu: bool = Fa
 
     With use_gpu=True and CuPy installed, uses GPU-accelerated batch
     generation for ed25519 (~10x faster than PyNaCl for large batches).
+
+    For CPU backends with >1000 accounts, uses ProcessPoolExecutor for
+    parallel generation across multiple cores.
     """
     cfg = config or AccountConfig()
     gpu = use_gpu or cfg.use_gpu
@@ -69,11 +84,17 @@ def generate_accounts(config: AccountConfig | None = None, *, use_gpu: bool = Fa
         pairs = backend.generate_accounts_batch(cfg.num_accounts)
         return [Account(address, seed, algorithm=cfg.algo) for seed, address in pairs]
 
-    out: list[Account] = []
-    for _ in range(cfg.num_accounts):
-        seed, address = backend.generate_account()
-        out.append(Account(address, seed, algorithm=cfg.algo))
-    return out
+    # Parallel CPU generation for large batches
+    n = cfg.num_accounts
+    if n > _PARALLEL_THRESHOLD:
+        workers = min(os.cpu_count() or 4, n // 250)
+        chunk_size, remainder = divmod(n, workers)
+        chunks = [(chunk_size + (1 if i < remainder else 0), cfg.algo) for i in range(workers)]
+        with ProcessPoolExecutor(max_workers=workers) as pool:
+            chunk_results = pool.map(_generate_chunk, chunks)
+        return [Account(addr, seed, algorithm=cfg.algo) for chunk in chunk_results for seed, addr in chunk]
+
+    return [Account(addr, seed, algorithm=cfg.algo) for seed, addr in (backend.generate_account() for _ in range(n))]
 
 
 def write_accounts_json(accounts: Iterable[tuple[str, str]], path: Path) -> None:

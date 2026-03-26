@@ -34,6 +34,10 @@ uv run gen xrpld --validators 5                 # just xrpld configs
 
 # Serve docs locally
 uv run mkdocs serve
+
+# Smoke test (requires Docker)
+pytest tests/smoke/ -m smoke --no-cov -v -s
+SMOKE_KEEP_NETWORK=1 pytest tests/smoke/ -m smoke --no-cov -v -s  # keep network running
 ```
 
 ### Documentation
@@ -86,7 +90,7 @@ Key CLI modules:
 
 - **`cli/main.py`** — Typer root app with full pipeline as default action; mounts sub-apps via `add_typer()`
 - **`cli/ledger.py`** — `gen ledger` command (Typer app) — ledger.json generation only
-- **`cli/xrpld_cfg.py`** — `gen xrpld` command (Typer app) — xrpld.cfg generation only
+- **`cli/xrpld_cfg.py`** — `gen xrpld` command (Typer app) — xrpld.cfg generation only (supports `--log-level`)
 - **`cli/shared_options.py`** — Shared config-building and pipeline logic (used by root and `gen ledger`)
 - **`cli/parsers.py`** — CLI option parsing for colon-delimited formats (trustlines, AMM pools, MPT specs)
 
@@ -136,8 +140,9 @@ See `docs/library-usage.md` for full usage guide.
 ### Test Organization
 
 - `tests/lib/` — Unit tests for core modules (indices, accounts, trustlines, amm, amendments, etc.)
-- `tests/cli/` — CLI smoke tests and parser tests
+- `tests/cli/` — CLI tests and parser tests
 - `tests/integration/` — Full pipeline tests through `gen_ledger_state()`
+- `tests/smoke/` — Network smoke tests (Docker required, skipped by default, run with `-m smoke`)
 
 ## Working Principles
 
@@ -159,7 +164,7 @@ See `docs/library-usage.md` for full usage guide.
 - Gateway topology (star/mesh), fast trustline generation, lsfDefaultRipple on issuers
 - MPT (Multi-Purpose Tokens) — implemented in `develop/mpt.py` (develop branch only)
 - Fast ed25519 account generation via PyNaCl (~25k/sec), GPU backend via CuPy (~110k/sec)
-- Test suite: ~415 tests across unit, CLI, and integration (GPU tests auto-skip without CUDA)
+- Test suite: ~425 tests across unit, CLI, integration, and smoke (GPU tests skip without CUDA, smoke tests skip by default)
 
 ### Planned (v2.0)
 

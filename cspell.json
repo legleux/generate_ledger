@@ -2,7 +2,7 @@
   "version": "0.2",
   "language": "en",
   "dictionaries": ["python", "softwareTerms", "typescript", "cpp"],
-  "ignorePaths": ["uv.lock", "tests/data/", "samples/", "mkdocs.yml"],
+  "ignorePaths": ["uv.lock", "tests/", "samples/", "mkdocs.yml"],
   "ignoreRegExpList": [
     "/0x[0-9a-fA-F]+/g",
     "/[0-9a-fA-F]{8,}/g",

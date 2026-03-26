@@ -89,10 +89,13 @@ gpu = [
 [tool.pytest.ini_options]
 # minversion = "8.0"
 # addopts = "-q"
-addopts = "-rP --cov --cov-report=term-missing:skip-covered"
+addopts = "-rP --cov --cov-report=term-missing:skip-covered -m 'not smoke'"
 # addopts = "-rx"
 # addopts = "-qrP"
 # testpaths = ["tests"]
+markers = [
+    "smoke: Smoke tests requiring Docker and a running network (deselected by default)",
+]
 
 [tool.coverage.run]
 source = ["src/generate_ledger"]

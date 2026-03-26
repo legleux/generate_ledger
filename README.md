@@ -53,20 +53,23 @@ CPU time scales linearly (~52ms per 1,000 accounts). GPU time is sub-linear — 
 
 | Algorithm | Backend                  | Rate             | vs. fallback |
 | --------- | ------------------------ | ---------------- | ------------ |
-| ed25519   | CuPy/CUDA (GPU)          | **~110,000/sec** | ~1,500x      |
-| ed25519   | PyNaCl (libsodium)       | **~25,000/sec**  | 350x         |
-| secp256k1 | coincurve (libsecp256k1) | ~7,400/sec       | 100x         |
+| ed25519   | CuPy/CUDA (GPU)          | **~280,000/sec** | ~4,000x      |
+| ed25519   | PyNaCl + multiprocessing | **~88,000/sec**  | ~1,200x      |
+| ed25519   | PyNaCl (single-core)     | **~25,000/sec**  | 350x         |
+| secp256k1 | coincurve (single-core)  | ~7,400/sec       | 100x         |
 | either    | xrpl-py (fallback)       | 60–80/sec        | 1x           |
+
+Multiprocessing kicks in automatically above 50k accounts. Below that, single-core is faster due to process spawn overhead.
 
 ### Backend Tiers
 
 Backends are tiered and fall back gracefully:
 
-| Tier        | Dependencies              | Install               | What you get                            |
-| ----------- | ------------------------- | --------------------- | --------------------------------------- |
-| **Default** | PyNaCl, coincurve         | `uv sync`             | ~25k/sec ed25519, ~7.4k/sec secp256k1   |
-| **Minimal** | xrpl-py only              | _(auto-fallback)_     | ~60–80 accounts/sec, no native deps     |
-| **GPU**     | CuPy, CUDA toolkit wheels | `uv sync --group gpu` | ~110k/sec ed25519 (requires NVIDIA GPU) |
+| Tier        | Dependencies              | Install               | What you get                                 |
+| ----------- | ------------------------- | --------------------- | -------------------------------------------- |
+| **Default** | PyNaCl, coincurve         | `uv sync`             | ~25-88k/sec ed25519 (auto-scales with cores) |
+| **Minimal** | xrpl-py only              | _(auto-fallback)_     | ~60–80 accounts/sec, no native deps          |
+| **GPU**     | CuPy, CUDA toolkit wheels | `uv sync --group gpu` | ~280k/sec ed25519 (requires NVIDIA GPU)      |
 
 #### GPU setup
 
