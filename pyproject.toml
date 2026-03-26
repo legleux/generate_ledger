@@ -63,6 +63,7 @@ known-first-party = ["generate_ledger", "gl"]
 dev = [
   {include-group = "lint"},
   {include-group = "test"},
+  {include-group = "fast"},
   "complexipy>=5.2.0",
   "radon>=6.0.1",
   "mkdocs-material>=9.6.0",

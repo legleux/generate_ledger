@@ -1,6 +1,7 @@
 """Account generation and resolution utilities."""
 
 import json
+import logging
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -9,6 +10,8 @@ from pydantic import PositiveInt
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from generate_ledger.crypto_backends import Algorithm, backend_info, get_backend
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -52,7 +55,7 @@ def generate_accounts(config: AccountConfig | None = None, *, use_gpu: bool = Fa
     algo = Algorithm(cfg.algo)
     backend = get_backend(algo, use_gpu=gpu)
     _, name = backend_info(algo, use_gpu=gpu)
-    print(f"Generating {cfg.num_accounts} accounts ({cfg.algo}, backend={name}).")
+    log.info("Generating %d accounts (%s, backend=%s).", cfg.num_accounts, cfg.algo, name)
 
     # Use full GPU generation if available (includes precomputed indices)
     if hasattr(backend, "generate_accounts_full"):

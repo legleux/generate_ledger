@@ -42,8 +42,8 @@ def build_ledger_config(
     num_accounts: int,
     gateways: int,
     balance: str,
-    algo: str,
     gpu: bool,
+    algo: str = "ed25519",
     gateway_currencies: str,
     assets_per_gateway: int,
     gateway_coverage: float,
@@ -129,13 +129,14 @@ def run_full_pipeline(
     reserve_base: int,
     reserve_inc: int,
     image: str,
+    log_level: str = "info",
 ):
-    """Run the 3-step testnet generation pipeline (ledger + rippled configs + docker-compose)."""
+    """Run the 3-step testnet generation pipeline (ledger + xrpld configs + docker-compose)."""
     from generate_ledger.amendments import get_amendments_for_profile  # noqa: PLC0415
     from generate_ledger.compose import write_compose_file  # noqa: PLC0415
     from generate_ledger.config import ComposeConfig  # noqa: PLC0415
     from generate_ledger.ledger import write_ledger_file  # noqa: PLC0415
-    from generate_ledger.rippled_cfg import RippledConfigSpec  # noqa: PLC0415
+    from generate_ledger.xrpld_cfg import XrpldConfigSpec  # noqa: PLC0415
 
     output_dir = output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -146,11 +147,11 @@ def run_full_pipeline(
     typer.echo(f"  ledger.json  -> {output_dir / 'ledger.json'}")
     typer.echo(f"  accounts.json -> {output_dir / 'accounts.json'}")
 
-    # Step 2: rippled configs
-    typer.echo("=== Step 2/3: Generating rippled configs ===")
+    # Step 2: xrpld configs
+    typer.echo("=== Step 2/3: Generating xrpld configs ===")
     amendments = get_amendments_for_profile(profile=amendment_profile, source=amendment_source)
     feature_names = [a.name for a in amendments if a.enabled]
-    spec = RippledConfigSpec(
+    spec = XrpldConfigSpec(
         num_validators=validators,
         base_dir=output_dir / "volumes",
         peer_port=peer_port,
@@ -159,6 +160,7 @@ def run_full_pipeline(
         reference_fee=base_fee,
         account_reserve=reserve_base,
         owner_reserve=reserve_inc,
+        log_level=log_level,
     )
     result = spec.write()
     for p in result.paths:

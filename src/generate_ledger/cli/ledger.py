@@ -25,7 +25,6 @@ def ledger(
     balance: str = typer.Option(
         str(100_000_000000), "--balance", "-b", help="Default account balance in drops (default: 100k XRP)."
     ),
-    algo: str = typer.Option("ed25519", "--algo", help="Key algorithm: ed25519 (fast, default) or secp256k1."),
     gpu: bool = typer.Option(False, "--gpu", help="Use GPU for account generation (requires --group gpu)."),
     # Output options
     outdir: Path = typer.Option(Path("testnet"), "--output-dir", "-o", help="Output directory."),
@@ -149,7 +148,6 @@ def ledger(
         num_accounts=num_accounts,
         gateways=gateways,
         balance=balance,
-        algo=algo,
         gpu=gpu,
         gateway_currencies=gateway_currencies,
         assets_per_gateway=assets_per_gateway,

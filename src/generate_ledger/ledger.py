@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 
 from pydantic import Field
@@ -29,6 +30,8 @@ from generate_ledger.trustlines import (
     generate_trustline_objects,
     generate_trustlines,
 )
+
+log = logging.getLogger(__name__)
 
 
 class LedgerConfig(BaseSettings):
@@ -253,7 +256,7 @@ def write_ledger_file(
     output_file = Path(output_file or cfg.ledger_json)
     output_file.parent.mkdir(exist_ok=True, parents=True)
     if not quiet:
-        print(f"Writing {cfg.ledger_json.name} to {output_file.resolve()}")
+        log.info("Writing %s to %s", cfg.ledger_json.name, output_file.resolve())
     ledger_data = gen_ledger_state(cfg)
     with output_file.open("w", encoding="UTF-8") as ld:
         json.dump(ledger_data, ld)

@@ -12,12 +12,15 @@ Performance:
 """
 
 import hashlib
+import logging
 import os
 from abc import ABC, abstractmethod
 from enum import Enum
 
 import base58
 from xrpl.core.addresscodec import encode_classic_address
+
+log = logging.getLogger(__name__)
 
 
 class Algorithm(Enum):
@@ -93,7 +96,7 @@ class NativeEd25519Backend(CryptoBackend):
     def generate_account(self) -> tuple[str, str]:
         # 1. Generate 16-byte XRPL seed entropy
         entropy = os.urandom(16)
-        # 2. Derive ed25519 signing key (matches xrpl-py / rippled derivation)
+        # 2. Derive ed25519 signing key (matches xrpl-py / xrpld derivation)
         signing_key_bytes = _sha512_half(entropy)
         # 3. Get public key via PyNaCl (fast C library)
         signing_key = self._signing.SigningKey(signing_key_bytes)
@@ -201,8 +204,10 @@ def get_backend(algo: Algorithm, *, use_gpu: bool = False) -> CryptoBackend:
             from generate_ledger.gpu_backend import GpuEd25519Backend  # noqa: PLC0415
 
             return GpuEd25519Backend()
-        except (ImportError, RuntimeError):
-            pass
+        except ImportError:
+            log.warning("--gpu requested but CuPy is not installed. Install with: uv sync --group gpu")
+        except RuntimeError as e:
+            log.warning("--gpu requested but GPU initialization failed: %s", e)
     if algo == Algorithm.ED25519:
         try:
             return NativeEd25519Backend()

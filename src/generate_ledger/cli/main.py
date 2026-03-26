@@ -1,6 +1,6 @@
 """Root CLI — ``gen`` generates a complete XRPL testnet by default.
 
-Subcommands (``gen ledger``, ``gen rippled``) run individual pipeline steps.
+Subcommands (``gen ledger``, ``gen xrpld``) run individual pipeline steps.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ import typer
 from typer.main import get_command
 
 from .ledger import app as ledger_app
-from .rippled_cfg import app as rippled_app
+from .xrpld_cfg import app as xrpld_app
 
 app = typer.Typer(
     invoke_without_command=True,
@@ -19,7 +19,7 @@ app = typer.Typer(
     help="Generate custom XRPL genesis ledgers and test network environments.",
 )
 app.add_typer(ledger_app, name="ledger")
-app.add_typer(rippled_app, name="rippled")
+app.add_typer(xrpld_app, name="xrpld")
 
 
 def _print_ledgend() -> None:
@@ -37,7 +37,6 @@ def root(
     validators: int = typer.Option(5, "--validators", "-v", min=1, help="Number of validator nodes."),
     num_accounts: int = typer.Option(1000, "--accounts", help="Number of regular (non-gateway) accounts."),
     balance: str = typer.Option(str(100_000_000_000), "--balance", "-b", help="Default account balance in drops."),
-    algo: str = typer.Option("ed25519", "--algo", help="Key algorithm: ed25519 (default) or secp256k1."),
     gpu: bool = typer.Option(False, "--gpu", help="GPU-accelerated account generation."),
     trustline: list[str] | None = typer.Option(
         None, "--trustline", "-t", help="Trustline: 'acct1:acct2:currency:limit'. Repeatable."
@@ -58,10 +57,11 @@ def root(
     base_fee: int = typer.Option(121, "--base-fee", help="Base fee (drops)."),
     reserve_base: int = typer.Option(2_000_000, "--reserve-base", help="Reserve base (drops)."),
     reserve_inc: int = typer.Option(666, "--reserve-inc", help="Reserve increment (drops)."),
-    image: str = typer.Option("rippleci/xrpld:develop", "--image", help="Docker image for rippled nodes."),
+    image: str = typer.Option("rippleci/xrpld:develop", "--image", help="Docker image for xrpld nodes."),
+    log_level: str = typer.Option("info", "--log-level", help="Log level (trace/debug/info/warning/error/fatal)"),
     ledgend: bool = typer.Option(False, "--ledgend", hidden=True, help="Show the ledgen(d) logo."),
 ):
-    """Generate a complete XRPL testnet: ledger.json, rippled configs, and docker-compose.yml."""
+    """Generate a complete XRPL testnet: ledger.json, xrpld configs, and docker-compose.yml."""
     if ledgend:
         _print_ledgend()
         raise typer.Exit()
@@ -87,7 +87,6 @@ def root(
         num_accounts=num_accounts,
         gateways=gateways,
         balance=balance,
-        algo=algo,
         gpu=gpu,
         gateway_currencies=gateway_currencies,
         assets_per_gateway=assets_per_gateway,
@@ -115,6 +114,7 @@ def root(
         reserve_base=reserve_base,
         reserve_inc=reserve_inc,
         image=image,
+        log_level=log_level,
     )
 
 
