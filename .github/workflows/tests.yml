@@ -17,8 +17,6 @@ jobs:
       - uses: webiny/action-conventional-commits@4ae80bc67b0b2e72a4d091a7b18eb4ecc7db68c8 # v1.3.0
 
   lint:
-    needs: [commit-message]
-    if: ${{ !cancelled() && (needs.commit-message.result == 'success' || needs.commit-message.result == 'skipped') }}
     runs-on: ubuntu-latest
     container: ghcr.io/astral-sh/uv:python3.13-bookworm
     steps:
@@ -27,8 +25,6 @@ jobs:
       - run: uv run ruff check .
 
   complexity:
-    needs: [commit-message]
-    if: ${{ !cancelled() && (needs.commit-message.result == 'success' || needs.commit-message.result == 'skipped') }}
     runs-on: ubuntu-latest
     container: ghcr.io/astral-sh/uv:python3.13-bookworm
     steps:
@@ -72,7 +68,7 @@ jobs:
             radon-mi-report.txt
 
   test:
-    needs: [lint, complexity]
+    needs: [lint]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -89,7 +85,7 @@ jobs:
       - run: uv run pytest
 
   test-macos:
-    needs: [lint, complexity]
+    needs: [lint]
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
