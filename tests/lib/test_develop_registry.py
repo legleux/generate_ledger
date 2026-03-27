@@ -16,30 +16,18 @@ class TestDevelopRegistry:
         builders = get_develop_builders()
         assert isinstance(builders, dict)
 
-    def test_mpt_builder_registered(self):
-        """MPT builder should now be registered (MPTokensV1 implemented)."""
+    def test_no_active_builders(self):
+        """All develop builders are currently commented out (MPT promoted, vault not implemented)."""
         from generate_ledger.develop import get_develop_builders
 
         builders = get_develop_builders()
-        assert "mpt" in builders
-        assert callable(builders["mpt"]["builder"])
-        assert builders["mpt"]["required_amendment"] == "MPTokensV1"
+        assert len(builders) == 0
 
-    def test_modules_importable(self):
-        """Developed modules should be importable."""
-        from generate_ledger.develop import mpt, vault
+    def test_vault_module_importable(self):
+        """Vault module should be importable even though it raises NotImplementedError."""
+        from generate_ledger.develop import vault
 
-        assert hasattr(mpt, "generate_mpt_objects")
         assert hasattr(vault, "generate_vault_objects")
-
-    def test_mpt_builder_callable(self):
-        """MPT builder accepts accounts/config kwargs and returns a list."""
-        from generate_ledger.develop.mpt import generate_mpt_objects
-        from generate_ledger.ledger import LedgerConfig
-
-        cfg = LedgerConfig(mpt_issuances=[])
-        result = generate_mpt_objects(accounts=[], config=cfg)
-        assert result == []
 
     def test_vault_stub_raises_not_implemented(self):
         from generate_ledger.develop.vault import generate_vault_objects
@@ -50,17 +38,12 @@ class TestDevelopRegistry:
 
 class TestGracefulImportError:
     def test_gen_ledger_state_works_without_develop(self, monkeypatch):
-        """gen_ledger_state() should work even if gl.develop import fails.
-
-        We simulate this by temporarily making the import raise ImportError.
-        """
+        """gen_ledger_state() should work even if develop/ import fails."""
         import sys
 
-        # Save original module if present
-        orig = sys.modules.get("gl.develop")
+        orig = sys.modules.get("generate_ledger.develop")
 
-        # Force ImportError for gl.develop
-        sys.modules["gl.develop"] = None  # type: ignore[assignment]
+        sys.modules["generate_ledger.develop"] = None  # type: ignore[assignment]
         try:
             from generate_ledger.ledger import LedgerConfig, gen_ledger_state
 
@@ -72,8 +55,7 @@ class TestGracefulImportError:
             assert "ledger" in ledger
             assert "accountState" in ledger["ledger"]
         finally:
-            # Restore
             if orig is not None:
-                sys.modules["gl.develop"] = orig
+                sys.modules["generate_ledger.develop"] = orig
             else:
-                sys.modules.pop("gl.develop", None)
+                sys.modules.pop("generate_ledger.develop", None)

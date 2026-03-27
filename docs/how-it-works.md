@@ -136,7 +136,7 @@ Amendment sources:
 
 ## MPTokenIssuance
 
-A Multi-Purpose Token issuance defines a new token type. Available on the `develop` branch.
+A Multi-Purpose Token issuance defines a new token type. Requires the `MPTokensV1` amendment (enabled on mainnet since 2025-10-01).
 
 **Derivation:**
 

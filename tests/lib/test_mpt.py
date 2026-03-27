@@ -1,16 +1,16 @@
-"""Tests for gl.develop.mpt — MPToken ledger object generation."""
+"""Tests for MPToken ledger object generation."""
 
 import pytest
 
 from generate_ledger.accounts import Account
-from generate_ledger.develop.mpt import (
+from generate_ledger.indices import mpt_id_to_hex, mpt_issuance_index, mptoken_index
+from generate_ledger.ledger import LedgerConfig, MPTHolderConfig, MPTIssuanceConfig
+from generate_ledger.mpt import (
     _build_issuance_object,
     _build_mptoken_object,
     _outstanding_amount,
     generate_mpt_objects,
 )
-from generate_ledger.indices import mpt_id_to_hex, mpt_issuance_index, mptoken_index
-from generate_ledger.ledger import LedgerConfig, MPTHolderConfig, MPTIssuanceConfig
 from tests.conftest import ALICE_ADDRESS, ALICE_SEED, BOB_ADDRESS, BOB_SEED
 
 

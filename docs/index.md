@@ -18,15 +18,15 @@ A single command (`uv run gen`) produces all three.
 
 The genesis ledger can include:
 
-| Object                     | XRPL Type                     | Description                                                       |
-| -------------------------- | ----------------------------- | ----------------------------------------------------------------- |
-| **Accounts**               | `AccountRoot`                 | Pre-funded accounts with keypairs (ed25519 or secp256k1)          |
-| **Trustlines**             | `RippleState`                 | Explicit, random, or gateway-topology trustlines between accounts |
-| **Gateway topology**       | `RippleState`                 | Star/mesh trustline networks from issuer accounts                 |
-| **AMM pools**              | `AMM` + `AccountRoot`         | Automated Market Maker pools with LP tokens and asset trustlines  |
-| **Amendments**             | `Amendments`                  | Enabled amendments (release, develop, or custom profile)          |
-| **Directory nodes**        | `DirectoryNode`               | Per-account ownership directories (auto-generated)                |
-| **MPT** _(develop branch)_ | `MPTokenIssuance` + `MPToken` | Multi-Purpose Tokens (issuances and holder tokens)                |
+| Object               | XRPL Type                     | Description                                                       |
+| -------------------- | ----------------------------- | ----------------------------------------------------------------- |
+| **Accounts**         | `AccountRoot`                 | Pre-funded accounts with keypairs (ed25519 or secp256k1)          |
+| **Trustlines**       | `RippleState`                 | Explicit, random, or gateway-topology trustlines between accounts |
+| **Gateway topology** | `RippleState`                 | Star/mesh trustline networks from issuer accounts                 |
+| **AMM pools**        | `AMM` + `AccountRoot`         | Automated Market Maker pools with LP tokens and asset trustlines  |
+| **Amendments**       | `Amendments`                  | Enabled amendments (release, develop, or custom profile)          |
+| **Directory nodes**  | `DirectoryNode`               | Per-account ownership directories (auto-generated)                |
+| **MPT**              | `MPTokenIssuance` + `MPToken` | Multi-Purpose Tokens (issuances and holder tokens)                |
 
 ### Output Files
 
