@@ -10,6 +10,7 @@ from pathlib import Path
 import typer
 from typer.main import get_command
 
+from .compose import app as compose_app
 from .ledger import app as ledger_app
 from .xrpld_cfg import app as xrpld_app
 
@@ -18,6 +19,7 @@ app = typer.Typer(
     no_args_is_help=False,
     help="Generate custom XRPL genesis ledgers and test network environments.",
 )
+app.add_typer(compose_app, name="compose")
 app.add_typer(ledger_app, name="ledger")
 app.add_typer(xrpld_app, name="xrpld")
 

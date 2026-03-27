@@ -47,6 +47,7 @@ class ComposeConfig(BaseSettings):
     ws_port: int = 6006
     standalone: bool = False
 
+    mount_ledger: bool = True
     ledger_file: str = "/ledger.json"  # REVIEW: Should this live here? What is the path?
     first_validator: str = f"{validator_name}0"
 
@@ -116,14 +117,14 @@ def gen_compose_data(config: ComposeConfig | None = None):
                 else {}
             ),
             # **(load_command),
-            **(load_command if name == cfg.first_validator else net_command),
+            **(load_command if name == cfg.first_validator and cfg.mount_ledger else net_command),
             **(healthcheck if name == cfg.first_validator else depends_on),
             # FIXME: volume mount kind of ugly...
             "volumes": [
                 f"./volumes/{name}:/etc/opt/ripple",
                 # TODO: Only loading the ledger file if it's the first validator? Test with
                 # *([f"./{cfg.ledger_file}:/{cfg.ledger_file}"] if i == 0 else [])
-                *([f".{cfg.ledger_file}:{cfg.ledger_file}"]),
+                *([f".{cfg.ledger_file}:{cfg.ledger_file}"] if cfg.mount_ledger else []),
                 # "./ledger.json:/ledger.json" if i == 0 else None,
             ],
             "networks": [cfg.network_name],
