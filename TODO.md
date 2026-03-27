@@ -117,6 +117,10 @@ The colon-delimited CLI syntax (`--trustline "0:1:USD:1000000000"`) is fine for 
 
 `--accounts 100` with no `--gateways` flag creates 104 accounts because the default gateway count (4) is added on top. When the user explicitly sets `--accounts`, the default gateways should probably be suppressed (i.e., `--gateways 0` implied) unless `--gateways` is also explicitly provided. The bare `gen` with no arguments should keep the default gateways.
 
+### coincurve fails to build on Debian trixie in CI
+
+Missing `python3-dev` headers in `ghcr.io/astral-sh/uv:python3.X-trixie` containers. coincurve needs CMake + Python development headers to compile from source. CI now fails loudly instead of silently falling back.
+
 ### Docker compose startup order
 
 If other validators start before val0, they create their own ledger, leaving val0 disconnected and not using the defined ledger. Workaround: `docker compose up -d val0 && sleep 3 && docker compose up -d`.
@@ -126,8 +130,7 @@ If other validators start before val0, they create their own ledger, leaving val
 - `trustlines.py:41` — Remove `generate_trustset_txn_id` once confirmed xrpld ignores `PreviousTxnID` on genesis objects
 - `amm.py:113` — Remove `generate_ammcreate_txn_id` once confirmed (same issue)
 - `crypto.py:24` — Remove `sign_and_hash_txn` once confirmed (same issue)
-- `compose.py:92` — Port exposure for multiple nodes unclear
-- `compose.py:95` — Port mapping logic needs rework
+- `compose.py` — ~~Port exposure for multiple nodes~~ addressed by `--expose-all-ports`
 - `compose.py:118,148` — Volume mount logic is messy
 - `compose.py:121,151` — Ledger file loading for first validator/hub only
 
@@ -139,3 +142,5 @@ If other validators start before val0, they create their own ledger, leaving val
 - ~~**Rename rippled → xrpld**~~ — Files, classes, CLI options, comments, compose binary.
 - ~~**Real description in pyproject.toml**~~
 - ~~**Test AMM fixes**~~ — 2026-01-28 lsfAMMNode flag fix and account derivation verified.
+- ~~**Expose all validator ports**~~ — `--expose-all-ports` CLI option + zero-padded naming.
+- ~~**Basic smoke test**~~ — Payment ring test: 100 accounts, async submit, balance verification.

@@ -46,7 +46,7 @@ Built with mkdocs-material. Source in `docs/`, config in `mkdocs.yml`, build out
 
 - `uv run mkdocs serve` — live preview at http://127.0.0.1:8000
 - `uv run mkdocs build` — static site to `site/`
-- Pages: index, quickstart, CLI reference, library API, amendments, development
+- Pages: index, quickstart, how it works, CLI reference, library API, amendments, development
 
 ## Architecture
 
@@ -126,7 +126,7 @@ See `docs/library-usage.md` for full usage guide.
 - **Framework**: pytest with pytest-cov
 - **Coverage**: enforced at 85% minimum (`fail_under = 85`), currently ~89%
 - **Default addopts**: `-rP --cov --cov-report=term-missing:skip-covered`
-- **CI matrix**: Python 3.12, 3.13, 3.14 on Debian bookworm + trixie
+- **CI matrix**: Python 3.12, 3.13, 3.14 on Debian bookworm + trixie, plus macOS latest
 
 ### Key Test Fixtures (conftest.py)
 
@@ -164,7 +164,8 @@ See `docs/library-usage.md` for full usage guide.
 - Gateway topology (star/mesh), fast trustline generation, lsfDefaultRipple on issuers
 - MPT (Multi-Purpose Tokens) — implemented in `develop/mpt.py` (develop branch only)
 - Fast ed25519 account generation via PyNaCl (~25k/sec), GPU backend via CuPy (~110k/sec)
-- Test suite: ~425 tests across unit, CLI, integration, and smoke (GPU tests skip without CUDA, smoke tests skip by default)
+- Test suite: ~437 tests across unit, CLI, integration, and smoke (GPU tests skip without CUDA, smoke tests skip by default)
+- P0 smoke test: generates network via CLI, boots Docker, submits 100 async Payment transactions, verifies balances
 
 ### Planned (v2.0)
 
