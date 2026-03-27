@@ -31,9 +31,7 @@ for v in "${VERSIONS[@]}"; do
             done
 
             docker exec "$name" sh -c '
-                if ! uv sync --group dev --group fast; then
-                    rm -rf .venv && uv sync --group dev
-                fi &&
+                uv sync --group dev --group fast &&
                 uv run pytest -q
             ' > "$logfile" 2>&1
             exit_code=$?
