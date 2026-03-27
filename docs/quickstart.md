@@ -46,14 +46,12 @@ on the number of validators and hubs configured.
 
 ### Crypto backends
 
-The fast crypto backends (PyNaCl, coincurve) are included in the default `dev` dependency
-group, so `uv sync` gives you ~25k accounts/sec out of the box.
-
-For GPU-accelerated generation (~110k accounts/sec), install the GPU group and pass `--gpu`:
+For faster account generation, install the optional crypto backends:
 
 ```bash
-uv sync --group gpu    # + CuPy, CUDA toolkit (requires NVIDIA GPU)
-uv run gen --gpu
+uv sync --group fast   # + PyNaCl, coincurve (~25k accounts/sec)
+uv sync --group gpu    # + CuPy, CUDA toolkit (~280k accounts/sec, requires NVIDIA GPU)
+uv run gen --gpu       # use GPU for account generation
 ```
 
 ## Customize Your Network

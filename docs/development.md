@@ -10,7 +10,11 @@ cd generate_ledger
 uv sync
 ```
 
-This installs all development dependencies including the fast crypto backends (PyNaCl, coincurve).
+For fast crypto backends (recommended for development):
+
+```bash
+uv sync --group fast   # + PyNaCl, coincurve
+```
 
 To also install GPU backends (requires NVIDIA GPU):
 
