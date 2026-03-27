@@ -16,11 +16,14 @@ repos:
     hooks:
       - id: cspell
 
-  - repo: https://github.com/compilerla/conventional-pre-commit
-    rev: 4394e2e7ab54549ad3f61cd32ae044710f885d12 # v4.0.0
+  - repo: local
     hooks:
       - id: conventional-pre-commit
+        name: Conventional Commit
+        language: system
+        entry: sh -c 'case "$(git branch --show-current)" in main|develop) uvx conventional-pre-commit "$@";; *) exit 0;; esac' --
         stages: [commit-msg]
+        always_run: true
 
   - repo: https://github.com/rbubley/mirrors-prettier
     rev: c2bc67fe8f8f549cc489e00ba8b45aa18ee713b1 # v3.8.1
