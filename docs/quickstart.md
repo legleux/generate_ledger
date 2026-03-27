@@ -28,21 +28,21 @@ Start the network:
 
 ```bash
 cd testnet
-docker compose up
+docker compose up -d
 ```
 
 In under a minute, verify a validator is proposing:
 
 ```bash
-curl -s localhost:5006 -d '{"method": "server_info"}' | jq .result.info.server_state
+curl -s localhost:5005 -d '{"method": "server_info"}' | jq .result.info.server_state
 # "proposing"
 ```
 
 You can also observe the network live in the XRPL explorer at
-[https://custom.xrpl.org/localhost:6007](https://custom.xrpl.org/localhost:6007).
+[https://custom.xrpl.org/localhost:6006](https://custom.xrpl.org/localhost:6006).
 
 The default ports for val0 are **5006** (RPC) and **6007** (WebSocket). These shift based
-on the number of validators and hubs configured.
+on the number of validators and xrpld nodes configured.
 
 ### Crypto backends
 

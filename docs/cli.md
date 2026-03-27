@@ -133,7 +133,7 @@ gen auto --accounts 100 --validators 5 --output-dir ./testnet
 ### Example
 
 ```bash
-gen auto --accounts 200 -v 5 -o ./testnet \
+gen --accounts 200 -v 5 -o ./testnet \
   --gateways 4 --assets-per-gateway 3 --gateway-coverage 0.8 \
   --base-fee 10 --reserve-base 200000 --reserve-inc 50000
 ```

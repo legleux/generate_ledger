@@ -28,13 +28,13 @@ The test suite uses pytest with a coverage threshold of 85% (currently ~89%).
 
 ```bash
 # Run all tests
-pytest
+uv pytest
 
 # Run a single test file
-pytest tests/lib/test_amm.py
+uv pytest tests/lib/test_amm.py
 
 # Run a single test by name
-pytest tests/lib/test_amm.py -k "test_amm_index_calculation"
+uv pytest tests/lib/test_amm.py -k "test_amm_index_calculation"
 ```
 
 Default pytest options (configured in `pyproject.toml`):
