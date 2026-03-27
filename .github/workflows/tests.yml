@@ -97,16 +97,10 @@ jobs:
           (rm -rf .venv && uv sync --group dev && echo "::warning::fast backends unavailable on this platform")
       - run: uv run pytest
 
-  docs:
+  docs-build:
     needs: [test, test-macos]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
       - uses: astral-sh/setup-uv@v6
@@ -118,6 +112,18 @@ jobs:
         uses: actions/upload-pages-artifact@v4
         with:
           path: site
+
+  docs-deploy:
+    needs: [docs-build]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
         id: deploy
         uses: actions/deploy-pages@v4
