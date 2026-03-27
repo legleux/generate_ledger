@@ -114,7 +114,7 @@ jobs:
         run: npm ci
       - name: Build slides into site/slides/
         working-directory: slides
-        run: npx slidev build slides.md --base "/${{ github.event.repository.name }}/slides/" --out ../site/slides
+        run: npx @slidev/cli build slides.md --base "/${{ github.event.repository.name }}/slides/" --out ../site/slides
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
