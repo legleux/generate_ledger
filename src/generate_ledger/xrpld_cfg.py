@@ -96,6 +96,11 @@ class XrpldConfigSpec:
             return ""
         return f"\n[amendment_majority_time]\n{self.amendment_majority_time}\n"
 
+    def _label(self, i: int) -> str:
+        """Zero-padded validator name: val0..val9 or val00..val49."""
+        width = len(str(self.num_validators - 1)) if self.num_validators > 9 else 1  # noqa: PLR2004
+        return f"{self.validator_name}{i:0{width}d}"
+
     def ips_fixed_block(self, who_index: int | None) -> str:
         """
         Build [ips_fixed].
@@ -106,7 +111,7 @@ class XrpldConfigSpec:
         for j in range(self.num_validators):
             if who_index is not None and j == who_index:
                 continue
-            lines.append(f"{self.validator_name}{j} {self.peer_port}")
+            lines.append(f"{self._label(j)} {self.peer_port}")
         return "\n[ips_fixed]\n" + "\n".join(lines) + "\n"
 
     # ---- main generation ----
@@ -143,7 +148,7 @@ class XrpldConfigSpec:
 
             nodes.append(
                 NodeConfig(
-                    name=f"{self.validator_name}{i}",
+                    name=self._label(i),
                     is_validator=True,
                     config_text=cfg,
                 )

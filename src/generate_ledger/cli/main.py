@@ -58,6 +58,7 @@ def root(
     reserve_base: int = typer.Option(2_000_000, "--reserve-base", help="Reserve base (drops)."),
     reserve_inc: int = typer.Option(666, "--reserve-inc", help="Reserve increment (drops)."),
     image: str = typer.Option("rippleci/xrpld:develop", "--image", help="Docker image for xrpld nodes."),
+    expose_all_ports: bool = typer.Option(False, "--expose-all-ports", help="Publish RPC/WS ports for all validators."),
     log_level: str = typer.Option("info", "--log-level", help="Log level (trace/debug/info/warning/error/fatal)"),
     ledgend: bool = typer.Option(False, "--ledgend", hidden=True, help="Show the ledgen(d) logo."),
 ):
@@ -115,6 +116,7 @@ def root(
         reserve_inc=reserve_inc,
         image=image,
         log_level=log_level,
+        expose_all_ports=expose_all_ports,
     )
 
 

@@ -47,8 +47,18 @@ class ComposeConfig(BaseSettings):
     ws_port: int = 6006
     standalone: bool = False
 
+    expose_all_ports: bool = False
     ledger_file: str = "/ledger.json"  # REVIEW: Should this live here? What is the path?
-    first_validator: str = f"{validator_name}0"
+
+    def validator_label(self, i: int) -> str:
+        """Zero-padded validator name: val0..val9 or val00..val49."""
+        width = len(str(self.num_validators - 1)) if self.num_validators > 9 else 1  # noqa: PLR2004
+        return f"{self.validator_name}{i:0{width}d}"
+
+    @computed_field
+    @property
+    def first_validator(self) -> str:
+        return self.validator_label(0)
 
 
 def gen_compose_data(config: ComposeConfig | None = None):
@@ -95,12 +105,8 @@ def gen_compose_data(config: ComposeConfig | None = None):
     # TODO: What to do about this?
     # if include_services is not None:
     #     compose_data.update(include=include_services)
-    """ FIXME: This is just a mess. We may want to expose ports of multiple nodes not just the first one.
-        It might be worth it to break hubs/vals into separate compose files from templates then just
-        include them together.
-    """
     validators = {
-        (name := f"{cfg.validator_name}{i}"): {
+        (name := cfg.validator_label(i)): {
             "image": f"{cfg.validator_image}:{cfg.validator_image_tag}",
             "container_name": f"{name}",
             "hostname": f"{name}",
@@ -112,7 +118,7 @@ def gen_compose_data(config: ComposeConfig | None = None):
                         f"{cfg.ws_port + i + cfg.num_hubs}:{cfg.ws_port}",
                     ]
                 }
-                if name == cfg.first_validator
+                if cfg.expose_all_ports or name == cfg.first_validator
                 else {}
             ),
             # **(load_command),
