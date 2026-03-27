@@ -130,6 +130,7 @@ def run_full_pipeline(
     reserve_inc: int,
     image: str,
     log_level: str = "info",
+    expose_all_ports: bool = False,
 ):
     """Run the 3-step testnet generation pipeline (ledger + xrpld configs + docker-compose)."""
     from generate_ledger.amendments import get_amendments_for_profile  # noqa: PLC0415
@@ -179,6 +180,7 @@ def run_full_pipeline(
         validator_image_tag=img_tag,
         hub_image=img_name,
         hub_image_tag=img_tag,
+        expose_all_ports=expose_all_ports,
     )
     compose_path = write_compose_file(config=compose_cfg)
     typer.echo(f"  {compose_path}")
