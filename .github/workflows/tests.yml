@@ -109,8 +109,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Install slide dependencies
+        working-directory: slides
+        run: npm ci
       - name: Build slides into site/slides/
-        run: npx -y @slidev/cli build slides/slides.md --base "/${{ github.event.repository.name }}/slides/" --out ../site/slides
+        working-directory: slides
+        run: npx slidev build slides.md --base "/${{ github.event.repository.name }}/slides/" --out ../site/slides
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
