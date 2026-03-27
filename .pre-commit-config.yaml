@@ -3,18 +3,23 @@ repos:
     rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # v6.0.0
     hooks:
       - id: trailing-whitespace
+        stages: [pre-commit]
       - id: end-of-file-fixer
+        stages: [pre-commit]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: e05c5c0818279e5ac248ac9e954431ba58865e61 # v0.15.7
     hooks:
       - id: ruff-check
+        stages: [pre-commit]
       - id: ruff-format
+        stages: [pre-commit]
 
   - repo: https://github.com/streetsidesoftware/cspell-cli
     rev: a42085ade523f591dca134379a595e7859986445 # v9.7.0
     hooks:
       - id: cspell
+        stages: [pre-commit]
 
   - repo: local
     hooks:
