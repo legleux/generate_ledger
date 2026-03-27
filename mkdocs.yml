@@ -31,6 +31,7 @@ theme:
 nav:
   - Home: index.md
   - Quick Start: quickstart.md
+  - How It Works: how-it-works.md
   - CLI Reference: cli.md
   - Library API: library.md
   - Amendments: amendments.md
