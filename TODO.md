@@ -38,6 +38,10 @@ The package has three core concerns: ledger generation (`ledger.py`, `ledger_bui
 
 Vault/Offers, Escrows, Checks, etc. Vault stub exists in `develop/vault.py` (raises `NotImplementedError`).
 
+### MPT authorization flags
+
+`MPTHolderConfig` doesn't support setting `lsfMPTAuthorized` (0x02) on MPToken objects. If an issuance has `lsfMPTRequireAuth`, pre-generated holders are unauthorized and can't transfer. Add `authorized: bool = True` to `MPTHolderConfig` that sets the flag on the MPToken. Without `lsfMPTRequireAuth` on the issuance (the default), holders work fine.
+
 ### Mixed key type accounts
 
 Support generating accounts with mixed key types (ed25519 + secp256k1) in the same ledger.

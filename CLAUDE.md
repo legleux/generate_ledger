@@ -73,10 +73,11 @@ The main data flow is in `ledger.py:gen_ledger_state()`:
 2. **`trustlines.py`** — Generates RippleState + DirectoryNode objects for trustlines. Provides shared builders: `order_low_high()`, `build_ripple_state()`, `build_directory_node()`, `generate_trustline_objects_fast()` (used by gateways and AMM)
 3. **`gateways.py`** — Generates gateway topology trustlines (star/mesh from issuer accounts). Imports `generate_trustline_objects_fast` from `trustlines.py`
 4. **`amm.py`** — Generates AMM pool objects (AMM entry, pseudo-account, LP tokens, asset trustlines). Uses shared builders from `trustlines.py` and constants from `constants.py`
-5. **`amendments.py`** — Loads amendment hashes (profile-based with auto-fetch: release queries mainnet RPC, develop fetches features.macro from GitHub, custom loads user JSON)
-6. **`develop/`** — Optional package for pre-release objects (MPT, Vault stubs); absent on `main` branch
-7. **`ledger_builder.py:assemble_ledger_json()`** — Assembles all objects into final `ledger.json` structure; delegates DirectoryNode consolidation and OwnerCount tracking to `directory_nodes.py`
-8. **`directory_nodes.py`** — DirectoryNode consolidation: merges per-object directory entries into per-account directories with sorted Indexes
+5. **`mpt.py`** — Generates MPTokenIssuance + MPToken objects (MPTokensV1 amendment, enabled on mainnet since 2025-10-01)
+6. **`amendments.py`** — Loads amendment hashes (profile-based with auto-fetch: release queries mainnet RPC, develop fetches features.macro from GitHub, custom loads user JSON)
+7. **`develop/`** — Optional package for pre-release objects (Vault stub); absent on `main` branch
+8. **`ledger_builder.py:assemble_ledger_json()`** — Assembles all objects into final `ledger.json` structure; delegates DirectoryNode consolidation and OwnerCount tracking to `directory_nodes.py`
+9. **`directory_nodes.py`** — DirectoryNode consolidation: merges per-object directory entries into per-account directories with sorted Indexes
 
 ### XRPL Crypto Primitives
 
@@ -162,7 +163,7 @@ See `docs/library-usage.md` for full usage guide.
 - AMM pools with LP tokens, asset trustlines, DirectoryNode consolidation (US5)
 - Amendment system: profiles (release/develop/custom), features.macro parser, per-amendment overrides, auto-fetch from GitHub (develop) and mainnet RPC (release) with offline fallbacks
 - Gateway topology (star/mesh), fast trustline generation, lsfDefaultRipple on issuers
-- MPT (Multi-Purpose Tokens) — implemented in `develop/mpt.py` (develop branch only)
+- MPT (Multi-Purpose Tokens) — `mpt.py` (promoted from develop/, MPTokensV1 enabled on mainnet since 2025-10-01)
 - Fast ed25519 account generation via PyNaCl (~25k/sec), GPU backend via CuPy (~110k/sec)
 - Test suite: ~437 tests across unit, CLI, integration, and smoke (GPU tests skip without CUDA, smoke tests skip by default)
 - P0 smoke test: generates network via CLI, boots Docker, submits 100 async Payment transactions, verifies balances

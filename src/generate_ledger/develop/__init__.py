@@ -1,10 +1,9 @@
 """Pre-release (develop branch) ledger object registry.
 
-This package contains ledger objects that exist only in xrpld's ``develop``
-branch and are not yet in any official release.  On the ``main`` branch of
-this repository the entire ``develop/`` directory is absent, and the
-``ImportError`` raised when importing this package is caught gracefully in
-``gl.ledger.gen_ledger_state()``.
+This package contains ledger objects that are not yet enabled on mainnet.
+On the ``main`` branch of this repository the entire ``develop/`` directory
+may be absent, and the ``ImportError`` raised when importing this package
+is caught gracefully in ``ledger.py:gen_ledger_state()``.
 
 Each entry in ``_DEVELOP_OBJECTS`` maps a short name to:
   - module_path: dotted import path of the builder module
@@ -21,8 +20,7 @@ from typing import Any
 # Uncomment entries as implementations are added.
 _DEVELOP_OBJECTS: list[tuple[str, str, str, str]] = [
     # (name, module_path, builder_function, required_amendment)
-    ("mpt", "gl.develop.mpt", "generate_mpt_objects", "MPTokensV1"),
-    # ("vault", "gl.develop.vault", "generate_vault_objects", "SingleAssetVault"),
+    # ("vault", "generate_ledger.develop.vault", "generate_vault_objects", "SingleAssetVault"),
 ]
 
 

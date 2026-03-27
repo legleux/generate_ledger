@@ -212,7 +212,12 @@ def gen_ledger_state(config: LedgerConfig | None = None, *, write_accounts: bool
 
     amm_issuers = _collect_amm_issuers(amm_specs, gateway_issuers)
 
-    # 5. Get amendment hashes (profile-based or legacy)
+    # 5. Generate MPT objects
+    from generate_ledger.mpt import generate_mpt_objects  # noqa: PLC0415
+
+    mpt_objects = generate_mpt_objects(accounts=accounts, config=cfg)
+
+    # 6. Get amendment hashes (profile-based or legacy)
     amendment_hashes = get_enabled_amendment_hashes(
         profile=cfg.amendment_profile,
         amendment_source=cfg.amendment_profile_source,
@@ -220,10 +225,11 @@ def gen_ledger_state(config: LedgerConfig | None = None, *, write_accounts: bool
         disable=cfg.disable_amendments or None,
     )
 
-    # 6. Discover and invoke develop object builders (if develop/ is present)
+    # 7. Discover and invoke develop object builders (if develop/ is present)
     extra_objects = _load_develop_objects(cfg, accounts)
+    extra_objects.extend(mpt_objects)
 
-    # 7. Assemble ledger with trustlines, AMMs, and extra objects
+    # 8. Assemble ledger with trustlines, AMMs, and extra objects
     ledger = ledger_builder.assemble_ledger_json(
         accounts=accounts,
         fees=cfg.fee_cfg.xrpl,
