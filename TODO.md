@@ -77,6 +77,10 @@ Support generating accounts with mixed key types (ed25519 + secp256k1) in the sa
 
 Multiple FIXMEs and TODOs: volume mount logic, port exposure for multiple nodes, image entrypoint assumption, ledger file loading for hubs.
 
+### Rename sub-packages and re-audit module interfaces
+
+Rename the three core concerns: `ledg` (genesis ledger creation), `conf` (xrpld config file generation), `topo` (compose service stack / network topology generation). After renaming, re-audit the public interfaces between them — what each exposes, what crosses boundaries, and whether the dependency graph is clean. This supersedes the existing "Split into sub-packages" TODO under P1.
+
 ### Clean packaging → PyPI deployment
 
 Publish workflow (`.github/workflows/publish.yml`) exists but only targets TestPyPI. Adding real PyPI is straightforward — duplicate the `publish-testpypi` job without the `repository-url` override and add a `pypi` environment.
