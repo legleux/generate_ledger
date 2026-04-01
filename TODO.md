@@ -35,6 +35,10 @@ Verify generated ledgers actually boot on xrpld and amendments are active — no
 
 Cognitive complexity 33 (threshold 15). Introduce `LedgerObjectGroup` protocol so each object type handles its own state entries, directory entries, and owner counts. New object types just implement the protocol instead of adding branches. Plan: `plans/consolidate_directory_nodes.md`.
 
+### Audit and modularize crypto primitives
+
+`crypto.py`, `crypto_backends.py`, `indices.py`, and `gpu_backend.py` each implement overlapping crypto primitives (SHA-512 Half, RIPEMD-160, base58check, ed25519/secp256k1 key derivation). Audit the full set of primitives we use, compare them against what xrpl-py provides natively, and determine what we actually need to own vs what we can delegate. Goal: a single `crypto/` package with clear boundaries — our custom fast paths (PyNaCl, coincurve, CUDA) vs xrpl-py's implementations, with documented rationale for each divergence.
+
 ### Refactor config generation
 
 ~~Templatized:~~ ~~validator and non-validator configs now use `string.Template` with separate `.cfg` templates.~~ Replaced with layered TOML compositor: Pydantic models, section generators, `build_config()` file-based composition, `NetworkBuilder` programmatic API. Remaining: keygen should use native backends (PyNaCl) with xrpl-py fallback, same as ledger generation. CLI `gen xrpld compose` subcommand for single-node file-based config.
@@ -58,6 +62,10 @@ Vault/Offers, Escrows, Checks, etc. Vault stub exists in `develop/vault.py` (rai
 ### Mixed key type accounts
 
 Support generating accounts with mixed key types (ed25519 + secp256k1) in the same ledger.
+
+### Modularize benchmark script for all object types
+
+`scripts/bench_accounts.py` currently benchmarks accounts, trustlines, and the full pipeline. Break it into a proper module structure (e.g. `scripts/bench/`) with a runner per object type so we can easily add benchmarks for AMM pools, MPTs, gateways, directory nodes, and future object types (Vault, Offers) without bloating a single file.
 
 ## P2 — Medium
 

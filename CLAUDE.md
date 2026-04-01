@@ -165,8 +165,8 @@ See `docs/library-usage.md` for full usage guide.
 - Amendment system: profiles (release/develop/custom), features.macro parser, per-amendment overrides, auto-fetch from GitHub (develop) and mainnet RPC (release) with offline fallbacks
 - Gateway topology (star/mesh), fast trustline generation, lsfDefaultRipple on issuers
 - MPT (Multi-Purpose Tokens) — `mpt.py` (promoted from develop/, MPTokensV1 enabled on mainnet since 2025-10-01)
-- Fast ed25519 account generation via PyNaCl (~25k/sec), GPU backend via CuPy (~110k/sec)
-- Test suite: ~509 tests across unit, CLI, integration, and smoke (GPU tests skip without CUDA, smoke tests skip by default)
+- Fast ed25519 account generation via PyNaCl (~25k/sec), GPU backend via CuPy (~535k/sec with indices)
+- Test suite: ~548 tests across unit, CLI, integration, scripts, and smoke (GPU tests skip without CUDA, smoke tests skip by default)
 - P0 smoke test: generates network via CLI, boots Docker, submits 100 async Payment transactions, verifies balances
 
 ### Planned (v2.0)
