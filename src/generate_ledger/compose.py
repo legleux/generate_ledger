@@ -126,7 +126,7 @@ def gen_compose_data(config: ComposeConfig | None = None):
             **(healthcheck if name == cfg.first_validator else depends_on),
             # FIXME: volume mount kind of ugly...
             "volumes": [
-                f"./volumes/{name}:/etc/opt/ripple",
+                f"./volumes/{name}:/etc/opt/xrpld",
                 # TODO: Only loading the ledger file if it's the first validator? Test with
                 # *([f"./{cfg.ledger_file}:/{cfg.ledger_file}"] if i == 0 else [])
                 *([f".{cfg.ledger_file}:{cfg.ledger_file}"]),
@@ -156,7 +156,7 @@ def gen_compose_data(config: ComposeConfig | None = None):
             **(depends_on),
             # FIXME: volume mount kind of ugly...
             "volumes": [
-                f"./volumes/{name}:/etc/opt/ripple",
+                f"./volumes/{name}:/etc/opt/xrpld",
                 # TODO: Only loading the ledger file if it's the first hub? Test with
                 # *([f"./{cfg.ledger_file}:/{cfg.ledger_file}"] if i == 0 else [])
                 # "./ledger.json:/ledger.json" if i == 0 else None,

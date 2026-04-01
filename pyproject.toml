@@ -1,6 +1,6 @@
 [project]
 name = "generate-ledger"
-version = "0.0.6"
+version = "0.0.7"
 description = "Generate custom XRPL genesis ledgers and test network environments"
 readme = "README.md"
 authors = [
