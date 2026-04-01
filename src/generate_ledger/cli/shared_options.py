@@ -123,7 +123,6 @@ def run_full_pipeline(
     amendment_profile: str,
     amendment_source: str | None,
     validators: int,
-    peer_port: int,
     amendment_majority_time: str | None,
     base_fee: int,
     reserve_base: int,
@@ -155,7 +154,6 @@ def run_full_pipeline(
     spec = XrpldConfigSpec(
         num_validators=validators,
         base_dir=output_dir / "volumes",
-        peer_port=peer_port,
         features=feature_names,
         amendment_majority_time=amendment_majority_time,
         reference_fee=base_fee,

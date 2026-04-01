@@ -9,16 +9,11 @@ runner = CliRunner()
 
 
 def test_xrpld_write(tmp_path: Path):
-    tpl = tmp_path / "xrpld.cfg"
-    tpl.write_text("# base template\n", encoding="utf-8")
-
     outdir = tmp_path / "vols"
     r = runner.invoke(
         app,
         [
             "xrpld",
-            "--template-path",
-            str(tpl),
             "--base-dir",
             str(outdir),
             "--validators",

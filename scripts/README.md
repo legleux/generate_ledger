@@ -52,34 +52,34 @@ Trustline Options:
 
 ## Parallelization Modes
 
-| Mode | Description |
-|------|-------------|
-| `seq` | Sequential (single-threaded baseline) |
-| `mp` | Multiprocessing with `ProcessPoolExecutor` |
+| Mode     | Description                                                      |
+| -------- | ---------------------------------------------------------------- |
+| `seq`    | Sequential (single-threaded baseline)                            |
+| `mp`     | Multiprocessing with `ProcessPoolExecutor`                       |
 | `thread` | Threading with `ThreadPoolExecutor` (benefits from 3.13t no-GIL) |
-| `hybrid` | Processes spawning thread pools |
-| `gpu` | GPU acceleration (stub, falls back to mp) |
+| `hybrid` | Processes spawning thread pools                                  |
+| `gpu`    | GPU acceleration (stub, falls back to mp)                        |
 
 ## Trustline Topologies
 
-| Topology | Description | Pairs per currency |
-|----------|-------------|-------------------|
-| `star` | All accounts trust account 0 (default, realistic) | n-1 |
-| `ring` | Each account trusts the next, forming a ring | n |
-| `mesh` | All pairs connected | n*(n-1)/2 |
-| `random` | Random 30% of possible pairs | ~0.3 * n*(n-1)/2 |
+| Topology | Description                                       | Pairs per currency |
+| -------- | ------------------------------------------------- | ------------------ |
+| `star`   | All accounts trust account 0 (default, realistic) | n-1                |
+| `ring`   | Each account trusts the next, forming a ring      | n                  |
+| `mesh`   | All pairs connected                               | n\*(n-1)/2         |
+| `random` | Random 30% of possible pairs                      | ~0.3 _ n_(n-1)/2   |
 
 ## Backend Performance (1000 accounts, sequential)
 
-| Algorithm | Backend | Library | Rate | Speedup |
-|-----------|---------|---------|------|---------|
-| ed25519 | native | PyNaCl (libsodium) | **22,568/sec** | 279x |
-| ed25519 | fallback | xrpl-py (ecpy) | 81/sec | 1x |
-| secp256k1 | native | coincurve (libsecp256k1) | ~15,000/sec* | ~250x |
-| secp256k1 | native | fastecdsa (GMP) | **878/sec** | 14x |
-| secp256k1 | fallback | xrpl-py (ecpy) | 61/sec | 1x |
+| Algorithm | Backend  | Library                  | Rate           | Speedup |
+| --------- | -------- | ------------------------ | -------------- | ------- |
+| ed25519   | native   | PyNaCl (libsodium)       | **22,568/sec** | 279x    |
+| ed25519   | fallback | xrpl-py (ecpy)           | 81/sec         | 1x      |
+| secp256k1 | native   | coincurve (libsecp256k1) | ~15,000/sec\*  | ~250x   |
+| secp256k1 | native   | fastecdsa (GMP)          | **878/sec**    | 14x     |
+| secp256k1 | fallback | xrpl-py (ecpy)           | 61/sec         | 1x      |
 
-*coincurve unavailable on Python 3.14, will auto-select when available
+\*coincurve unavailable on Python 3.14, will auto-select when available
 
 ## Installing Native Backends
 
@@ -193,11 +193,13 @@ The script uses a modular architecture with swappable components:
 ## What is Benchmarked
 
 **Account Generation**:
+
 - Keypair derivation (EC point multiplication)
 - Address encoding (SHA256 + RIPEMD160 + Base58Check)
 - AccountRoot index calculation (SHA512-Half)
 
 **Trustline Generation** (in-memory object creation):
+
 - RippleState index calculation (SHA512-Half with account ordering)
 - Owner directory index calculation (2 per trustline)
 - Dict construction for RippleState and DirectoryNode objects

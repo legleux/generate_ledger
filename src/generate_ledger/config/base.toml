@@ -1,0 +1,21 @@
+[server]
+node_size = "huge"
+peer_port = 2459
+rpc_admin_port = 5005
+ws_admin_port = 6006
+
+[storage]
+db_path = "/var/lib/xrpld/db"
+db_type = "NuDB"
+nudb_path = "/var/lib/xrpld/db/nudb"
+
+[rpc]
+admin_bind = "0.0.0.0"
+admin_allow = ["0.0.0.0"]
+
+[validator]
+enabled = false
+
+[logging]
+level = "info"
+file = "/var/log/xrpld/debug.log"

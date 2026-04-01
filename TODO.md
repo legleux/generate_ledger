@@ -1,6 +1,19 @@
 # TODO
 
+### Split out ledger generation
+
+Consider refactoring the repo to be even less coupled by creating a new repo `ledger_tools` that just includes the 3
+components somehow (git submodules?) such that they can stand on their own but be used as one final package.
+
 ## P0 — Critical
+
+### Clean up dead code and crufty files from config compositor refactor
+
+- Delete old `.cfg` template files (`xrpld_validator.cfg`, `xrpld_node.cfg`) — no longer used
+- Delete `template_idea/` and `template_idea_2/` directories — absorbed into main code
+- Audit `xrpld_cfg.py` for unused imports (`string.Template`, etc.) and dead code
+- Remove `--peer-port` option definition from `cli/xrpld_cfg.py` if still present (param removed but option may linger)
+- Verify no other code references the old template paths (`_VALIDATOR_TEMPLATE`, `_NODE_TEMPLATE`)
 
 ### Network startup smoke testing
 
@@ -24,7 +37,7 @@ Cognitive complexity 33 (threshold 15). Introduce `LedgerObjectGroup` protocol s
 
 ### Refactor config generation
 
-Minor validator/non-validator code duplication but the main issue is that the topology is not configurable enough. Use native keygen backends (PyNaCl) with xrpl-py fallback, same as ledger generation.
+~~Templatized:~~ ~~validator and non-validator configs now use `string.Template` with separate `.cfg` templates.~~ Replaced with layered TOML compositor: Pydantic models, section generators, `build_config()` file-based composition, `NetworkBuilder` programmatic API. Remaining: keygen should use native backends (PyNaCl) with xrpl-py fallback, same as ledger generation. CLI `gen xrpld compose` subcommand for single-node file-based config.
 
 ### Re-introduce UNL usage
 
@@ -48,9 +61,9 @@ Support generating accounts with mixed key types (ed25519 + secp256k1) in the sa
 
 ## P2 — Medium
 
-### xrpld config overlay file
+### ~~xrpld config overlay file~~
 
-Accept a TOML/JSON overlay file that overrides specific sections of the xrpld.cfg template (node_size, ports, database paths, etc.) without maintaining a full custom template. Currently `--template-path` is the only way to customize beyond the parameterized options (`--log-level`, `--peer-port`, fees, amendments).
+~~Accept a TOML/JSON overlay file that overrides specific sections of the xrpld.cfg templates.~~ Done — layered TOML compositor (`build_config()`) supports base → env → role → host layers with recursive deep merge.
 
 ### Clean up compose.py
 

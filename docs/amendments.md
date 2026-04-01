@@ -32,7 +32,7 @@ gen ledger --accounts 10 --amendment-profile develop \
 This is useful when working with a local rippled checkout, especially on a feature branch that introduces new amendments.
 
 !!! note "Supported vs. Enabled"
-    `features.macro` defines what amendments a rippled build **supports** -- not what is enabled on a live network. Amendments are enabled on mainnet only after reaching 80% validator consensus, which can lag weeks or months behind a release. The `develop` profile enables all supported amendments, matching the behavior of a freshly started test network where all supported amendments activate immediately.
+`features.macro` defines what amendments a rippled build **supports** -- not what is enabled on a live network. Amendments are enabled on mainnet only after reaching 80% validator consensus, which can lag weeks or months behind a release. The `develop` profile enables all supported amendments, matching the behavior of a freshly started test network where all supported amendments activate immediately.
 
 ### custom
 

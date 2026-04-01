@@ -17,9 +17,6 @@ class KeygenMode(StrEnum):
     docker = "docker"
 
 
-_BUNDLED_TEMPLATE = Path(__file__).parent.parent / "xrpld.cfg"
-
-
 def _pick_keygen(mode: KeygenMode):
     return keygen_xrpl if mode == KeygenMode.xrpl else keygen_docker
 
@@ -46,16 +43,6 @@ def _load_features(features_from: str | None) -> list[str] | None:
 
 @app.callback(invoke_without_command=True)
 def write(
-    template_path: Path = typer.Option(
-        _BUNDLED_TEMPLATE,
-        "--template-path",
-        "-t",
-        exists=True,
-        file_okay=True,
-        dir_okay=False,
-        readable=True,
-        help="Path to base xrpld.cfg template.",
-    ),
     base_dir: Path = typer.Option(
         Path("testnet/volumes"),
         "--base-dir",
@@ -66,10 +53,9 @@ def write(
     validators: int = typer.Option(5, "--validators", "-v", min=0, help="Number of validator nodes."),
     validator_name: str = typer.Option("val", "--validator-name", help="Prefix for validator node dirs (val0..)."),
     xrpld_name: str = typer.Option("xrpld", "--xrpld-name", help="Name for the non-validator node dir."),
-    peer_port: int = typer.Option(51235, "--peer-port", help="Port used in [ips_fixed] entries."),
-    reference_fee: int = typer.Option(10, "--reference-fee", help="Voting: reference_fee (drops)."),
-    account_reserve: int = typer.Option(int(0.2 * 1e6), "--account-reserve", help="Voting: account_reserve (drops)."),
-    owner_reserve: int = typer.Option(int(1.0 * 1e6), "--owner-reserve", help="Voting: owner_reserve (drops)."),
+    reference_fee: int | None = typer.Option(None, "--reference-fee", help="Voting: reference_fee (drops)."),
+    account_reserve: int | None = typer.Option(None, "--account-reserve", help="Voting: account_reserve (drops)."),
+    owner_reserve: int | None = typer.Option(None, "--owner-reserve", help="Voting: owner_reserve (drops)."),
     keygen: KeygenMode = typer.Option(
         KeygenMode.xrpl, "--keygen", case_sensitive=False, help="Key generation backend."
     ),
@@ -83,8 +69,8 @@ def write(
         "--amendment-majority-time",
         help="Override amendment majority time (e.g. '2 minutes').",
     ),
-    log_level: str = typer.Option(
-        "info",
+    log_level: str | None = typer.Option(
+        None,
         "--log-level",
         help="xrpld log level: trace, debug, info, warning, error, fatal.",
     ),
@@ -99,11 +85,9 @@ def write(
         validator_name=validator_name,
         xrpld_name=xrpld_name,
         base_dir=base_dir,
-        peer_port=peer_port,
         reference_fee=reference_fee,
         account_reserve=account_reserve,
         owner_reserve=owner_reserve,
-        template_path=template_path,
         keygen=_pick_keygen(keygen),
         features=features,
         amendment_majority_time=amendment_majority_time,
