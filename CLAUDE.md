@@ -144,7 +144,7 @@ See `docs/library-usage.md` for full usage guide.
 - `tests/lib/` — Unit tests for core modules (indices, accounts, trustlines, amm, amendments, etc.)
 - `tests/cli/` — CLI tests and parser tests
 - `tests/integration/` — Full pipeline tests through `gen_ledger_state()`
-- `tests/smoke/` — Network smoke tests (Docker required, skipped by default, run with `-m smoke`)
+- `tests/smoke/` — Network smoke tests (Docker required, skipped by default, run with `-m smoke`). Payment ring uses full consensus network; AMM and MPT tests use standalone mode (single container, `ledger_accept` RPC)
 
 ## Working Principles
 
@@ -166,8 +166,8 @@ See `docs/library-usage.md` for full usage guide.
 - Gateway topology (star/mesh), fast trustline generation, lsfDefaultRipple on issuers
 - MPT (Multi-Purpose Tokens) — `mpt.py` (promoted from develop/, MPTokensV1 enabled on mainnet since 2025-10-01)
 - Fast ed25519 account generation via PyNaCl (~25k/sec), GPU backend via CuPy (~535k/sec with indices)
-- Test suite: ~548 tests across unit, CLI, integration, scripts, and smoke (GPU tests skip without CUDA, smoke tests skip by default)
-- P0 smoke test: generates network via CLI, boots Docker, submits 100 async Payment transactions, verifies balances
+- Test suite: ~548 unit/CLI/integration tests (GPU tests skip without CUDA) + 3 smoke tests (Docker, skipped by default)
+- Smoke tests: Payment ring (100 accounts, async submit, balance verification), AMM CLOB (issued/issued pools cross OfferCreate), MPT transfer (issuance → authorize → fund → transfer)
 
 ### Planned (v2.0)
 

@@ -19,6 +19,7 @@ import json
 import os
 import subprocess
 import time
+import uuid
 
 import pytest
 from xrpl.asyncio.clients import AsyncJsonRpcClient
@@ -64,16 +65,24 @@ def accounts(testnet_dir):
 
 
 @pytest.fixture(scope="module")
-def network(testnet_dir):
+def compose_project():
+    """Unique compose project name to avoid container name conflicts."""
+    return f"smoke_ring_{uuid.uuid4().hex[:8]}"
+
+
+@pytest.fixture(scope="module")
+def network(testnet_dir, compose_project):
     """Start the network with docker compose, wait for proposing, yield client."""
     compose_file = str(testnet_dir / "docker-compose.yml")
+    compose_cmd = ["docker", "compose", "-f", compose_file, "-p", compose_project]
 
     print(f"\n  Testnet dir: {testnet_dir}")
     print(f"  Compose file: {compose_file}")
-    print(f"  To tear down: docker compose -f {compose_file} down -v")
+    print(f"  Project: {compose_project}")
+    print(f"  To tear down: docker compose -f {compose_file} -p {compose_project} down -v")
 
     subprocess.run(
-        ["docker", "compose", "-f", compose_file, "up", "-d"],
+        [*compose_cmd, "up", "-d"],
         check=True,
         timeout=30,
     )
@@ -89,20 +98,20 @@ def network(testnet_dir):
         print(f"  val0 state after 10s: {early_state}")
         if early_state not in ("syncing", "tracking", "full", "validating", "proposing"):
             logs = subprocess.run(
-                ["docker", "compose", "-f", compose_file, "logs", "--tail=20"],
+                [*compose_cmd, "logs", "--tail=20"],
                 capture_output=True,
                 text=True,
                 check=False,
             )
             if not KEEP_NETWORK:
-                subprocess.run(["docker", "compose", "-f", compose_file, "down", "-v"], check=False, timeout=15)
+                subprocess.run([*compose_cmd, "down", "-v"], check=False, timeout=15)
             pytest.fail(
                 f"val0 in unexpected state '{early_state}' after 10s (expected syncing or better).\n"
                 f"Logs:\n{logs.stdout}"
             )
     except Exception as e:
         if not KEEP_NETWORK:
-            subprocess.run(["docker", "compose", "-f", compose_file, "down", "-v"], check=False, timeout=15)
+            subprocess.run([*compose_cmd, "down", "-v"], check=False, timeout=15)
         pytest.fail(f"Cannot reach val0 RPC after 10s: {e}")
 
     # Wait for proposing
@@ -120,13 +129,13 @@ def network(testnet_dir):
         time.sleep(1)
     else:
         logs = subprocess.run(
-            ["docker", "compose", "-f", compose_file, "logs", "--tail=30"],
+            [*compose_cmd, "logs", "--tail=30"],
             capture_output=True,
             text=True,
             check=False,
         )
         if not KEEP_NETWORK:
-            subprocess.run(["docker", "compose", "-f", compose_file, "down", "-v"], check=False, timeout=15)
+            subprocess.run([*compose_cmd, "down", "-v"], check=False, timeout=15)
         pytest.fail(
             f"Network stuck in '{last_state}' (not 'proposing') after {NETWORK_TIMEOUT}s.\nLogs:\n{logs.stdout}"
         )
@@ -136,10 +145,10 @@ def network(testnet_dir):
     if KEEP_NETWORK:
         print("\n  SMOKE_KEEP_NETWORK=1: leaving network running.")
         print(f"  Testnet dir: {testnet_dir}")
-        print(f"  To tear down: docker compose -f {compose_file} down -v")
+        print(f"  To tear down: docker compose -f {compose_file} -p {compose_project} down -v")
     else:
         subprocess.run(
-            ["docker", "compose", "-f", compose_file, "down", "-v"],
+            [*compose_cmd, "down", "-v"],
             check=False,
             timeout=15,
         )

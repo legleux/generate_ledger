@@ -23,6 +23,8 @@ Every object type should have an associated test that:
 2. Starts the network
 3. Confirms transactions using those generated objects succeed (e.g. using a generated account, a `Payment` transaction can be sent)
 
+**Done:** Accounts/XRP (`test_payment_ring.py`), AMM pools (`test_amm_autobridge.py` — issued/issued AMM CLOB), MPT (`test_mpt_transfer.py` — issuance/authorize/fund/transfer). **Remaining:** Trustlines, Gateways, Offers (when implemented).
+
 ### Live validation
 
 Verify generated ledgers actually boot on xrpld and amendments are active — not just correct JSON. This is the foundation for smoke testing above.
