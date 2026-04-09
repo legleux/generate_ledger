@@ -114,7 +114,7 @@ def start_standalone_node(
 
 def stop_container(container_name: str) -> None:
     """Remove a Docker container by name."""
-    subprocess.run(["docker", "rm", "-f", container_name], check=False, timeout=15)
+    subprocess.run(["docker", "rm", "-f", container_name], check=False, timeout=15, capture_output=True)
 
 
 def ledger_accept(client: JsonRpcClient) -> None:

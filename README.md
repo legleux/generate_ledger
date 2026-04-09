@@ -2,14 +2,6 @@
 
 Generate custom XRPL genesis ledgers and complete test network environments — accounts, trustlines, AMM pools, validator configs, and docker-compose — in seconds.
 
-## First order of business, rename
-
-- `ledgen` - My initial thought but maybe prone to typos aad or misunderstanding?
-- `xrpl-genesis` - Genesis ledger is automatic, `xrpl-pre-genesis` more accurate?
-- `ledgectl` - Doesn't really control.
-- `ledgergen` - Boring.
-- `ledgerforge` - Heavy
-
 ## Quickstart
 
 ```bash
@@ -125,7 +117,6 @@ Bare `gen` supports all ledger options (gateways, AMM, trustlines, amendments, f
 | Option                      | Default                  | Description                                            |
 | --------------------------- | ------------------------ | ------------------------------------------------------ |
 | `--validators` / `-v`       | 5                        | Number of validator nodes                              |
-| `--peer-port`               | 51235                    | Port used in `[ips_fixed]` entries                     |
 | `--amendment-majority-time` | —                        | Override amendment majority time (e.g. `2 minutes`)    |
 | `--log-level`               | `info`                   | xrpld log level (trace/debug/info/warning/error/fatal) |
 | `--image`                   | `rippleci/xrpld:develop` | Docker image for xrpld nodes                           |
@@ -237,8 +228,6 @@ uv run gen xrpld --validators 5 --base-dir ./testnet/volumes
 | --------------------------- | ----------------- | ------------------------------------------------------ |
 | `--validators` / `-v`       | 5                 | Number of validator nodes                              |
 | `--base-dir` / `-b`         | `testnet/volumes` | Output directory for node subdirs                      |
-| `--template-path` / `-t`    | built-in          | Path to base `xrpld.cfg` template                      |
-| `--peer-port`               | 51235             | Port for `[ips_fixed]` entries                         |
 | `--reference-fee`           | 10                | Voting: reference fee (drops)                          |
 | `--account-reserve`         | 200000            | Voting: account reserve (drops)                        |
 | `--owner-reserve`           | 1000000           | Voting: owner reserve (drops)                          |
@@ -261,20 +250,76 @@ This is handled automatically by `gen` when generating the full environment.
 
 ## Development
 
+### Install
+
 ```bash
-# Run tests (GPU tests skip automatically if GPU group not installed)
-uv run pytest
+uv sync                    # core + fast crypto (PyNaCl, coincurve)
+uv sync --extra fast       # explicit: just the fast crypto backends
+uv sync --group gpu        # + CuPy/CUDA (optional, requires NVIDIA GPU)
+uv sync --group dev        # + lint, test, docs tools
+```
 
-# Run tests with GPU backend
-uv sync --group gpu
-uv run pytest
+### Running Tests
 
-# Lint
-uv run ruff check .
+The default `pytest` addopts exclude smoke tests (Docker-dependent) and network tests (full consensus):
 
-# Build locally (sdist + wheel → dist/)
-uv build
+```bash
+# Unit, CLI, integration, and benchmark tests (~548 tests)
+pytest
 
-# Run benchmarks (see scripts/README.md)
-uv run scripts/bench_accounts.py --accounts 10000 --mode seq
+# All tests except the slow consensus network test (requires Docker)
+pytest -m "" --no-cov -v -s -k "not payment_ring"
+
+# All tests including the full consensus network test (requires Docker + ~2 min)
+pytest -m "" --no-cov -v -s
+
+# Just the smoke tests (requires Docker)
+pytest tests/smoke/ -m smoke --no-cov -v -s
+
+# Keep Docker containers running after smoke tests (for debugging)
+SMOKE_KEEP_NETWORK=1 pytest tests/smoke/ -m smoke --no-cov -v -s
+```
+
+GPU tests skip automatically when the `gpu` group isn't installed or no GPU is available.
+
+### Lint
+
+```bash
+ruff check .          # lint
+ruff check . --fix    # auto-fix
+ruff format .         # format
+```
+
+### Benchmarks
+
+```bash
+# Account generation (CPU)
+uv run scripts/bench_accounts.py --accounts 10000
+
+# Account generation (GPU)
+uv run scripts/bench_accounts.py --accounts 100000 --gpu
+
+# Compare all backends (ed25519/secp256k1, native/fallback, GPU if available)
+uv run scripts/bench_accounts.py --compare
+
+# Trustline generation
+uv run scripts/bench_accounts.py --accounts 1000 --target trustlines
+
+# Full pipeline (ledger.json generation end-to-end)
+uv run scripts/bench_accounts.py --pipeline
+
+# Multiple iterations with stddev
+uv run scripts/bench_accounts.py --accounts 10000 --iterations 5
+
+# JSON output (for tables/CI)
+uv run scripts/bench_accounts.py --compare --json
+uv run scripts/bench_accounts.py --compare --output results.json
+```
+
+Output is a human-readable table by default. Use `--json` or `--output FILE` for machine-readable results.
+
+### Build
+
+```bash
+uv build    # sdist + wheel → dist/
 ```

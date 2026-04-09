@@ -32,7 +32,8 @@ classifiers = [
 gen = "generate_ledger.cli.main:cli"
 
 [build-system]
-  requires = ["uv_build"]
+  requires = ["uv_build>=0.8.0,<0.12.0"]
+
   build-backend = "uv_build"
 
 # [build-system]
@@ -104,12 +105,13 @@ gpu = [
 [tool.pytest.ini_options]
 # minversion = "8.0"
 # addopts = "-q"
-addopts = "-rP --cov --cov-report=term-missing:skip-covered -m 'not smoke'"
+addopts = "-rP --cov --cov-report=term-missing:skip-covered -m 'not smoke and not network'"
 # addopts = "-rx"
 # addopts = "-qrP"
 # testpaths = ["tests"]
 markers = [
-    "smoke: Smoke tests requiring Docker and a running network (deselected by default)",
+    "smoke: Smoke tests requiring Docker (deselected by default)",
+    "network: Tests that docker-compose up a full consensus network (deselected by default)",
 ]
 
 [tool.coverage.run]

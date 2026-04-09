@@ -2,6 +2,7 @@ import random
 from dataclasses import dataclass
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from xrpl.core.addresscodec import decode_classic_address
 
 from generate_ledger.accounts import Account
 from generate_ledger.constants import NEUTRAL_ISSUER
@@ -100,8 +101,8 @@ def generate_trustline_objects(
 
 
 def order_low_high(addr_a: str, addr_b: str) -> tuple[str, str]:
-    """Return (lo, hi) addresses ordered by lexicographic byte comparison of the address strings."""
-    if addr_a.encode() < addr_b.encode():
+    """Return (lo, hi) addresses ordered by raw AccountID bytes, matching xrpld."""
+    if decode_classic_address(addr_a) < decode_classic_address(addr_b):
         return addr_a, addr_b
     return addr_b, addr_a
 
