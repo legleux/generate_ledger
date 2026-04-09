@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - CLI: `gen ledger` and `gen auto` no longer require double subcommand name (was `gen ledger ledger`)
 - Amendments: `develop` profile auto-fetches amendment list from GitHub; `release` profile queries mainnet RPC
-- All imports standardized to `from generate_ledger.*` (`gl` alias remains as a dev-only convenience)
+- All imports standardized to `from generate_ledger.*` (`gl` alias package removed)
 - Removed bundled `amendments_develop.json`; renamed `amendments_release.json` to `amendments_mainnet.json`
 - Dead CLI files removed (`cli/__init__.py`, `cli/compose.py`); `auto.py` renamed to `click_builder.py`
 - Backend tiers: `fast` dependency group is no longer included in `dev` by default

@@ -50,16 +50,6 @@ Built with mkdocs-material. Source in `docs/`, config in `mkdocs.yml`, build out
 
 ## Architecture
 
-### Package Alias: `gl` → `generate_ledger`
-
-The package is installed as `generate_ledger` (under `src/generate_ledger/`), with a thin alias package at `src/gl/__init__.py` that re-exports everything. **All official code (src, tests, docs) uses the full `generate_ledger.*` import path.** The `gl` alias exists only as a developer convenience and should not be used in committed code.
-
-```python
-from generate_ledger.accounts import Account, generate_accounts
-from generate_ledger.indices import account_root_index
-from generate_ledger.amendments import get_enabled_amendment_hashes
-```
-
 ### Shared Modules
 
 - **`constants.py`** — Centralized XRPL flag constants (`LSF_DEFAULT_RIPPLE`, `AMM_ACCOUNT_FLAGS`, `TXN_PREFIX`, `NEUTRAL_ISSUER`) used across trustlines, AMM, and ledger_builder

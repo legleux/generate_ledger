@@ -30,11 +30,10 @@ classifiers = [
   Repository = "https://github.com/legleux/generate_ledger"
 
 [project.scripts]
-gen = "generate_ledger.cli.main:cli"
+  gen = "generate_ledger.cli.main:cli"
 
 [build-system]
   requires = ["uv_build>=0.8.0,<0.12.0"]
-
   build-backend = "uv_build"
 
 # [build-system]
@@ -52,56 +51,55 @@ gen = "generate_ledger.cli.main:cli"
 # ]
 
 [tool.ruff]
-target-version = "py313"
-line-length = 120
-force-exclude = true
-exclude = [
-]
+  target-version = "py313"
+  line-length = 120
+  force-exclude = true
+  exclude = []
 
 [tool.ruff.lint]
-select = ["E","F","I","W","B","UP","ISC","PL","RUF"]
-ignore = [
+  select = ["E","F","I","W","B","UP","ISC","PL","RUF"]
+  ignore = [
     "E203",
     "B008",      # typer.Option() in function defaults — standard typer/click pattern
     "PLR0913",   # too many arguments — unavoidable in CLI commands and builders
     "PLR0912",   # too many branches — complex parsers
     "PLR0915",   # too many statements — complex functions
-]
+  ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["generate_ledger", "gl"]
+  known-first-party = ["generate_ledger"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["PLR2004", "PLC0415"]
-"scripts/**" = ["PLR2004", "PLC0415", "PLW0603", "RUF001"]
+  "tests/**" = ["PLR2004", "PLC0415"]
+  "scripts/**" = ["PLR2004", "PLC0415", "PLW0603", "RUF001"]
 
 [dependency-groups]
-dev = [
-  { include-group = "lint" },
-  { include-group = "test" },
-  "complexipy>=5.2.0",
-  "radon>=6.0.1",
-  "mkdocs-material>=9.6.0",
-]
-lint = [
-  "pre-commit>=4.2.0",
-  "ruff>=0.12.11",
-]
-test = [
-  "pytest>=8.4.1",
-  "pytest-cov>=6.0",
-]
+  dev = [
+    { include-group = "lint" },
+    { include-group = "test" },
+    "complexipy>=5.2.0",
+    "radon>=6.0.1",
+    "mkdocs-material>=9.6.0",
+  ]
+  lint = [
+    "pre-commit>=4.2.0",
+    "ruff>=0.12.11",
+  ]
+  test = [
+    "pytest>=8.4.1",
+    "pytest-cov>=6.0",
+  ]
 
 [project.optional-dependencies]
-fast = [
-  "coincurve>=20.0.0,<21.0.0",
-  "pynacl>=1.5.0",
-]
-gpu = [
-  "cupy-cuda12x>=13.0.0",
-  "nvidia-cuda-nvcc-cu12>=12.9.86",
-  "nvidia-cuda-nvrtc-cu12>=12.9.86",
-]
+  fast = [
+    "coincurve>=20.0.0,<21.0.0",
+    "pynacl>=1.5.0",
+  ]
+  gpu = [
+    "cupy-cuda12x>=13.0.0",
+    "nvidia-cuda-nvcc-cu12>=12.9.86",
+    "nvidia-cuda-nvrtc-cu12>=12.9.86",
+  ]
 
 [tool.pytest.ini_options]
 # minversion = "8.0"
@@ -111,20 +109,19 @@ addopts = "-rP --cov --cov-report=term-missing:skip-covered -m 'not smoke and no
 # addopts = "-qrP"
 # testpaths = ["tests"]
 markers = [
-    "smoke: Smoke tests requiring Docker (deselected by default)",
-    "network: Tests that docker-compose up a full consensus network (deselected by default)",
+  "smoke: Smoke tests requiring Docker (deselected by default)",
+  "network: Tests that docker-compose up a full consensus network (deselected by default)",
 ]
 
 [tool.coverage.run]
 source = ["src/generate_ledger"]
-
 omit = []
 
 [tool.coverage.report]
-show_missing = true
-fail_under = 85
-exclude_lines = [
-    "pragma: no cover",
-    "if __name__",
-    "if TYPE_CHECKING",
-]
+  show_missing = true
+  fail_under = 85
+  exclude_lines = [
+      "pragma: no cover",
+      "if __name__",
+      "if TYPE_CHECKING",
+  ]
