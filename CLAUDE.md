@@ -127,14 +127,14 @@ See `docs/library-usage.md` for full usage guide.
 
 - **Framework**: pytest with pytest-cov
 - **Coverage**: enforced at 85% minimum (`fail_under = 85`), currently ~92%
-- **Default addopts**: `-rP --cov --cov-report=term-missing:skip-covered`
+- **Default addopts**: `-rP --cov --cov-report=term-missing:skip-covered -m 'not smoke and not network'`
 - **CI matrix**: Python 3.12, 3.13, 3.14 on Debian bookworm + trixie, plus macOS latest
 
 ### Key Test Fixtures (conftest.py)
 
 - `_sandbox_base_dir` (autouse) — Redirects `GL_BASE_DIR` to tmp_path so tests never touch real files
 - `_no_network_amendment_fetch` (autouse) — Blocks GitHub fetch and mainnet RPC; develop profile falls back to `GL_FEATURES_MACRO` env var pointing at `tests/data/features_develop.macro`, release profile falls back to bundled `amendments_mainnet.json`
-- `alice_account` / `bob_account` — Deterministic accounts with known addresses/seeds
+- `alice` / `bob` — Deterministic accounts with known addresses/seeds
 - `sample_amendment_hashes` — Loads from test fixture `tests/data/amendments_develop.json`
 - `MAINNET_AMENDMENT_COUNT`, `MAINNET_RETIRED_COUNT`, etc. — Derived from `amendments_mainnet.json` at import time so tests stay in sync with data
 - Known-good index constants: `GENESIS_INDEX`, `ALICE_INDEX`, `BOB_INDEX`, `AMENDMENTS_INDEX` (verified against running xrpld)
@@ -144,7 +144,10 @@ See `docs/library-usage.md` for full usage guide.
 - `tests/lib/` — Unit tests for core modules (indices, accounts, trustlines, amm, amendments, etc.)
 - `tests/cli/` — CLI tests and parser tests
 - `tests/integration/` — Full pipeline tests through `gen_ledger_state()`
-- `tests/smoke/` — Network smoke tests (Docker required, skipped by default, run with `-m smoke`). Payment ring uses full consensus network; AMM and MPT tests use standalone mode (single container, `ledger_accept` RPC)
+- `tests/smoke/` — Network smoke tests (Docker required, skipped by default, run with `-m smoke`). Payment ring uses full consensus network; AMM, MPT, and trustline balance tests use standalone mode (single container, `ledger_accept` RPC)
+- `tests/xrpl_validators.py` — Shared assertion helpers for validating XRPL ledger objects (RippleState, DirectoryNode, AccountRoot, AMM). Checks structural correctness (hex indices, field types) and semantic correctness (Low/High ordering by decoded AccountID bytes, currency consistency, AMM flag invariants)
+- `tests/smoke/helpers.py` — Shared smoke test utilities: standalone node startup/teardown, transaction submission, ledger advancement, trustline balance queries
+- `tests/smoke/conftest.py` — Shared smoke fixtures: `accounts` (loads accounts.json), `container_name` (UUID-suffixed), `network` (standalone node lifecycle)
 
 ## Working Principles
 
@@ -166,8 +169,8 @@ See `docs/library-usage.md` for full usage guide.
 - Gateway topology (star/mesh), fast trustline generation, lsfDefaultRipple on issuers
 - MPT (Multi-Purpose Tokens) — `mpt.py` (promoted from develop/, MPTokensV1 enabled on mainnet since 2025-10-01)
 - Fast ed25519 account generation via PyNaCl (~25k/sec), GPU backend via CuPy (~535k/sec with indices)
-- Test suite: ~548 unit/CLI/integration tests (GPU tests skip without CUDA) + 3 smoke tests (Docker, skipped by default)
-- Smoke tests: Payment ring (100 accounts, async submit, balance verification), AMM CLOB (issued/issued pools cross OfferCreate), MPT transfer (issuance → authorize → fund → transfer)
+- Test suite: ~548 unit/CLI/integration tests (GPU tests skip without CUDA) + 4 smoke tests (Docker, skipped by default)
+- Smoke tests: Payment ring (100 accounts, async submit, balance verification), AMM CLOB (issued/issued pools cross OfferCreate), MPT transfer (issuance → authorize → fund → transfer), Trustline balance (gateway IOU, verify balance sign from both perspectives)
 
 ### Planned (v2.0)
 
