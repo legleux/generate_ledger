@@ -8,6 +8,7 @@ from generate_ledger.trustlines import (
     generate_trustline_objects,
     generate_trustlines,
 )
+from tests.xrpl_validators import assert_valid_ripple_state
 
 # TODO: Constant
 TXN_ID_LEN = 64
@@ -47,12 +48,9 @@ class TestGenerateTrustlineObjects:
         assert len(rs["index"]) == 64
 
     def test_high_low_ordering(self, alice, bob):
-        """HighLimit/LowLimit accounts are ordered lexicographically."""
+        """HighLimit/LowLimit accounts are ordered by raw AccountID bytes."""
         tl = generate_trustline_objects(alice, bob, "USD", 1_000_000_000)
-        rs = tl.ripple_state
-        lo = rs["LowLimit"]["issuer"]
-        hi = rs["HighLimit"]["issuer"]
-        assert lo.encode() < hi.encode()
+        assert_valid_ripple_state(tl.ripple_state)
 
     def test_directory_node_structure(self, alice, bob):
         tl = generate_trustline_objects(alice, bob, "USD", 1_000_000_000)

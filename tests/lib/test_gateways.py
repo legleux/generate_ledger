@@ -12,6 +12,7 @@ from generate_ledger.gateways import (
     generate_trustline_objects_fast,
 )
 from generate_ledger.trustlines import TrustlineObjects
+from tests.xrpl_validators import assert_valid_ripple_state
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -99,10 +100,7 @@ class TestGenerateTrustlineObjectsFast:
 
     def test_high_low_ordering(self, accounts):
         tl = generate_trustline_objects_fast(accounts[0], accounts[1], "USD", 1000)
-        rs = tl.ripple_state
-        lo = rs["LowLimit"]["issuer"]
-        hi = rs["HighLimit"]["issuer"]
-        assert lo.encode() < hi.encode()
+        assert_valid_ripple_state(tl.ripple_state)
 
     def test_directory_nodes_reference_rsi(self, accounts):
         tl = generate_trustline_objects_fast(accounts[0], accounts[1], "USD", 1000)
