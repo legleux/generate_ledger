@@ -1,3 +1,4 @@
+---
 name: Tests
 
 on:
@@ -42,7 +43,8 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
           # Summary counts
-          total=$(uv run complexipy src/generate_ledger/ --max-complexity-allowed 15 2>&1 | grep -c "PASSED\|FAILED" || true)
+          total=$(uv run complexipy src/generate_ledger/ --max-complexity-allowed 15 2>&1 | \
+            grep -c "PASSED\|FAILED" || true)
           passed=$(uv run complexipy src/generate_ledger/ --max-complexity-allowed 15 2>&1 | grep -c "PASSED" || true)
           failed=$(uv run complexipy src/generate_ledger/ --max-complexity-allowed 15 2>&1 | grep -c "FAILED" || true)
 

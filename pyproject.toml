@@ -1,12 +1,12 @@
 [project]
 name = "generate-ledger"
-version = "0.0.8"
+version = "0.1.0"
 description = "Generate custom XRPL genesis ledgers and test network environments"
-readme = "README.md"
-authors = [
-    { name = "Michael Legleux", email = "legleux@gmail.com" }
-]
+authors = [{ name = "Michael Legleux", email = "legleux@gmail.com" }]
 requires-python = ">=3.13"
+readme = "README.md"
+license = { text = "ISC" }
+
 dependencies = [
     "base58>=2.1.1",
     "pydantic>=2.11.7",
@@ -16,24 +16,38 @@ dependencies = [
     "xrpl-py>=4.2.0",
 ]
 
-[project.scripts]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "License :: OSI Approved :: ISC License (ISCL)",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
 
+[project.urls]
+  Issues = "https://github.com/legleux/generate_ledger/issues"
+  Repository = "https://github.com/legleux/generate_ledger"
+
+[project.scripts]
 gen = "generate_ledger.cli.main:cli"
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+  requires = ["uv_build"]
+  build-backend = "uv_build"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/generate_ledger"]
+# [build-system]
+# requires = ["hatchling"]
+# build-backend = "hatchling.build"
 
-[tool.hatch.build.targets.sdist]
-include = [
-  "src/generate_ledger",
-  "pyproject.toml",
-  "README.md",
-#   "LICENSE*",
-]
+# [tool.hatch.build.targets.wheel]
+# packages = ["src/generate_ledger"]
+
+# [tool.hatch.build.targets.sdist]
+# include = [
+#   "src/generate_ledger",
+#   "pyproject.toml",
+#   "README.md",
+# ]
 
 [tool.ruff]
 target-version = "py313"
@@ -61,28 +75,30 @@ known-first-party = ["generate_ledger", "gl"]
 
 [dependency-groups]
 dev = [
-  {include-group = "lint"},
-  {include-group = "test"},
+  { include-group = "lint" },
+  { include-group = "test" },
   "complexipy>=5.2.0",
   "radon>=6.0.1",
   "mkdocs-material>=9.6.0",
 ]
 lint = [
-    "pre-commit>=4.2.0",
-    "ruff>=0.12.11",
+  "pre-commit>=4.2.0",
+  "ruff>=0.12.11",
 ]
 test = [
-    "pytest>=8.4.1",
-    "pytest-cov>=6.0",
+  "pytest>=8.4.1",
+  "pytest-cov>=6.0",
 ]
+
+[project.optional-dependencies]
 fast = [
-    "coincurve>=20.0.0,<21.0.0",
-    "pynacl>=1.5.0",
+  "coincurve>=20.0.0,<21.0.0",
+  "pynacl>=1.5.0",
 ]
 gpu = [
-    "cupy-cuda12x>=13.0.0",
-    "nvidia-cuda-nvcc-cu12>=12.9.86",
-    "nvidia-cuda-nvrtc-cu12>=12.9.86",
+  "cupy-cuda12x>=13.0.0",
+  "nvidia-cuda-nvcc-cu12>=12.9.86",
+  "nvidia-cuda-nvrtc-cu12>=12.9.86",
 ]
 
 [tool.pytest.ini_options]

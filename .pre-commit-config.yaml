@@ -1,43 +1,72 @@
+---
+# ci:
+# autoupdate_schedule: monthly
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # v6.0.0
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # frozen: v6.0.0
     hooks:
-      - id: trailing-whitespace
-        stages: [pre-commit]
+      - id: check-added-large-files
+        args: [--maxkb=2000, --enforce-all]
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: check-yaml
+        args: [--allow-multiple-documents, --unsafe]
+      - id: detect-private-key
       - id: end-of-file-fixer
-        stages: [pre-commit]
+      - id: trailing-whitespace
+
+  # - id: check-docstring-first
+  # - id: name-tests-test
+
+  - repo: https://github.com/rhysd/actionlint
+    rev: 914e7df21a07ef503a81201c76d2b11c789d3fca # frozen: v1.7.12
+    hooks:
+      - id: actionlint
+
+  - repo: https://github.com/adrienverge/yamllint.git
+    rev: cba56bcde1fdd01c1deb3f945e69764c291a6530 # frozen: v1.38.0
+    hooks:
+      - id: yamllint
+        args: [--config-file=.github/linters/.yamllint.yml, --strict]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: e05c5c0818279e5ac248ac9e954431ba58865e61 # v0.15.7
+    rev: c60c980e561ed3e73101667fe8365c609d19a438 # frozen: v0.15.9
     hooks:
       - id: ruff-check
-        stages: [pre-commit]
       - id: ruff-format
-        stages: [pre-commit]
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: 2ca41cc1372d1e939a6a879f18cdc19fc1cac1ce # frozen: v8.30.0
+    hooks:
+      - id: gitleaks
 
   - repo: https://github.com/streetsidesoftware/cspell-cli
-    rev: a42085ade523f591dca134379a595e7859986445 # v9.7.0
+    rev: 4643f154907327ee0a2c7038f0296e0dd77d9776 # frozen: v10.0.0
     hooks:
       - id: cspell
-        stages: [pre-commit]
+
+  - repo: https://github.com/rbubley/mirrors-prettier
+    rev: c2bc67fe8f8f549cc489e00ba8b45aa18ee713b1 # frozen: v3.8.1
+    hooks:
+      - id: prettier
+        files: \.(yml|yaml)$
 
   - repo: local
     hooks:
       - id: conventional-pre-commit
         name: Conventional Commit
         language: system
-        entry: sh -c 'case "$(git branch --show-current)" in main|develop) uvx conventional-pre-commit "$@";; *) exit 0;; esac' --
+        entry: >
+          sh -c 'branch="$(git branch --show-current)";
+          case "$branch" in
+            main|release/*) exec uvx conventional-pre-commit "$@" ;;
+            *) exit 0 ;;
+          esac' --
         stages: [commit-msg]
         always_run: true
 
-  - repo: https://github.com/rbubley/mirrors-prettier
-    rev: c2bc67fe8f8f549cc489e00ba8b45aa18ee713b1 # v3.8.1
-    hooks:
-      - id: prettier
-        stages: [pre-commit]
-
-  - repo: local
-    hooks:
       - id: pytest
         name: pytest
         entry: uv run pytest tests/ -x -q --no-header
@@ -45,3 +74,25 @@ repos:
         always_run: true
         pass_filenames: false
         stages: [pre-push]
+
+      - id: yaml-document-start
+        name: Add YAML document start
+        language: system
+        files: \.(yml|yaml)$
+        entry: >
+          sh -c '
+          for f in "$@"; do
+            # Skip empty files
+            [ ! -s "$f" ] && continue
+
+            # Get first non-empty line (trim whitespace)
+            first="$(grep -m1 -v "^[[:space:]]*$" "$f" | tr -d "[:space:]")"
+
+            if [ "$first" != "---" ]; then
+              tmp=$(mktemp)
+              printf -- "---\n" > "$tmp"
+              cat "$f" >> "$tmp"
+              mv "$tmp" "$f"
+            fi
+          done
+          ' --

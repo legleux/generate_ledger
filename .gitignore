@@ -1,9 +1,9 @@
-.venv
-testnet/
-.coverage
 __pycache__/
-.complexipy_cache/
 .claude/
+.complexipy_cache/
+.coverage
 .specify/
+.venv
 .vscode/
+/testnet/
 site/

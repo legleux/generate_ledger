@@ -1,12 +1,11 @@
+---
 services:
   val0:
     image: rippleci/rippled:latest
     container_name: val0
     hostname: val0
-    command: [
-      "--start",
-      # "--ledgerfile", "/srv/ledger.json",
-      ]
+    command:
+      - "--start"
     ports:
       - 5005:5005
       - 6006:6006
@@ -22,10 +21,8 @@ services:
     image: rippleci/rippled:latest
     container_name: val1
     hostname: val1
-    command: [
-      "--start",
-      # "--ledgerfile", "/srv/ledger.json",
-      ]
+    command:
+      - "--start"
     # ports:
     #   - 5006:5005
     #   - 6007:6006

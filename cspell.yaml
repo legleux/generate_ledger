@@ -1,0 +1,68 @@
+---
+version: "0.2"
+language: en
+useGitignore: true
+
+dictionaryDefinitions:
+  - name: project-words
+    path: ./cspell-words.txt
+    # addWords: true
+
+dictionaries:
+  - python
+  - softwareTerms
+  - project-words
+
+ignorePaths:
+  - ".git/**"
+  - ".venv/**"
+  - .pre-commit-config.yaml
+  - "*.bin"
+  - "*.jpeg"
+  - "*.jpg"
+  - "*.lock"
+  - "*.log"
+  - "*.min.*"
+  - "*.pdf"
+  - "*.png"
+  - "*.svg"
+  - mkdocs.yml
+  - samples/
+  - tests/
+  - uv.lock
+  - build/**
+  - dist/**
+  - node_modules/**
+
+ignoreRegExpList:
+  - "/0x[0-9a-fA-F]+/" # hex
+  - "/[A-Fa-f0-9]{32,}/" # hashes
+  - "/\\b[A-Z0-9_]{3,}\\b/" # CONSTANTS / acronyms
+  - "/\\b\\w*\\d+\\w*\\b/" # words with numbers
+  - "/0x[0-9a-fA-F]+/g"
+  - "/[0-9a-fA-F]{8,}/g"
+  - "/r[a-zA-Z1-9]{24,34}/g"
+  - "/s[a-zA-Z1-9]{20,32}/g"
+  - "/\\w*Backend\\w*/g"
+
+overrides:
+  - filename: "**/.gitignore"
+    ignoreRegExpList:
+      - "/[\\w./*-]+/"
+
+  - filename: "*.md"
+    ignoreRegExpList: ["/```[\\s\\S]*?```/"]
+
+  - filename: "**/*.cu"
+    ignoreRegExpList: ["/ULL/g", "/__\\w+/g"]
+
+  - filename: "**/*.sh"
+    ignoreRegExpList: ["/[A-Z_]{2,}/g"]
+
+  - filename: "*.json"
+    allowCompoundWords: true
+
+  - filename: "*.yml"
+    allowCompoundWords: true
+
+allowCompoundWords: true
