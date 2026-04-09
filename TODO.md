@@ -2,8 +2,7 @@
 
 ### Split out ledger generation
 
-Consider refactoring the repo to be even less coupled by creating a new repo `ledger_tools` that just includes the 3
-components somehow (git submodules?) such that they can stand on their own but be used as one final package.
+Consider refactoring the repo to be even less coupled by creating a new repo `ledger_tools` that just includes the 3 components somehow (git submodules?) such that they can stand on their own but be used as one final package.
 
 ## P0 — Critical
 

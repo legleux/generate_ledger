@@ -318,6 +318,21 @@ uv run scripts/bench_accounts.py --compare --output results.json
 
 Output is a human-readable table by default. Use `--json` or `--output FILE` for machine-readable results.
 
+### Complexity Reports
+
+```bash
+# Cognitive complexity (functions exceeding threshold are flagged)
+uv run complexipy src/generate_ledger/ --max-complexity-allowed 15
+
+# Cognitive complexity with CSV output
+uv run complexipy src/generate_ledger/ --max-complexity-allowed 15 --output-csv
+
+# Cyclomatic complexity (average + per-function, hide A/B grades)
+uv run radon cc src/generate_ledger/ -a -nc
+```
+
+Both run in CI (informational only — they don't gate merges).
+
 ### Build
 
 ```bash
