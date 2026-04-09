@@ -2,7 +2,6 @@
 
 import pytest
 
-from generate_ledger.accounts import Account
 from generate_ledger.indices import mpt_id_to_hex, mpt_issuance_index, mptoken_index
 from generate_ledger.ledger import LedgerConfig, MPTHolderConfig, MPTIssuanceConfig
 from generate_ledger.mpt import (
@@ -11,22 +10,7 @@ from generate_ledger.mpt import (
     _outstanding_amount,
     generate_mpt_objects,
 )
-from tests.conftest import ALICE_ADDRESS, ALICE_SEED, BOB_ADDRESS, BOB_SEED
-
-
-@pytest.fixture
-def alice():
-    return Account(ALICE_ADDRESS, ALICE_SEED)
-
-
-@pytest.fixture
-def bob():
-    return Account(BOB_ADDRESS, BOB_SEED)
-
-
-@pytest.fixture
-def two_accounts(alice, bob):
-    return [alice, bob]
+from tests.conftest import ALICE_ADDRESS, BOB_ADDRESS
 
 
 # ---------------------------------------------------------------------------

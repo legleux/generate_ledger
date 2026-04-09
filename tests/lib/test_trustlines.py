@@ -2,27 +2,15 @@
 
 import pytest
 
-from generate_ledger.accounts import Account
 from generate_ledger.trustlines import (
     TrustlineConfig,
     TrustlineObjects,
     generate_trustline_objects,
     generate_trustlines,
 )
-from tests.conftest import ALICE_ADDRESS, ALICE_SEED, BOB_ADDRESS, BOB_SEED
 
 # TODO: Constant
 TXN_ID_LEN = 64
-
-
-@pytest.fixture
-def alice():
-    return Account(ALICE_ADDRESS, ALICE_SEED)
-
-
-@pytest.fixture
-def bob():
-    return Account(BOB_ADDRESS, BOB_SEED)
 
 
 # ---------------------------------------------------------------------------

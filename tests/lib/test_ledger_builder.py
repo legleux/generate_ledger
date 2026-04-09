@@ -2,7 +2,6 @@
 
 import pytest
 
-from generate_ledger.accounts import Account
 from generate_ledger.indices import account_root_index
 from generate_ledger.ledger_builder import (
     GENESIS_ADDRESS,
@@ -16,21 +15,9 @@ from generate_ledger.trustlines import generate_trustline_objects
 from tests.conftest import (
     ALICE_ADDRESS,
     ALICE_INDEX,
-    ALICE_SEED,
     AMENDMENTS_INDEX,
     BOB_ADDRESS,
-    BOB_SEED,
 )
-
-
-@pytest.fixture
-def alice():
-    return Account(ALICE_ADDRESS, ALICE_SEED)
-
-
-@pytest.fixture
-def bob():
-    return Account(BOB_ADDRESS, BOB_SEED)
 
 
 @pytest.fixture

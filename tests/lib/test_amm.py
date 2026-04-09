@@ -7,7 +7,6 @@ import math
 
 import pytest
 
-from generate_ledger.accounts import Account
 from generate_ledger.amm import (
     AMM_ACCOUNT_FLAGS,
     LSF_AMM_NODE,
@@ -21,17 +20,7 @@ from generate_ledger.amm import (
     generate_amm_objects,
     generate_amms,
 )
-from tests.conftest import ALICE_ADDRESS, ALICE_SEED, BOB_ADDRESS, BOB_SEED
-
-
-@pytest.fixture
-def alice():
-    return Account(ALICE_ADDRESS, ALICE_SEED)
-
-
-@pytest.fixture
-def bob():
-    return Account(BOB_ADDRESS, BOB_SEED)
+from tests.conftest import ALICE_ADDRESS
 
 
 @pytest.fixture

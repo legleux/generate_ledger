@@ -2,7 +2,7 @@
 
 import pytest
 
-from generate_ledger.accounts import Account, AccountConfig
+from generate_ledger.accounts import AccountConfig
 from generate_ledger.amendments import amendment_hash, get_amendments_for_profile
 from generate_ledger.gateways import GatewayConfig
 from generate_ledger.ledger import (
@@ -17,17 +17,7 @@ from generate_ledger.ledger import (
     gen_ledger_state,
 )
 from generate_ledger.trustlines import TrustlineConfig
-from tests.conftest import ALICE_ADDRESS, ALICE_SEED, AMENDMENTS_INDEX, BOB_ADDRESS, BOB_SEED
-
-
-@pytest.fixture
-def alice():
-    return Account(ALICE_ADDRESS, ALICE_SEED)
-
-
-@pytest.fixture
-def bob():
-    return Account(BOB_ADDRESS, BOB_SEED)
+from tests.conftest import ALICE_ADDRESS, AMENDMENTS_INDEX, BOB_ADDRESS
 
 
 # ---------------------------------------------------------------------------
