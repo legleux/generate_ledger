@@ -253,10 +253,10 @@ This is handled automatically by `gen` when generating the full environment.
 ### Install
 
 ```bash
-uv sync                    # core + fast crypto (PyNaCl, coincurve)
-uv sync --extra fast       # explicit: just the fast crypto backends
-uv sync --group gpu        # + CuPy/CUDA (optional, requires NVIDIA GPU)
-uv sync --group dev        # + lint, test, docs tools
+uv sync               # core + fast crypto (PyNaCl, coincurve)
+uv sync --extra fast  # explicit: just the fast crypto backends
+uv sync --group gpu   # + CuPy/CUDA (optional, requires NVIDIA GPU)
+uv sync --group dev   # + lint, test, docs tools
 ```
 
 ### Running Tests
