@@ -15,8 +15,6 @@ Options:
 """
 
 import asyncio
-import json
-import os
 import subprocess
 import time
 import uuid
@@ -30,13 +28,14 @@ from xrpl.models.requests import AccountInfo, Fee, ServerInfo, Tx
 from xrpl.utils import xrp_to_drops
 from xrpl.wallet import Wallet
 
-pytestmark = pytest.mark.smoke
+from tests.smoke.conftest import KEEP_NETWORK
+
+pytestmark = [pytest.mark.smoke, pytest.mark.network]
 
 NUM_ACCOUNTS = 100
 XRP_AMOUNT = 100
 RPC_PORT = 5006  # Default mapped port for val0
 NETWORK_TIMEOUT = 60  # Max seconds to wait for proposing
-KEEP_NETWORK = os.environ.get("SMOKE_KEEP_NETWORK", "0") == "1"
 
 
 @pytest.fixture(scope="module")
@@ -55,13 +54,6 @@ def testnet_dir(tmp_path_factory):
     assert (output_dir / "docker-compose.yml").exists()
 
     return output_dir
-
-
-@pytest.fixture(scope="module")
-def accounts(testnet_dir):
-    """Load generated accounts from accounts.json."""
-    data = json.loads((testnet_dir / "accounts.json").read_text())
-    return [(addr, seed) for addr, seed in data]
 
 
 @pytest.fixture(scope="module")
@@ -147,11 +139,7 @@ def network(testnet_dir, compose_project):
         print(f"  Testnet dir: {testnet_dir}")
         print(f"  To tear down: docker compose -f {compose_file} -p {compose_project} down -v")
     else:
-        subprocess.run(
-            [*compose_cmd, "down", "-v"],
-            check=False,
-            timeout=15,
-        )
+        subprocess.run([*compose_cmd, "down", "-v"], check=False, timeout=15)
 
 
 def _get_balance(client: JsonRpcClient, address: str) -> int:
