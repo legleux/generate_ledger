@@ -333,6 +333,13 @@ uv run radon cc src/generate_ledger/ -a -nc
 
 Both run in CI (informational only — they don't gate merges).
 
+### Docs
+
+```bash
+uv run mkdocs serve     # live preview at http://127.0.0.1:8000
+uv run mkdocs build     # static site → site/
+```
+
 ### Build
 
 ```bash
