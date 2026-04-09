@@ -93,18 +93,18 @@ MAINNET_ENABLED_COUNT = len([a for a in _mainnet_amendments if a.enabled])
 
 
 @pytest.fixture
-def alice_account() -> Account:
+def alice() -> Account:
     return Account(ALICE_ADDRESS, ALICE_SEED)
 
 
 @pytest.fixture
-def bob_account() -> Account:
+def bob() -> Account:
     return Account(BOB_ADDRESS, BOB_SEED)
 
 
 @pytest.fixture
-def two_accounts(alice_account, bob_account) -> list[Account]:
-    return [alice_account, bob_account]
+def two_accounts(alice, bob) -> list[Account]:
+    return [alice, bob]
 
 
 @pytest.fixture
