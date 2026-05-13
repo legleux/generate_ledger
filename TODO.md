@@ -57,6 +57,18 @@ The package has three core concerns: ledger generation (`ledger.py`, `ledger_bui
 
 Vault/Offers, Escrows, Checks, etc. Vault stub exists in `develop/vault.py` (raises `NotImplementedError`).
 
+### AMMVote smoke coverage
+
+Single-validator standalone smoke test for `AMMVote`. Voter (an LP-holder) submits an `AMMVote` setting `TradingFee` to a new value; assert the AMM ledger object's `TradingFee` field updates and a `VoteSlots` entry appears for the voter. Template: `tests/smoke/test_amm_deposit_withdraw.py`.
+
+### AMMBid smoke coverage
+
+Single-validator standalone smoke test for `AMMBid`. LP holder submits `AMMBid`; assert `AuctionSlot` updates with the bidder as the new account, LP tokens are burned from the bidder's balance, and the AMM's `LPTokenBalance` decreases. Template: `tests/smoke/test_amm_deposit_withdraw.py`.
+
+### Full-network multi-validator AMM smoke coverage
+
+Port AMM deposit/withdraw (and eventually vote/bid) tests to a full docker-compose multi-validator network, modeled on `tests/smoke/test_payment_ring.py`. Validates the same AMM state mutations under real consensus rather than standalone `ledger_accept`. Longer runtime (~2-3 min vs ~30 s) — keep both versions: standalone is the fast-feedback gate, consensus is the pre-release confidence check.
+
 ### MPT authorization flags
 
 `MPTHolderConfig` doesn't support setting `lsfMPTAuthorized` (0x02) on MPToken objects. If an issuance has `lsfMPTRequireAuth`, pre-generated holders are unauthorized and can't transfer. Add `authorized: bool = True` to `MPTHolderConfig` that sets the flag on the MPToken. Without `lsfMPTRequireAuth` on the issuance (the default), holders work fine.
@@ -78,6 +90,12 @@ Support generating accounts with mixed key types (ed25519 + secp256k1) in the sa
 ### Clean up compose.py
 
 Multiple FIXMEs and TODOs: volume mount logic, port exposure for multiple nodes, image entrypoint assumption, ledger file loading for hubs.
+
+### Verify AMM pseudo-account `OwnerCount`
+
+`amm.py:225` hardcodes `OwnerCount: 1` on the AMM pseudo-account regardless of how many asset trustlines + LP trustline it touches. Intent (per comment) is that `lsfAMMNode` trustlines don't count toward the AMM's reserve. This matches xrpld semantics in theory — but we should diff against a real AMM account fetched from mainnet/testnet to confirm the field value is exactly `1` in the wild, not (e.g.) the number of non-XRP assets.
+
+Note: we also never validate reserve sufficiency on any account (`balance ≥ base_reserve + OwnerCount × owner_reserve`). With 100k XRP default balances and 2 XRP owner reserve, accounts can own ~50k objects before hitting the limit, so it's fine in practice for any realistic config — but if someone lowers the default balance or generates pathological topologies, malformed ledgers could slip through silently. Optional add: a post-assembly sanity check that warns when any account is under-reserved.
 
 ### Rename sub-packages and re-audit module interfaces
 
@@ -164,6 +182,7 @@ If other validators start before val0, they create their own ledger, leaving val
 - `compose.py` — ~~Port exposure for multiple nodes~~ addressed by `--expose-all-ports`
 - `compose.py:118,148` — Volume mount logic is messy
 - `compose.py:121,151` — Ledger file loading for first validator/hub only
+- `directory_nodes.py:10` — `make_owner_dir_entry()` (used for MPT) omits `PreviousTxnID`/`PreviousTxnLgrSeq`, while `build_directory_node()` (used for trustlines/AMM) includes them. Cosmetic — xrpld ignores those on genesis — but worth aligning for consistency
 
 ## Done
 
