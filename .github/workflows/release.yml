@@ -1,0 +1,195 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing tag to release, for example v1.2.3-rc.1"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Validate release
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      version: ${{ steps.tag.outputs.version }}
+      package_version: ${{ steps.tag.outputs.package_version }}
+      channel: ${{ steps.tag.outputs.channel }}
+      prerelease: ${{ steps.tag.outputs.prerelease }}
+      publish_target: ${{ steps.tag.outputs.publish_target }}
+      release_environment: ${{ steps.tag.outputs.release_environment }}
+      title: ${{ steps.tag.outputs.title }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Resolve release tag
+        id: resolve
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TAG: ${{ inputs.release_tag }}
+          PUSH_TAG: ${{ github.ref_name }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            tag="$INPUT_TAG"
+          else
+            tag="$PUSH_TAG"
+          fi
+
+          if [ -z "$tag" ]; then
+            echo "::error::No release tag was provided."
+            exit 1
+          fi
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Parse release tag
+        id: tag
+        run: python scripts/release/parse_release_tag.py "${{ steps.resolve.outputs.tag }}"
+
+      - name: Authorize release actor
+        id: auth
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+          RELEASE_ACTORS: ${{ vars.RELEASE_ACTORS }}
+        run: python scripts/release/check_release_actor.py
+
+  build:
+    name: Build artifacts
+    needs: prepare
+    runs-on: ubuntu-latest
+    container: ghcr.io/astral-sh/uv:python3.13-bookworm
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Build package artifacts (stub)
+        run: >
+          python scripts/release/stub_build.py
+          --tag "${{ needs.prepare.outputs.tag }}"
+          --version "${{ needs.prepare.outputs.version }}"
+          --package-version "${{ needs.prepare.outputs.package_version }}"
+          --channel "${{ needs.prepare.outputs.channel }}"
+          --output-dir dist
+
+      - name: Upload dist
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: dist-${{ needs.prepare.outputs.tag }}
+          path: dist/
+
+  publish:
+    name: Publish artifacts (stub)
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ needs.prepare.outputs.release_environment }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Download dist
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist-${{ needs.prepare.outputs.tag }}
+          path: dist/
+
+      - name: Publish package artifacts (stub)
+        shell: bash
+        env:
+          TAG: ${{ needs.prepare.outputs.tag }}
+          TARGET: ${{ needs.prepare.outputs.publish_target }}
+        run: |
+          echo "Would publish $TAG artifacts to $TARGET."
+          ls -la dist
+
+          {
+            echo "## Publish stub"
+            echo ""
+            echo "- Tag: \`$TAG\`"
+            echo "- Target: \`$TARGET\`"
+            echo "- Replace this step with trusted publishing when the package index is ready."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  github-release:
+    name: Create GitHub release
+    needs: [prepare, build, publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download dist
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist-${{ needs.prepare.outputs.tag }}
+          path: dist/
+
+      - name: Write release notes
+        shell: bash
+        env:
+          TITLE: ${{ needs.prepare.outputs.title }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+          CHANNEL: ${{ needs.prepare.outputs.channel }}
+          PACKAGE_VERSION: ${{ needs.prepare.outputs.package_version }}
+          PUBLISH_TARGET: ${{ needs.prepare.outputs.publish_target }}
+        run: |
+          {
+            echo "## $TITLE"
+            echo ""
+            echo "- Tag: \`$TAG\`"
+            echo "- Channel: \`$CHANNEL\`"
+            echo "- Package version: \`$PACKAGE_VERSION\`"
+            echo "- Publish target: \`$PUBLISH_TARGET\` (stubbed)"
+            echo "- Commit: \`$GITHUB_SHA\`"
+            echo ""
+            echo "Package build and package publishing are currently stubbed. The release page and artifact upload are real."
+          } > release-notes.md
+
+          cat release-notes.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create or update release page
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+          TITLE: ${{ needs.prepare.outputs.title }}
+          PRERELEASE: ${{ needs.prepare.outputs.prerelease }}
+        run: |
+          prerelease_args=()
+          if [ "$PRERELEASE" = "true" ]; then
+            prerelease_args+=(--prerelease)
+          fi
+
+          release_id="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq .id 2>/dev/null || true)"
+          if [ -n "$release_id" ]; then
+            body="$(cat release-notes.md)"
+            gh api \
+              --method PATCH \
+              "repos/$GITHUB_REPOSITORY/releases/$release_id" \
+              -f tag_name="$TAG" \
+              -f target_commitish="$GITHUB_SHA" \
+              -f name="$TITLE" \
+              -f body="$body" \
+              -F draft=false \
+              -F prerelease="$PRERELEASE"
+            gh release upload "$TAG" dist/* --clobber
+          else
+            gh release create "$TAG" dist/* \
+              --verify-tag \
+              --target "$GITHUB_SHA" \
+              --title "$TITLE" \
+              --notes-file release-notes.md \
+              "${prerelease_args[@]}"
+          fi

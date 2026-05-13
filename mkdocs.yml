@@ -35,6 +35,7 @@ nav:
   - CLI Reference: cli.md
   - Library API: library.md
   - Amendments: amendments.md
+  - Release Process: release.md
   - Development: development.md
 
 markdown_extensions:

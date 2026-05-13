@@ -97,6 +97,12 @@ uv sync                # includes fast crypto backends (PyNaCl, coincurve)
 uv sync --group gpu    # + CuPy, CUDA toolkit (optional, requires NVIDIA GPU)
 ```
 
+## Releases
+
+Release mechanics live in the `Release` GitHub Actions workflow. Authorized maintainers can push `v*` tags for stable, beta, release-candidate, and hotfix releases; the workflow currently builds and publishes stub artifacts before creating the GitHub Release page.
+
+See [Release Automation](docs/release.md) for the supported tag formats and setup notes.
+
 ## CLI Help
 
 ```bash

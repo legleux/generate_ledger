@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Project description added to `pyproject.toml`
+- Release workflow mechanics added for authorized `v*` tags, including beta, release-candidate, and hotfix tag handling
 - Complexity reporting (complexipy, radon) added to CI
 - Conventional commits enforced via pre-commit hook
 - GPU tests skip gracefully when CUDA is not available

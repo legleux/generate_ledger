@@ -1,44 +1,153 @@
-name: Build and publish
+name: Release
 
 on:
   push:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to validate and build, for example v0.1.0-beta.1"
+        required: true
+        default: "v0.0.0-beta.1"
+      create_release:
+        description: "Create the GitHub Release page. The tag must already exist."
+        required: true
+        type: boolean
+        default: false
+
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
 
 jobs:
-  build:
+  prepare:
+    name: Authorize and classify tag
     runs-on: ubuntu-latest
-    container: ghcr.io/astral-sh/uv:python3.13-bookworm
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+      version: ${{ steps.release.outputs.version }}
+      base_version: ${{ steps.release.outputs.base_version }}
+      release_type: ${{ steps.release.outputs.release_type }}
+      prerelease: ${{ steps.release.outputs.prerelease }}
+      latest: ${{ steps.release.outputs.latest }}
+      title: ${{ steps.release.outputs.title }}
+      artifact_prefix: ${{ steps.release.outputs.artifact_prefix }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Build package
-        run: uv build
+      - name: Authorize release actor
+        env:
+          AUTHORIZED_RELEASE_ACTORS: ${{ vars.RELEASE_AUTHORIZED_ACTORS || github.repository_owner }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          actor="${GITHUB_ACTOR}"
+          allowed="${AUTHORIZED_RELEASE_ACTORS}"
+
+          if [[ -z "${allowed// }" ]]; then
+            echo "::error::Set the RELEASE_AUTHORIZED_ACTORS repository variable to a comma-separated username list."
+            exit 1
+          fi
+
+          IFS=',' read -ra principals <<< "$allowed"
+          for principal in "${principals[@]}"; do
+            principal="$(printf '%s' "$principal" | xargs)"
+            principal="${principal#@}"
+
+            if [[ "$principal" == "$actor" ]]; then
+              echo "Authorized release actor: $actor"
+              exit 0
+            fi
+          done
+
+          echo "::error::${actor} is not listed in RELEASE_AUTHORIZED_ACTORS (${allowed})."
+          exit 1
+
+      - name: Parse release tag
+        id: release
+        run: python scripts/release_automation.py parse-tag "$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Summarize release plan
+        run: |
+          {
+            echo "## Release Plan"
+            echo ""
+            echo "- Tag: \`${{ steps.release.outputs.tag }}\`"
+            echo "- Version: \`${{ steps.release.outputs.version }}\`"
+            echo "- Type: \`${{ steps.release.outputs.release_type }}\`"
+            echo "- GitHub prerelease: \`${{ steps.release.outputs.prerelease }}\`"
+            echo "- Latest candidate: \`${{ steps.release.outputs.latest }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  build:
+    name: Build package
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Build package (stub)
+        run: python scripts/release_automation.py build-stub "${{ needs.prepare.outputs.tag }}" dist
 
       - name: Upload dist
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
-          name: dist
+          name: dist-${{ needs.prepare.outputs.artifact_prefix }}
           path: dist/
 
-  publish-testpypi:
-    name: Publish to TestPyPI
-    needs: build
+  release:
+    name: Publish and create release page
+    needs: [prepare, build]
     runs-on: ubuntu-latest
-    environment:
-      name: testpypi
-      url: https://test.pypi.org/p/legleux-generate-ledger
     permissions:
-      id-token: write
+      contents: write
+    environment:
+      name: release
     steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
       - name: Download dist
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: dist
+          name: dist-${{ needs.prepare.outputs.artifact_prefix }}
           path: dist/
 
-      - name: Publish to TestPyPI
-        uses: pypa/gh-action-pypi-publish@106e0b0b7c337fa67ed433972f777c6357f78598 # v1.13.0
-        with:
-          repository-url: https://test.pypi.org/legacy/
+      - name: Publish package (stub)
+        run: python scripts/release_automation.py publish-stub dist
+
+      - name: Create GitHub Release page
+        if: ${{ github.event_name == 'push' || inputs.create_release }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRERELEASE: ${{ needs.prepare.outputs.prerelease }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+          TITLE: ${{ needs.prepare.outputs.title }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release page already exists for $TAG; uploading stub assets with --clobber."
+            gh release upload "$TAG" dist/* --clobber
+            exit 0
+          fi
+
+          args=(release create "$TAG" dist/* --title "$TITLE" --notes-file dist/release-notes.md --verify-tag)
+
+          if [[ "$PRERELEASE" == "true" ]]; then
+            args+=(--prerelease)
+          fi
+
+          gh "${args[@]}"
+
+      - name: Skip release page for rehearsal
+        if: ${{ github.event_name == 'workflow_dispatch' && !inputs.create_release }}
+        run: echo "Rehearsal complete; GitHub Release page creation was skipped."

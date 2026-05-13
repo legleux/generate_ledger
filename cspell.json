@@ -80,6 +80,7 @@
     "optmeta",
     "paychan",
     "permissioned",
+    "pipefail",
     "platformdirs",
     "preimage",
     "pubkeys",
