@@ -1,0 +1,89 @@
+name: Prepare release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump level"
+        required: true
+        type: choice
+        options: [patch, minor, major, rc, beta, hotfix]
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-prep
+  cancel-in-progress: false
+
+jobs:
+  open-pr:
+    name: Open changelog PR
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Compute next version
+        id: next
+        run: python scripts/release/next_version.py "${{ inputs.bump }}"
+
+      - name: Generate changelog
+        uses: orhun/git-cliff-action@f50e11560dce63f7c33227798f90b924471a88b5 # v4.8.0
+        with:
+          config: cliff.toml
+          args: --unreleased --tag ${{ steps.next.outputs.tag }} --prepend CHANGELOG.md
+
+      - name: Ensure changelog is writable by the runner
+        run: sudo chown "$(id -u):$(id -g)" CHANGELOG.md
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          branch: release/${{ steps.next.outputs.tag }}
+          base: ${{ github.ref_name }}
+          title: "release: ${{ steps.next.outputs.tag }}"
+          body: |
+            Automated release preparation for **${{ steps.next.outputs.tag }}** (bump: `${{ inputs.bump }}`).
+
+            Merging this PR pushes the tag `${{ steps.next.outputs.tag }}`, which triggers the Release workflow
+            (build → test → trusted publish → GitHub release).
+
+            This PR changes only `CHANGELOG.md`. The package version is derived from the tag — nothing else to edit.
+          labels: release
+          add-paths: |
+            CHANGELOG.md
+
+  tag-on-merge:
+    name: Tag merged release PR
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.merged == true &&
+      contains(github.event.pull_request.labels.*.name, 'release')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_PAT }}
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+
+      - name: Push release tag
+        shell: bash
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          set -euo pipefail
+          tag="${HEAD_REF#release/}"
+          echo "Tagging merge commit $MERGE_SHA as $tag"
+          git tag "$tag" "$MERGE_SHA"
+          git push origin "$tag"

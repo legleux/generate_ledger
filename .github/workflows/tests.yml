@@ -119,7 +119,7 @@ jobs:
           name: complexity-report
           path: complexipy_results_*.csv
 
-  test:
+  test-linux:
     needs: [lint]
     runs-on: ubuntu-latest
     strategy:
@@ -144,9 +144,25 @@ jobs:
         run: uv sync --group dev --group fast
       - run: uv run pytest
 
+  test:
+    name: test
+    needs: [test-linux, test-macos]
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    steps:
+      - name: Verify test jobs passed
+        env:
+          LINUX_RESULT: ${{ needs.test-linux.result }}
+          MACOS_RESULT: ${{ needs.test-macos.result }}
+        run: |
+          if [ "$LINUX_RESULT" != "success" ] || [ "$MACOS_RESULT" != "success" ]; then
+            echo "Linux tests: $LINUX_RESULT"
+            echo "macOS tests: $MACOS_RESULT"
+            exit 1
+          fi
+
   docs-build:
-    needs: [test, test-macos]
-    if: github.event_name == 'push'
+    needs: [test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -162,7 +178,7 @@ jobs:
 
   docs-deploy:
     needs: [docs-build]
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       pages: write
