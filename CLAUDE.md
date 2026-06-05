@@ -130,6 +130,13 @@ See `docs/library-usage.md` for full usage guide.
 - **Default addopts**: `-rP --cov --cov-report=term-missing:skip-covered`
 - **CI matrix**: Python 3.12, 3.13, 3.14 on Debian bookworm + trixie, plus macOS latest
 
+### Release & CI workflows
+
+- `.github/workflows/tests.yml` — lint, complexity, test matrix, docs.
+- `.github/workflows/release.yml` — single tag-driven Release workflow (validate → test gate → `uv build` → `uv publish` via trusted publishing → GitHub Release). Versions are derived from git tags via `uv-dynamic-versioning`; no version is committed in `pyproject.toml`.
+- `.github/workflows/release-prep.yml` — action-driven release prep: pick a bump level, it opens a changelog-only PR; merging the PR pushes the tag (via `RELEASE_PAT`) which triggers `release.yml`.
+- Release helpers live in `scripts/release/` (`parse_release_tag.py`, `check_release_actor.py`, `next_version.py`), tested under `tests/scripts/`.
+
 ### Key Test Fixtures (conftest.py)
 
 - `_sandbox_base_dir` (autouse) — Redirects `GL_BASE_DIR` to tmp_path so tests never touch real files

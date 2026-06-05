@@ -1,12 +1,12 @@
 [project]
 name = "generate-ledger"
-version = "0.0.8"
+dynamic = ["version"]
 description = "Generate custom XRPL genesis ledgers and test network environments"
 readme = "README.md"
 authors = [
     { name = "Michael Legleux", email = "legleux@gmail.com" }
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
     "base58>=2.1.1",
     "pydantic>=2.11.7",
@@ -21,8 +21,17 @@ dependencies = [
 gen = "generate_ledger.cli.main:cli"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "uv-dynamic-versioning"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
+
+[tool.uv-dynamic-versioning]
+vcs = "git"
+style = "pep440"
+# Used when git history/tags are unavailable (Dependabot, sdist-from-sdist, sandboxes).
+fallback-version = "0.0.0"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/generate_ledger"]
@@ -91,7 +100,7 @@ gpu = [
 addopts = "-rP --cov --cov-report=term-missing:skip-covered -m 'not smoke'"
 # addopts = "-rx"
 # addopts = "-qrP"
-# testpaths = ["tests"]
+testpaths = ["tests"]
 markers = [
     "smoke: Smoke tests requiring Docker and a running network (deselected by default)",
 ]
