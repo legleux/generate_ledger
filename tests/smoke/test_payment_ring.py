@@ -15,8 +15,6 @@ Options:
 """
 
 import asyncio
-import json
-import os
 import subprocess
 import time
 import uuid
@@ -30,13 +28,14 @@ from xrpl.models.requests import AccountInfo, Fee, ServerInfo, Tx
 from xrpl.utils import xrp_to_drops
 from xrpl.wallet import Wallet
 
+from tests.smoke._helpers import KEEP_NETWORK, RPC_PORT_DEFAULT
+
 pytestmark = pytest.mark.smoke
 
 NUM_ACCOUNTS = 100
 XRP_AMOUNT = 100
-RPC_PORT = 5006  # Default mapped port for val0
+RPC_PORT = RPC_PORT_DEFAULT  # Default mapped port for val0
 NETWORK_TIMEOUT = 60  # Max seconds to wait for proposing
-KEEP_NETWORK = os.environ.get("SMOKE_KEEP_NETWORK", "0") == "1"
 
 
 @pytest.fixture(scope="module")
@@ -55,13 +54,6 @@ def testnet_dir(tmp_path_factory):
     assert (output_dir / "docker-compose.yml").exists()
 
     return output_dir
-
-
-@pytest.fixture(scope="module")
-def accounts(testnet_dir):
-    """Load generated accounts from accounts.json."""
-    data = json.loads((testnet_dir / "accounts.json").read_text())
-    return [(addr, seed) for addr, seed in data]
 
 
 @pytest.fixture(scope="module")
