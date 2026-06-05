@@ -1,6 +1,7 @@
 .venv
 testnet/
 .coverage
+dist/
 __pycache__/
 .complexipy_cache/
 .claude/
