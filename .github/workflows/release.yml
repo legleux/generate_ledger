@@ -87,6 +87,9 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
+      - name: Trust checkout for git-based versioning
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Build package
         run: uv build
 
