@@ -5,6 +5,7 @@ repo_name: legleux/generate_ledger
 
 theme:
   name: material
+  custom_dir: docs/overrides
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -36,6 +37,19 @@ theme:
     - navigation.expand
     - navigation.top
     - toc.follow
+
+extra:
+  docs_metadata:
+    source_label: !ENV [DOCS_SOURCE_LABEL, "local"]
+    source_context: !ENV [DOCS_SOURCE_CONTEXT, ""]
+    ref_name: !ENV [DOCS_REF_NAME, ""]
+    commit_sha: !ENV [DOCS_COMMIT_SHA, ""]
+    commit_short: !ENV [DOCS_COMMIT_SHORT, ""]
+    run_url: !ENV [DOCS_RUN_URL, ""]
+
+extra_css:
+  - stylesheets/docs-version.css
+
 nav:
   - Home: index.md
   - Quick Start: quickstart.md

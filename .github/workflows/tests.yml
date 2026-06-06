@@ -166,9 +166,43 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          fetch-tags: true
       - uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
       - run: uv python install 3.13
       - run: uv sync
+      - name: Set docs build metadata
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          EVENT_NAME: ${{ github.event_name }}
+          HEAD_REF: ${{ github.head_ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REF_TYPE: ${{ github.ref_type }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          source_label="$GITHUB_REF_NAME"
+          source_context=""
+
+          if [ "$REF_TYPE" = "tag" ]; then
+            source_context="tag"
+          elif [ "$EVENT_NAME" = "pull_request" ]; then
+            source_label="PR #$PR_NUMBER"
+            source_context="merge preview: $HEAD_REF -> $BASE_REF"
+          elif [ "$REF_TYPE" = "branch" ]; then
+            source_context="branch"
+          elif [ -n "$REF_TYPE" ]; then
+            source_context="$REF_TYPE"
+          fi
+
+          {
+            printf 'DOCS_SOURCE_LABEL=%s\n' "$source_label"
+            printf 'DOCS_SOURCE_CONTEXT=%s\n' "$source_context"
+            printf 'DOCS_REF_NAME=%s\n' "$GITHUB_REF_NAME"
+            printf 'DOCS_COMMIT_SHA=%s\n' "$GITHUB_SHA"
+            printf 'DOCS_COMMIT_SHORT=%s\n' "$(git rev-parse --short HEAD)"
+            printf 'DOCS_RUN_URL=%s\n' "$RUN_URL"
+          } >> "$GITHUB_ENV"
       - name: Build docs
         run: uv run mkdocs build --strict
       - name: Upload Pages artifact
