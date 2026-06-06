@@ -1,0 +1,32 @@
+.docs-header-source {
+  display: flex;
+  align-items: center;
+  margin-left: 0.4rem;
+  min-width: 0;
+}
+
+.docs-header-source__chip {
+  max-width: 9rem;
+  overflow: hidden;
+  padding: 0.12rem 0.42rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  color: var(--md-primary-bg-color);
+  font-size: 0.58rem;
+  font-weight: 700;
+  line-height: 1.2;
+  opacity: 0.86;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.docs-header-source__chip:hover {
+  opacity: 1;
+}
+
+@media screen and (max-width: 30em) {
+  .docs-header-source {
+    display: none;
+  }
+}
