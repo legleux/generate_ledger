@@ -355,6 +355,25 @@ class TestGatewayTopology:
         owners = [dn["Owner"] for dn in dir_nodes]
         # No duplicate owners — consolidation is working
         assert len(owners) == len(set(owners))
+        assert max(len(dn["Indexes"]) for dn in dir_nodes) <= 32
+
+    def test_oversized_gateway_owner_directory_raises(self, tmp_path):
+        """Reject gateway topologies that need unimplemented owner-directory paging."""
+        cfg = LedgerConfig(
+            account_cfg=AccountConfig(num_accounts=10),
+            gateway_cfg=GatewayConfig(
+                num_gateways=1,
+                assets_per_gateway=4,
+                currencies=["USD", "EUR", "GBP", "JPY"],
+                coverage=1.0,
+                connectivity=1.0,
+                seed=1,
+            ),
+            base_dir=tmp_path,
+        )
+
+        with pytest.raises(ValueError, match="single-page DirectoryNode limit"):
+            gen_ledger_state(cfg)
 
 
 class TestMPTIntegration:

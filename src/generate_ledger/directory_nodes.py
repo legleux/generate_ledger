@@ -6,6 +6,8 @@ per-account directories with sorted Indexes and OwnerCount tracking.
 
 from generate_ledger.indices import owner_dir
 
+MAX_SINGLE_PAGE_DIRECTORY_INDEXES = 32
+
 
 def make_owner_dir_entry(address: str, object_index: str) -> dict:
     """Create a minimal DirectoryNode entry for a single object in an account's owner dir."""
@@ -27,6 +29,21 @@ def merge_dir_node(directory_nodes: dict, entry: dict) -> None:
         directory_nodes[owner]["Indexes"].extend(entry["Indexes"])
     else:
         directory_nodes[owner] = entry.copy()
+
+
+def validate_single_page_directory_node(entry: dict) -> None:
+    """Reject owner directories that need paging, which is not implemented yet."""
+    entry_count = len(entry["Indexes"])
+    if entry_count <= MAX_SINGLE_PAGE_DIRECTORY_INDEXES:
+        return
+
+    owner = entry["Owner"]
+    msg = (
+        f"Owner directory for {owner} has {entry_count} entries, "
+        f"which exceeds the single-page DirectoryNode limit of {MAX_SINGLE_PAGE_DIRECTORY_INDEXES}. "
+        "DirectoryNode paging is not implemented yet; reduce generated trustlines/gateway coverage."
+    )
+    raise ValueError(msg)
 
 
 def consolidate_directory_nodes(
@@ -99,5 +116,6 @@ def consolidate_directory_nodes(
     # Sort Indexes in each DirectoryNode (XRPL serialization requires sorted STVector256)
     for dn in directory_nodes.values():
         dn["Indexes"].sort()
+        validate_single_page_directory_node(dn)
 
     return state_entries, directory_nodes, owner_counts

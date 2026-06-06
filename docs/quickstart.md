@@ -24,6 +24,8 @@ This creates a `testnet/` directory with everything needed to boot a private XRP
 - `volumes/val0/xrpld.cfg` through `valN/xrpld.cfg` -- Validator configurations with UNL
 - `docker-compose.yml` -- Ready-to-run Docker deployment
 
+Bare `gen` defaults to 100 accounts, 5 validators, and 1 non-validator `xrpld` node.
+
 Start the network:
 
 ```bash
