@@ -136,7 +136,7 @@ jobs:
   #       run: uv publish --trusted-publishing always
   publish:
     name: Publish to TestPyPI
-    needs: [prepare, build]
+    needs: [prepare, build, docs-build]
     runs-on: ubuntu-latest
     environment:
       name: testpypi
@@ -159,6 +159,41 @@ jobs:
           uv publish --trusted-publishing always
           --publish-url https://test.pypi.org/legacy/
           --check-url https://test.pypi.org/simple/
+
+  docs-build:
+    name: Build release docs
+    needs: [prepare, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: refs/tags/${{ needs.prepare.outputs.tag }}
+          fetch-depth: 0
+          fetch-tags: true
+      - uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
+      - run: uv python install 3.13
+      - run: uv sync
+      - name: Set release docs metadata
+        env:
+          PACKAGE_VERSION: ${{ needs.prepare.outputs.package_version }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          {
+            printf 'DOCS_SOURCE_LABEL=%s\n' "$PACKAGE_VERSION"
+            printf 'DOCS_SOURCE_CONTEXT=release tag %s\n' "$RELEASE_TAG"
+            printf 'DOCS_REF_NAME=%s\n' "$RELEASE_TAG"
+            printf 'DOCS_COMMIT_SHA=%s\n' "$(git rev-parse HEAD)"
+            printf 'DOCS_COMMIT_SHORT=%s\n' "$(git rev-parse --short HEAD)"
+            printf 'DOCS_RUN_URL=%s\n' "$RUN_URL"
+          } >> "$GITHUB_ENV"
+      - name: Build docs
+        run: uv run mkdocs build --strict
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
   github-release:
     name: Create GitHub release
     needs: [prepare, build, publish]
@@ -217,3 +252,19 @@ jobs:
               --notes-file release-notes.md \
               "${prerelease_args[@]}"
           fi
+
+  docs-deploy:
+    name: Deploy release docs
+    needs: [prepare, docs-build, github-release]
+    if: needs.prepare.outputs.prerelease == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
