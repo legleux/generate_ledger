@@ -61,6 +61,7 @@ jobs:
           token: ${{ secrets.RELEASE_PAT }}
           branch: release/${{ steps.next.outputs.tag }}
           base: ${{ github.ref_name }}
+          commit-message: "chore: prepare release ${{ steps.next.outputs.tag }}"
           title: "release: ${{ steps.next.outputs.tag }}"
           body: |
             Automated release preparation for **${{ steps.next.outputs.tag }}** (bump: `${{ inputs.bump }}`).

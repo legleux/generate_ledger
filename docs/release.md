@@ -5,12 +5,20 @@ nothing is hardcoded in `pyproject.toml` (see `uv-dynamic-versioning`).
 
 ## Cutting a release
 
+Do all feature and fix work through normal PRs into `main` first. A `release/vX.Y.Z`
+branch is not a staging branch; it is an automated, changelog-only branch created
+by the release preparation workflow.
+
 1. Go to **Actions → Prepare release → Run workflow** and pick a bump level
    (`patch`, `minor`, `major`, `rc`, `beta`, `hotfix`).
 2. Review the changelog PR it opens (titled `release: vX.Y.Z`). It changes only `CHANGELOG.md`.
 3. Merge the PR. On merge, the tag `vX.Y.Z` is pushed automatically (using `RELEASE_PAT`),
    which triggers the **Release** workflow: test gate → `uv build` → `uv publish` (trusted) →
    GitHub Release.
+
+If `main` changes while a release PR is open, do not merge code into the release
+branch. Merge the code into `main`, then rerun **Prepare release** to update the
+changelog PR.
 
 All releases — stable **and** pre-releases — publish to **PyPI** in the `release` environment.
 Pre-releases (`rc`/`beta`) are PEP 440 pre-release versions (e.g. `1.2.3rc1`): `pip install`
@@ -47,9 +55,11 @@ sandbox, not a release channel, so it is not part of this pipeline.)
    | Workflow     | `release.yml`     |
    | Environment  | `release`         |
 
-4. Create a **fine-grained PAT** with `contents: write` (push tags) on this repo and
-   store it as the repository secret **`RELEASE_PAT`** (used to push the release tag so it
-   triggers `release.yml` — a `GITHUB_TOKEN`-pushed tag would not).
+4. Create a **fine-grained PAT** on this repo with **Contents: Read and write** and
+   **Pull requests: Read and write**. Store it as the repository secret
+   **`RELEASE_PAT`**. The preparation workflow uses it to create the changelog PR,
+   and the tag-on-merge job uses it to push the release tag so it triggers
+   `release.yml` — a `GITHUB_TOKEN`-pushed tag would not.
 5. _(Optional)_ Set the **`RELEASE_ACTORS`** repository variable to a comma-separated list
    of GitHub usernames allowed to release. If unset, `check_release_actor.py` falls back to
    the repository owner, so a solo maintainer can skip this.
