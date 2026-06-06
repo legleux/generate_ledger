@@ -108,7 +108,6 @@ def gen_compose_data(config: ComposeConfig | None = None):
     validators = {
         (name := cfg.validator_label(i)): {
             "image": f"{cfg.validator_image}:{cfg.validator_image_tag}",
-            "container_name": f"{name}",
             "hostname": f"{name}",
             **(validator_entrypoint),
             **(
@@ -140,7 +139,6 @@ def gen_compose_data(config: ComposeConfig | None = None):
     hubs = {
         (name := f"{cfg.hub_name}{(i if cfg.num_hubs > 1 else '')}"): {
             "image": f"{cfg.hub_image}:{cfg.hub_image_tag}",
-            "container_name": f"{name}",
             "hostname": f"{name}",
             **(hub_entrypoint),
             **(
@@ -166,9 +164,7 @@ def gen_compose_data(config: ComposeConfig | None = None):
         for i in range(cfg.num_hubs)
     }
 
-    networks = {
-        cfg.network_name: {"name": cfg.network_name},
-    }
+    networks = {cfg.network_name: {}}
 
     compose_data.update(services={**validators, **hubs})
     compose_data.update(networks=networks)

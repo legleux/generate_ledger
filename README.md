@@ -21,6 +21,7 @@ cd testnet && docker compose up
 ```
 
 Output: `ledger.json`, `accounts.json`, validator configs (`xrpld.cfg`), and `docker-compose.yml`. In under a minute you'll have a running XRPL test network.
+Bare `gen` defaults to **100 accounts**, **5 validators**, and **1 non-validator `xrpld` node**.
 
 ```bash
 # Just a ledger

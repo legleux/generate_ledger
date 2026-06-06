@@ -17,11 +17,39 @@ class TestFullPipeline:
         assert (tmp_path / "accounts.json").exists()
         assert (tmp_path / "volumes").is_dir()
 
+    def test_bare_gen_default_shape(self, tmp_path):
+        result = runner.invoke(cli, ["-o", str(tmp_path)])
+        assert result.exit_code == 0, result.output
+
+        data = json.loads((tmp_path / "ledger.json").read_text())
+        state = data["ledger"]["accountState"]
+        account_roots = [o for o in state if o.get("LedgerEntryType") == "AccountRoot"]
+        ripple_states = [o for o in state if o.get("LedgerEntryType") == "RippleState"]
+
+        assert len(account_roots) == 101  # genesis + 100 generated accounts
+        assert ripple_states == []
+
+        volumes = tmp_path / "volumes"
+        for name in ["val0", "val1", "val2", "val3", "val4", "xrpld"]:
+            assert (volumes / name / "xrpld.cfg").exists()
+
     def test_ledger_output_valid_json(self, tmp_path):
         runner.invoke(cli, ["-o", str(tmp_path), "-v", "2", "--accounts", "2"])
         data = json.loads((tmp_path / "ledger.json").read_text())
         assert "ledger" in data
         assert "accountState" in data["ledger"]
+
+    def test_default_auto_has_no_gateway_topology(self, tmp_path):
+        result = runner.invoke(cli, ["-o", str(tmp_path), "-v", "2", "--accounts", "3"])
+        assert result.exit_code == 0, result.output
+
+        data = json.loads((tmp_path / "ledger.json").read_text())
+        state = data["ledger"]["accountState"]
+        account_roots = [o for o in state if o.get("LedgerEntryType") == "AccountRoot"]
+        ripple_states = [o for o in state if o.get("LedgerEntryType") == "RippleState"]
+
+        assert len(account_roots) == 4  # genesis + 3 generated accounts
+        assert ripple_states == []
 
     def test_validator_configs_created(self, tmp_path):
         result = runner.invoke(cli, ["-o", str(tmp_path), "-v", "3", "--accounts", "2"])

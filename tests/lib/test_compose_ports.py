@@ -111,3 +111,14 @@ class TestPortAllocation:
         assert "val00" in services
         assert "val49" in services
         assert "val0" not in services
+
+    def test_compose_does_not_pin_container_names(self):
+        cfg = ComposeConfig(num_validators=2)
+        data = gen_compose_data(cfg)
+        for service in data["services"].values():
+            assert "container_name" not in service
+
+    def test_network_name_is_project_scoped(self):
+        cfg = ComposeConfig(num_validators=2)
+        data = gen_compose_data(cfg)
+        assert data["networks"][cfg.network_name] == {}

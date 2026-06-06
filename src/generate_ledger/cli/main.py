@@ -35,13 +35,13 @@ def root(
     ctx: typer.Context,
     output_dir: Path = typer.Option(Path("testnet"), "--output-dir", "-o", help="Root output directory."),
     validators: int = typer.Option(5, "--validators", "-v", min=1, help="Number of validator nodes."),
-    num_accounts: int = typer.Option(1000, "--accounts", help="Number of regular (non-gateway) accounts."),
+    num_accounts: int = typer.Option(100, "--accounts", help="Number of regular (non-gateway) accounts."),
     balance: str = typer.Option(str(100_000_000_000), "--balance", "-b", help="Default account balance in drops."),
     gpu: bool = typer.Option(False, "--gpu", help="GPU-accelerated account generation."),
     trustline: list[str] | None = typer.Option(
         None, "--trustline", "-t", help="Trustline: 'acct1:acct2:currency:limit'. Repeatable."
     ),
-    gateways: int = typer.Option(4, "--gateways", help="Number of gateway accounts. 0 = disabled."),
+    gateways: int = typer.Option(0, "--gateways", help="Number of gateway accounts. 0 = disabled."),
     assets_per_gateway: int = typer.Option(4, "--assets-per-gateway", help="Assets per gateway."),
     gateway_currencies: str = typer.Option("USD,CNY,BTC,ETH", "--gateway-currencies", help="Currency pool."),
     gateway_coverage: float = typer.Option(1.0, "--gateway-coverage", help="Fraction of accounts with trustlines."),
