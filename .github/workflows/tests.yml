@@ -210,17 +210,5 @@ jobs:
         with:
           path: site
 
-  docs-deploy:
-    needs: [docs-build]
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deploy
-        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
+  # Production docs are deployed by the tag-driven Release workflow so the
+  # published header shows the released package version, not a moving branch.
