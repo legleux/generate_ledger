@@ -23,7 +23,7 @@ Every object type should have an associated test that:
 2. Starts the network
 3. Confirms transactions using those generated objects succeed (e.g. using a generated account, a `Payment` transaction can be sent)
 
-**Done:** Accounts/XRP (`test_payment_ring.py`), AMM pools (`test_amm_autobridge.py` — issued/issued AMM CLOB), MPT (`test_mpt_transfer.py` — issuance/authorize/fund/transfer). **Remaining:** Trustlines, Gateways, Offers (when implemented).
+**Done:** Accounts/XRP (`test_payment_ring.py`), AMM pools (`test_amm_autobridge.py` — issued/issued AMM CLOB), MPT (`test_mpt_transfer.py` — issuance/authorize/fund/transfer). **Remaining:** Trustlines, Gateways, Offers (when implemented), Sponsorship (`sponsor.py` — blocked on an `xrpld` build that ships the Sponsor/XLS-68 amendment; unit/CLI coverage exists in `tests/lib/test_sponsor.py` and `tests/cli/test_cli_ledger.py::test_with_sponsorship_flag`).
 
 ### Live validation
 
@@ -32,6 +32,18 @@ Verify generated ledgers actually boot on xrpld and amendments are active — no
 **Future validations:** Leverage the OpenAPI spec (when available) to aid in object validation testing.
 
 ## P1 — High
+
+### Release pipeline: finish publishing setup
+
+Tag-driven release pipeline is built and staged: dynamic versioning via `uv-dynamic-versioning` (no committed version), `release.yml` (validate → test gate → `uv build` → `uv publish` trusted → GitHub Release) + `release-prep.yml` (dispatch a bump → changelog PR → tag-on-merge via `RELEASE_PAT`), git-cliff changelog. See `docs/release.md`.
+
+Currently **publishing to TestPyPI** for end-to-end flow testing — `release.yml` has the PyPI `publish` job commented out and a temporary TestPyPI publish job active (also gained a `docs-build` Pages job).
+
+Remaining:
+
+- For the current TestPyPI job to authenticate via OIDC: register a TestPyPI trusted publisher (owner `legleux`, repo `generate_ledger`, workflow `release.yml`, environment `testpypi`). Local token rehearsal documented in the untracked `TESTPYPI_REHEARSAL.md`.
+- When ready for real releases: uncomment the PyPI `publish` job, remove the temporary TestPyPI job, register the **PyPI** trusted publisher (environment `release`), and add the `RELEASE_PAT` repo secret so merge→tag→`release.yml` fires.
+- Optional (solo): set `RELEASE_ACTORS` and required reviewers on the `release` environment.
 
 ### Refactor `consolidate_directory_nodes` → protocol-based
 

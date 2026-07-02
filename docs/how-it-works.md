@@ -64,7 +64,7 @@ Each account has one `DirectoryNode` (owner directory) listing all objects it ow
 - `Owner` -- the account address
 - `Indexes` -- sorted list of owned object indices (XRPL requires lexicographic ordering)
 
-During ledger assembly, directory entries from trustlines, AMM objects, and MPTokens are consolidated into a single DirectoryNode per account with all Indexes merged and sorted.
+During ledger assembly, directory entries from trustlines, AMM objects, MPTokens, and Sponsorship objects are consolidated into a single DirectoryNode per account with all Indexes merged and sorted.
 
 ## AMM
 
@@ -164,6 +164,29 @@ An individual holder's balance of an MPT. One entry per holder per issuance.
 - `MPTokenIssuanceID` -- 48-character hex MPTID
 - `MPTAmount` -- amount held
 
+## Sponsorship
+
+A `Sponsorship` entry represents a Sponsor amendment relationship where one account can pre-fund fees and reserves for another account.
+
+**Derivation:**
+
+1. Decode the sponsor account and sponsee account to 20-byte account IDs
+2. Concatenate sponsor first, then sponsee
+
+**Index:** `SHA512Half(0x003E + sponsor_account_id + sponsee_account_id)`
+
+**Key fields:**
+
+- `Owner` -- the sponsor account
+- `Sponsee` -- the sponsored account
+- `FeeAmount` -- optional XRP drops held by the Sponsorship object for fees
+- `MaxFee` -- optional maximum fee amount per sponsored transaction
+- `ReserveCount` -- optional number of reserves made available to the sponsee
+- `OwnerNode` / `SponseeNode` -- owner directory page hints
+- `Flags` -- `0x00010000` requires sponsor signature for fee use, `0x00020000` requires sponsor signature for reserve use
+
+The object is inserted into both accounts' owner directories, but only the sponsor account's `OwnerCount` increases. If `FeeAmount` is present, that amount is subtracted from the sponsor's `AccountRoot.Balance` because the XRP is held by the Sponsorship object.
+
 ## FeeSettings
 
 Controls the network's fee parameters. One entry per ledger.
@@ -184,4 +207,5 @@ Controls the network's fee parameters. One entry per ledger.
 | AMM             | `0x0041`  | SHA512Half(0x0041 + min_asset + max_asset)       |
 | MPTokenIssuance | `0x007E`  | SHA512Half(0x007E + mptid)                       |
 | MPToken         | `0x0074`  | SHA512Half(0x0074 + issuance_index + holder_id)  |
+| Sponsorship     | `0x003E`  | SHA512Half(0x003E + sponsor_id + sponsee_id)     |
 | Amendments      | --        | Fixed: `7DB0788C...CD6EF4`                       |

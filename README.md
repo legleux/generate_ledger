@@ -1,104 +1,130 @@
 # generate_ledger
 
-Generate custom XRPL genesis ledgers and complete test network environments — accounts, trustlines, AMM pools, validator configs, and docker-compose — in seconds.
+`generate_ledger` creates XRPL genesis ledgers and private test network scaffolding.
+It can produce funded accounts, trustlines, gateway-style issued-asset topology,
+AMM pools, MPT objects, Sponsorship objects, amendment entries, `xrpld.cfg` files, and a
+`docker-compose.yml` that can boot a local XRPL network.
 
-## First order of business, rename
+The default command is intentionally broad:
 
-- `ledgen` - My initial thought but maybe prone to typos aad or misunderstanding?
-- `xrpl-genesis` - Genesis ledger is automatic, `xrpl-pre-genesis` more accurate?
-- `ledgectl` - Doesn't really control.
-- `ledgergen` - Boring.
-- `ledgerforge` - Heavy
+```bash
+uv run gen
+```
 
-## Quickstart
+That writes a complete `testnet/` directory with:
+
+- `ledger.json`: genesis ledger state for `xrpld`
+- `accounts.json`: generated account addresses and seeds
+- `volumes/val*/xrpld.cfg`: validator configuration and UNL data
+- `volumes/xrpld/xrpld.cfg`: non-validator node configuration
+- `docker-compose.yml`: container definition for the generated network
+
+By default, bare `gen` creates 100 regular accounts, 5 validators, and 1
+non-validator `xrpld` node.
+
+## Quick Start
 
 ```bash
 git clone https://github.com/legleux/generate_ledger.git
 cd generate_ledger
 uv sync
 uv run gen
-cd testnet && docker compose up
+cd testnet
+docker compose up -d
 ```
 
-Output: `ledger.json`, `accounts.json`, validator configs (`xrpld.cfg`), and `docker-compose.yml`. In under a minute you'll have a running XRPL test network.
-Bare `gen` defaults to **100 accounts**, **5 validators**, and **1 non-validator `xrpld` node**.
+Verify a validator:
 
 ```bash
-# Just a ledger
-uv run gen ledger --accounts 10 --output-dir ./my-ledger
+curl -s localhost:5005 -d '{"method": "server_info"}' | jq .result.info.server_state
+```
 
-# With trustlines and AMM pools
-uv run gen ledger --accounts 50 --output-dir ./testnet \
+Generate only a ledger:
+
+```bash
+uv run gen ledger --accounts 10 --output-dir ./my-ledger
+```
+
+Generate a ledger with trustlines and an AMM pool:
+
+```bash
+uv run gen ledger --accounts 50 --output-dir ./out \
   --trustline "0:1:USD:1000000000" \
   --amm-pool "XRP:USD:0:1000000000000:1000000:500:0"
 ```
 
-## Performance
+## Installation
 
-### Full `ledger.json` Generation (accounts only, ed25519)
-
-| Accounts  | CPU (PyNaCl) | GPU (CuPy) | Speedup  | File size |
-| --------- | ------------ | ---------- | -------- | --------- |
-| 1,000     | 0.3s         | 0.7s       | 0.4x     | 0.3 MB    |
-| 10,000    | 0.6s         | 0.1s       | **6x**   | 3.3 MB    |
-| 100,000   | 5.3s         | 0.7s       | **7.6x** | 33 MB     |
-| 250,000   | 13.3s        | 2.2s       | **6x**   | 82 MB     |
-| 500,000   | 26.0s        | 3.1s       | **8.4x** | 163 MB    |
-| 1,000,000 | 52.1s        | 6.1s       | **8.5x** | 326 MB    |
-
-CPU time scales linearly (~52ms per 1,000 accounts). GPU time is sub-linear — kernel launch overhead is fixed, so the per-account cost drops at scale. GPU crossover is around 5k accounts.
-
-> Benchmarked on 16-core AMD 5950X + RTX 5090, Python 3.14. At 1M accounts the bottleneck is JSON serialization, not account generation (GPU generates 1M accounts in ~2s).
-
-### Crypto Backend Performance
-
-| Algorithm | Backend                  | Rate             | vs. fallback |
-| --------- | ------------------------ | ---------------- | ------------ |
-| ed25519   | CuPy/CUDA (GPU)          | **~280,000/sec** | ~4,000x      |
-| ed25519   | PyNaCl + multiprocessing | **~88,000/sec**  | ~1,200x      |
-| ed25519   | PyNaCl (single-core)     | **~25,000/sec**  | 350x         |
-| secp256k1 | coincurve (single-core)  | ~7,400/sec       | 100x         |
-| either    | xrpl-py (fallback)       | 60–80/sec        | 1x           |
-
-Multiprocessing kicks in automatically above 50k accounts. Below that, single-core is faster due to process spawn overhead.
-
-### Backend Tiers
-
-Backends are tiered and fall back gracefully:
-
-| Tier        | Dependencies              | Install               | What you get                                 |
-| ----------- | ------------------------- | --------------------- | -------------------------------------------- |
-| **Default** | PyNaCl, coincurve         | `uv sync`             | ~25-88k/sec ed25519 (auto-scales with cores) |
-| **Minimal** | xrpl-py only              | _(auto-fallback)_     | ~60–80 accounts/sec, no native deps          |
-| **GPU**     | CuPy, CUDA toolkit wheels | `uv sync --group gpu` | ~280k/sec ed25519 (requires NVIDIA GPU)      |
-
-#### GPU setup
-
-The `gpu` dependency group installs CuPy and the CUDA toolkit as pre-built pip wheels — no system CUDA install needed. Just an NVIDIA GPU with drivers.
-
-```bash
-uv sync --group gpu
-uv run gen --gpu --accounts 100000
-```
-
-`CUDA_PATH` is auto-detected from the installed `nvidia-cuda-nvcc` wheel. GPU tests skip gracefully when the GPU group isn't installed or no GPU is available.
-
-## Install
+From PyPI:
 
 ```bash
 pip install generate-ledger
 ```
 
-Or from source:
+From source:
 
 ```bash
 git clone https://github.com/legleux/generate_ledger.git
 cd generate_ledger
-uv sync                # includes fast crypto backends (PyNaCl, coincurve)
-uv sync --group gpu    # + CuPy, CUDA toolkit (optional, requires NVIDIA GPU)
+uv sync
 ```
 
-## CLI Help
+Optional dependency groups:
+
+```bash
+uv sync --group fast   # PyNaCl and coincurve crypto backends
+uv sync --group gpu    # CuPy/CUDA account generation backend
+```
+
+## Main Workflows
+
+### Full Local Network
+
+Use the root command when you want ledger state, `xrpld` configuration, and Docker
+Compose output in one pass:
+
+```bash
+uv run gen --accounts 200 --validators 5 --output-dir ./testnet \
+  --gateways 4 --assets-per-gateway 3 --gateway-coverage 0.8
+```
+
+This is the fastest path for integration tests, demos, and local protocol work.
+
+### Ledger Only
+
+Use `gen ledger` when another tool will run the network or when you only need the
+genesis state:
+
+```bash
+uv run gen ledger --accounts 100 --output-dir ./ledger-out
+```
+
+Common additions:
+
+```bash
+# Random trustlines
+uv run gen ledger --accounts 100 --num-trustlines 20 --currencies USD,EUR
+
+# Gateway topology
+uv run gen ledger --accounts 100 --gateways 4 --assets-per-gateway 3
+
+# Multi-Purpose Token issuance
+uv run gen ledger --accounts 10 --mpt "0:1"
+
+# Sponsorship relationship
+uv run gen ledger --accounts 10 --sponsorship "0:1:1000000:10:5" --enable-amendment Sponsor
+```
+
+### xrpld Config Only
+
+Use `gen xrpld` when you already have ledger state and only need node
+configuration:
+
+```bash
+uv run gen xrpld --validators 5 --base-dir ./testnet/volumes
+```
+
+## CLI Reference
 
 ```bash
 uv run gen --help
@@ -106,176 +132,110 @@ uv run gen ledger --help
 uv run gen xrpld --help
 ```
 
-## Usage
+High-value options:
 
-### Generate a Complete Environment
+| Option                | Applies to     | Purpose                                                                       |
+| --------------------- | -------------- | ----------------------------------------------------------------------------- |
+| `--accounts`          | root, `ledger` | Number of generated regular accounts                                          |
+| `--validators`        | root, `xrpld`  | Number of validator nodes                                                     |
+| `--output-dir`        | root, `ledger` | Output directory                                                              |
+| `--trustline`         | root, `ledger` | Explicit trustline: `account1:account2:currency:limit`                        |
+| `--num-trustlines`    | `ledger`       | Generate random trustlines                                                    |
+| `--gateways`          | root, `ledger` | Make the first N accounts issued-asset gateways                               |
+| `--amm-pool`          | root, `ledger` | AMM pool: `asset1:asset2:amount1:amount2[:fee[:creator]]`                     |
+| `--mpt`               | `ledger`       | MPT issuance: `issuer:sequence[:max_amount[:flags[:scale[:fee[:metadata]]]]]` |
+| `--sponsorship`       | root, `ledger` | Sponsorship: `owner:sponsee[:fee_amount[:max_fee[:reserve_count[:flags]]]]`   |
+| `--amendment-profile` | root, `ledger` | `release`, `develop`, or `custom` amendments                                  |
+| `--base-fee`          | root, `ledger` | Base transaction fee in drops                                                 |
+| `--reserve-base`      | root, `ledger` | Account reserve in drops                                                      |
+| `--reserve-inc`       | root, `ledger` | Owner reserve increment in drops                                              |
+| `--gpu`               | root, `ledger` | Use GPU account generation when available                                     |
 
-```bash
-uv run gen --accounts 100 --validators 5 --output-dir ./testnet
+## Python Library Usage
+
+The package can also be used without the CLI:
+
+```python
+from generate_ledger.accounts import AccountConfig
+from generate_ledger.ledger import LedgerConfig, gen_ledger_state
+
+ledger = gen_ledger_state(
+    LedgerConfig(
+        account_cfg=AccountConfig(num_accounts=50, algo="ed25519"),
+        amendment_profile="release",
+    ),
+    write_accounts=False,
+)
+
+print(len(ledger["ledger"]["accountState"]))
 ```
 
-This creates:
+See the MkDocs library page for more examples.
 
-- `ledger.json` — Genesis ledger with accounts, trustlines, AMM pools, and amendments
-- `accounts.json` — Account credentials (addresses, seeds, keys)
-- `volumes/val0/xrpld.cfg` ... `valN/xrpld.cfg` — Validator configurations with UNL
-- `docker-compose.yml` — Ready-to-run Docker deployment
+## Project Layout
 
-Bare `gen` supports all ledger options (gateways, AMM, trustlines, amendments, fees) plus:
-
-| Option                      | Default                  | Description                                            |
-| --------------------------- | ------------------------ | ------------------------------------------------------ |
-| `--validators` / `-v`       | 5                        | Number of validator nodes                              |
-| `--peer-port`               | 51235                    | Port used in `[ips_fixed]` entries                     |
-| `--amendment-majority-time` | —                        | Override amendment majority time (e.g. `2 minutes`)    |
-| `--log-level`               | `info`                   | xrpld log level (trace/debug/info/warning/error/fatal) |
-| `--image`                   | `rippleci/xrpld:develop` | Docker image for xrpld nodes                           |
-
-```bash
-# Full environment with gateways and custom fees
-uv run gen --accounts 200 --validators 5 --output-dir ./testnet \
-  --gateways 4 --assets-per-gateway 3 --gateway-coverage 0.8 \
-  --base-fee 10 --reserve-base 200000 --reserve-inc 50000
-```
-
-### Generate Ledger Only
-
-```bash
-uv run gen ledger --accounts 100 --output-dir ./output
-```
-
-### Trustlines
-
-```bash
-# Explicit trustline: account 0 trusts account 1 for USD, limit 1B
-uv run gen ledger --accounts 10 --output-dir ./out --trustline "0:1:USD:1000000000"
-
-# Random trustlines (star topology from account 0)
-uv run gen ledger --accounts 100 --output-dir ./out --num-trustlines 20
-
-# Multiple currencies
-uv run gen ledger --accounts 50 --output-dir ./out --currencies USD,EUR,JPY --num-trustlines 10
-```
-
-### AMM Pools
-
-```bash
-# XRP/USD pool: issuer=account 0, XRP deposit=1T drops, USD deposit=1M, LP tokens=500, fee=0
-uv run gen ledger --accounts 10 --output-dir ./out \
-  --trustline "0:1:USD:1000000000" \
-  --amm-pool "XRP:USD:0:1000000000000:1000000:500:0"
-```
-
-### Gateways
-
-Gateway accounts issue assets and create a realistic trustline topology across your test network.
-
-```bash
-# 4 gateways, each issuing 3 assets, 80% of accounts get trustlines
-uv run gen ledger --accounts 100 --output-dir ./out \
-  --gateways 4 --assets-per-gateway 3 --gateway-coverage 0.8
-```
-
-| Option                   | Default                                 | Description                                                        |
-| ------------------------ | --------------------------------------- | ------------------------------------------------------------------ |
-| `--gateways N`           | 0                                       | Number of gateway accounts (first N accounts become gateways)      |
-| `--assets-per-gateway N` | 4                                       | Unique assets each gateway issues                                  |
-| `--gateway-currencies`   | USD,EUR,GBP,JPY,BTC,ETH,CNY,MXN,CAD,AUD | Currency pool (distributed round-robin)                            |
-| `--gateway-coverage`     | 0.5                                     | Fraction of non-gateway accounts that receive trustlines (0.0–1.0) |
-| `--gateway-connectivity` | 0.5                                     | Fraction of gateways each account connects to (0.0–1.0)            |
-| `--gateway-seed`         | —                                       | RNG seed for reproducible topology                                 |
-
-### MPT (Multi-Purpose Tokens)
-
-```bash
-# MPT issuance: issuer=account 0, sequence=1
-uv run gen ledger --accounts 10 --output-dir ./out --mpt "0:1"
-```
-
-Format: `issuer:sequence[:max_amount[:flags[:asset_scale]]]`. Requires the `MPTokensV1` amendment (develop branch).
-
-### Amendment Profiles
-
-```bash
-# Curated mainnet amendments (default)
-uv run gen ledger --accounts 10 --amendment-profile release
-
-# Parse from a local xrpld repo's features.macro
-uv run gen ledger --accounts 10 --amendment-profile develop \
-  --amendment-source /path/to/xrpld/include/xrpl/protocol/detail/features.macro
-
-# Per-amendment overrides
-uv run gen ledger --accounts 10 --enable-amendment SomeFeature --disable-amendment Clawback
-```
-
-The `--amendment-source` option accepts a path to any `features.macro` file, so you can point it at your local xrpld checkout to pick up amendments from any branch.
-
-**Important distinction:** `features.macro` defines what amendments an xrpld build _supports_ — not what is _enabled on a live network_. Amendments are enabled on mainnet only after reaching 80% validator consensus, which can lag weeks or months behind a release. The `release` profile queries a mainnet node (falling back to a bundled snapshot) to get the actual enabled set. The `develop` profile enables all supported amendments, matching the behavior of a freshly started test network.
-
-### Fee Configuration
-
-```bash
-uv run gen ledger --accounts 10 --base-fee 10 --reserve-base 200000 --reserve-inc 50000
-```
-
-| Option           | Default | Description                                |
-| ---------------- | ------- | ------------------------------------------ |
-| `--base-fee`     | 121     | Base transaction fee (drops)               |
-| `--reserve-base` | 2000000 | Account reserve base (drops)               |
-| `--reserve-inc`  | 666     | Owner reserve increment per object (drops) |
-
-### Subcommands
-
-#### `gen xrpld` — Generate Validator Configs
-
-Writes per-node `xrpld.cfg` files with UNL, voting stanzas, and peer discovery.
-
-```bash
-uv run gen xrpld --validators 5 --base-dir ./testnet/volumes
-```
-
-| Option                      | Default           | Description                                            |
-| --------------------------- | ----------------- | ------------------------------------------------------ |
-| `--validators` / `-v`       | 5                 | Number of validator nodes                              |
-| `--base-dir` / `-b`         | `testnet/volumes` | Output directory for node subdirs                      |
-| `--template-path` / `-t`    | built-in          | Path to base `xrpld.cfg` template                      |
-| `--peer-port`               | 51235             | Port for `[ips_fixed]` entries                         |
-| `--reference-fee`           | 10                | Voting: reference fee (drops)                          |
-| `--account-reserve`         | 200000            | Voting: account reserve (drops)                        |
-| `--owner-reserve`           | 1000000           | Voting: owner reserve (drops)                          |
-| `--keygen`                  | `xrpl`            | Key generation backend (`xrpl` or `docker`)            |
-| `--log-level`               | `info`            | xrpld log level (trace/debug/info/warning/error/fatal) |
-| `--amendment-majority-time` | —                 | Override amendment majority time                       |
-
-## Validator Configuration
-
-Set this in `[voting]` to preserve reserve settings after the flag ledger:
-
-```ini
-[voting]
-reference_fee = 1
-account_reserve = 1000000
-owner_reserve = 200000
-```
-
-This is handled automatically by `gen` when generating the full environment.
+| Path                                    | Purpose                                                             |
+| --------------------------------------- | ------------------------------------------------------------------- |
+| `src/generate_ledger/cli/`              | Typer CLI entry points and spec parsers                             |
+| `src/generate_ledger/accounts.py`       | Account generation and account reference resolution                 |
+| `src/generate_ledger/ledger.py`         | Top-level ledger configuration and assembly pipeline                |
+| `src/generate_ledger/ledger_builder.py` | Final XRPL ledger JSON construction                                 |
+| `src/generate_ledger/indices.py`        | XRPL ledger index derivation helpers                                |
+| `src/generate_ledger/trustlines.py`     | `RippleState` and owner directory generation                        |
+| `src/generate_ledger/gateways.py`       | Gateway-issued asset topology                                       |
+| `src/generate_ledger/amm.py`            | AMM object generation                                               |
+| `src/generate_ledger/mpt.py`            | MPT ledger object generation                                        |
+| `src/generate_ledger/sponsor.py`        | Sponsor amendment Sponsorship object generation                     |
+| `src/generate_ledger/amendments.py`     | Amendment profile loading and hashing                               |
+| `src/generate_ledger/xrpld_cfg.py`      | Layered `xrpld.cfg` rendering                                       |
+| `src/generate_ledger/compose.py`        | Docker Compose generation                                           |
+| `tests/`                                | Unit, CLI, integration, and Docker smoke tests                      |
+| `docs/`                                 | MkDocs source                                                       |
+| `scripts/`                              | Benchmarks, fixture updates, release helpers, and local test matrix |
 
 ## Development
 
 ```bash
-# Run tests (GPU tests skip automatically if GPU group not installed)
+# Tests
 uv run pytest
 
-# Run tests with GPU backend
+# Include optional fast crypto dependencies
+uv sync --group fast
+
+# Include optional GPU dependencies
 uv sync --group gpu
-uv run pytest
 
 # Lint
 uv run ruff check .
 
-# Build locally (sdist + wheel → dist/)
+# Build package artifacts
 uv build
 
-# Run benchmarks (see scripts/README.md)
-uv run scripts/bench_accounts.py --accounts 10000 --mode seq
+# Build docs
+uv run mkdocs build
+```
+
+Smoke tests that require Docker are marked separately:
+
+```bash
+uv run pytest -m smoke
+```
+
+## Documentation
+
+The MkDocs site has the deeper reference material:
+
+- `docs/index.md`: overview
+- `docs/project-guide.md`: broad repository guide
+- `docs/quickstart.md`: first run
+- `docs/cli.md`: full CLI reference
+- `docs/how-it-works.md`: XRPL object and index derivation
+- `docs/library.md`: Python API usage
+- `docs/amendments.md`: amendment profiles
+- `docs/development.md`: contributor workflow
+
+Serve it locally with:
+
+```bash
+uv run mkdocs serve
 ```

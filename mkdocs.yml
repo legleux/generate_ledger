@@ -53,6 +53,7 @@ extra_css:
 nav:
   - Home: index.md
   - Quick Start: quickstart.md
+  - Project Guide: project-guide.md
   - How It Works: how-it-works.md
   - CLI Reference: cli.md
   - Library API: library.md

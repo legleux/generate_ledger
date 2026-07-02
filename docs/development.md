@@ -28,19 +28,19 @@ The test suite uses pytest with a coverage threshold of 85% (currently ~89%).
 
 ```bash
 # Run all tests
-uv pytest
+uv run pytest
 
 # Run a single test file
-uv pytest tests/lib/test_amm.py
+uv run pytest tests/lib/test_amm.py
 
 # Run a single test by name
-uv pytest tests/lib/test_amm.py -k "test_amm_index_calculation"
+uv run pytest tests/lib/test_amm.py -k "test_amm_index_calculation"
 ```
 
 Default pytest options (configured in `pyproject.toml`):
 
 ```
-addopts = "-rP --cov --cov-report=term-missing:skip-covered"
+addopts = "-rP --cov --cov-report=term-missing:skip-covered -m 'not smoke'"
 ```
 
 ### Test Organization
@@ -50,6 +50,7 @@ addopts = "-rP --cov --cov-report=term-missing:skip-covered"
 | `tests/lib/`         | Unit tests for core modules (indices, accounts, trustlines, AMM, amendments, etc.) |
 | `tests/cli/`         | CLI smoke tests and parser tests                                                   |
 | `tests/integration/` | Full pipeline tests through `gen_ledger_state()`                                   |
+| `tests/smoke/`       | Docker-backed network smoke tests, excluded from the default test run              |
 
 ### Key Test Fixtures
 
@@ -76,10 +77,10 @@ The project uses [ruff](https://docs.astral.sh/ruff/) for linting and formatting
 
 ```bash
 # Check for issues
-ruff check .
+uv run ruff check .
 
 # Auto-fix issues
-ruff check . --fix
+uv run ruff check . --fix
 ```
 
 Configuration (from `pyproject.toml`):

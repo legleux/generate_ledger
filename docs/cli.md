@@ -4,7 +4,7 @@ The CLI entry point is `gen`. Running `gen` with no subcommand executes the full
 
 ## gen ledger
 
-Generate a genesis ledger with pre-funded accounts, trustlines, AMM pools, and amendments.
+Generate a genesis ledger with pre-funded accounts, trustlines, AMM pools, MPTs, Sponsorship objects, and amendments.
 
 ```bash
 gen ledger --accounts 100 --output-dir ./output
@@ -47,9 +47,9 @@ gen ledger --accounts 10 -o ./out \
   -a "XRP:USD:0:1000000000000:1000000:500:0"
 ```
 
-| Option         | Default | Description                                                                          |
-| -------------- | ------- | ------------------------------------------------------------------------------------ |
-| `-a` / `--amm` | --      | AMM pool in `asset1:asset2:issuer:amount1:amount2:lp_tokens:fee` format (repeatable) |
+| Option              | Default | Description                                                                     |
+| ------------------- | ------- | ------------------------------------------------------------------------------- |
+| `-a` / `--amm-pool` | --      | AMM pool in `asset1:asset2:amount1:amount2[:fee[:creator]]` format (repeatable) |
 
 ### Gateway Options
 
@@ -108,21 +108,33 @@ gen ledger --accounts 10 --enable-amendment SomeFeature --disable-amendment Claw
 gen ledger --accounts 10 -o ./out --mpt "0:1"
 ```
 
-| Option  | Default | Description                                                                              |
-| ------- | ------- | ---------------------------------------------------------------------------------------- |
-| `--mpt` | --      | MPT issuance in `issuer:sequence[:max_amount[:flags[:asset_scale]]]` format (repeatable) |
+| Option  | Default | Description                                                                                               |
+| ------- | ------- | --------------------------------------------------------------------------------------------------------- |
+| `--mpt` | --      | MPT issuance in `issuer:sequence[:max_amount[:flags[:asset_scale[:fee[:metadata]]]]]` format (repeatable) |
+
+### Sponsorship Options (Sponsor amendment)
+
+```bash
+gen ledger --accounts 10 -o ./out \
+  --sponsorship "0:1:1000000:10:5:0x00030000" \
+  --enable-amendment Sponsor
+```
+
+| Option          | Default | Description                                                                                              |
+| --------------- | ------- | -------------------------------------------------------------------------------------------------------- |
+| `--sponsorship` | --      | Sponsorship object in `owner:sponsee[:fee_amount[:max_fee[:reserve_count[:flags]]]]` format (repeatable) |
 
 ---
 
-## gen auto
+## gen
 
 Generate a complete test environment: ledger + validator configs + docker-compose.
 
 ```bash
-gen auto --accounts 100 --validators 5 --output-dir ./testnet
+gen --accounts 100 --validators 5 --output-dir ./testnet
 ```
 
-`gen auto` supports **all** `gen ledger` options (accounts, trustlines, AMM, gateways, amendments, fees), plus:
+Root `gen` supports the shared ledger options used by `gen ledger`, plus:
 
 | Option                      | Default | Description                                         |
 | --------------------------- | ------- | --------------------------------------------------- |

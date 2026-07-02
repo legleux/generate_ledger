@@ -112,6 +112,12 @@ def consolidate_directory_nodes(
                 holder = obj["Account"]
                 merge_dir_node(directory_nodes, make_owner_dir_entry(holder, obj["index"]))
                 owner_counts[holder] = owner_counts.get(holder, 0) + 1
+            elif le_type == "Sponsorship":
+                owner = obj["Owner"]
+                sponsee = obj["Sponsee"]
+                merge_dir_node(directory_nodes, make_owner_dir_entry(owner, obj["index"]))
+                merge_dir_node(directory_nodes, make_owner_dir_entry(sponsee, obj["index"]))
+                owner_counts[owner] = owner_counts.get(owner, 0) + 1
 
     # Sort Indexes in each DirectoryNode (XRPL serialization requires sorted STVector256)
     for dn in directory_nodes.values():

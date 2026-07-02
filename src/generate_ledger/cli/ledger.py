@@ -9,6 +9,7 @@ from generate_ledger.cli.shared_options import (
     build_ledger_config,
     parse_amm_pool_specs,
     parse_specs,
+    parse_sponsorship_specs,
     parse_trustline_specs,
 )
 from generate_ledger.ledger import MPTIssuanceConfig, write_ledger_file
@@ -83,6 +84,15 @@ def ledger(
             " Requires MPTokensV1 amendment. Repeatable."
         ),
     ),
+    # Sponsorship options
+    sponsorship: list[str] | None = typer.Option(
+        None,
+        "--sponsorship",
+        help=(
+            "Sponsorship spec: 'owner:sponsee[:fee_amount[:max_fee[:reserve_count[:flags]]]]'."
+            " Requires Sponsor amendment. Repeatable."
+        ),
+    ),
     # Amendment options
     amendment_profile: str = typer.Option(
         "develop",
@@ -129,6 +139,7 @@ def ledger(
 
     explicit_trustlines = parse_trustline_specs(trustline)
     amm_pools = parse_amm_pool_specs(amm_pool)
+    sponsorships = parse_sponsorship_specs(sponsorship)
     mpt_issuances = parse_specs(
         mpt,
         parse_mpt_spec,
@@ -164,6 +175,7 @@ def ledger(
         enable_amendments=enable_amendment,
         disable_amendments=disable_amendment,
         mpt_issuances=mpt_issuances,
+        sponsorships=sponsorships,
         base_fee=base_fee,
         reserve_base=reserve_base,
         reserve_inc=reserve_inc,
@@ -189,3 +201,5 @@ def ledger(
         typer.echo(f"  AMM pools: {len(amm_pools)}")
     if mpt_issuances:
         typer.echo(f"  MPT issuances: {len(mpt_issuances)}")
+    if sponsorships:
+        typer.echo(f"  Sponsorships: {len(sponsorships)}")

@@ -30,7 +30,7 @@ All options are set via `LedgerConfig`. Every field has a sensible default.
 ```python
 from generate_ledger.accounts import AccountConfig
 from generate_ledger.gateways import GatewayConfig
-from generate_ledger.ledger import AMMPoolConfig, ExplicitTrustline, FeeConfig, LedgerConfig
+from generate_ledger.ledger import AMMPoolConfig, ExplicitTrustline, FeeConfig, LedgerConfig, SponsorshipConfig
 from generate_ledger.trustlines import TrustlineConfig
 
 config = LedgerConfig(
@@ -79,6 +79,18 @@ config = LedgerConfig(
             asset2_issuer=0,        # account index 0
             asset2_amount=1_000_000,
             trading_fee=500,
+        ),
+    ],
+
+    # Sponsorships (Sponsor amendment)
+    sponsorships=[
+        SponsorshipConfig(
+            owner="0",
+            sponsee="1",
+            fee_amount="1000000",
+            max_fee="10",
+            reserve_count=5,
+            flags=0x00030000,
         ),
     ],
 

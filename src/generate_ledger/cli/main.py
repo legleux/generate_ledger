@@ -50,6 +50,14 @@ def root(
     amm_pool: list[str] | None = typer.Option(
         None, "--amm-pool", "-a", help="AMM pool: 'asset1:asset2:amt1:amt2[:fee[:creator]]'."
     ),
+    sponsorship: list[str] | None = typer.Option(
+        None,
+        "--sponsorship",
+        help=(
+            "Sponsorship: 'owner:sponsee[:fee_amount[:max_fee[:reserve_count[:flags]]]]'."
+            " Requires Sponsor amendment. Repeatable."
+        ),
+    ),
     amendment_profile: str = typer.Option("release", "--amendment-profile", help="release, develop, or custom."),
     amendment_source: str | None = typer.Option(None, "--amendment-source", help="Path to features.macro or JSON."),
     amendment_majority_time: str | None = typer.Option(None, "--amendment-majority-time"),
@@ -72,6 +80,7 @@ def root(
     from generate_ledger.cli.shared_options import (  # noqa: PLC0415
         build_ledger_config,
         parse_amm_pool_specs,
+        parse_sponsorship_specs,
         parse_trustline_specs,
         run_full_pipeline,
     )
@@ -81,6 +90,7 @@ def root(
 
     explicit_trustlines = parse_trustline_specs(trustline)
     amm_pools = parse_amm_pool_specs(amm_pool)
+    sponsorships = parse_sponsorship_specs(sponsorship)
 
     ledger_config = build_ledger_config(
         base_dir=output_dir,
@@ -95,6 +105,7 @@ def root(
         gateway_seed=gateway_seed,
         explicit_trustlines=explicit_trustlines,
         amm_pools=amm_pools,
+        sponsorships=sponsorships,
         amendment_profile=amendment_profile,
         amendment_source=amendment_source,
         base_fee=base_fee,

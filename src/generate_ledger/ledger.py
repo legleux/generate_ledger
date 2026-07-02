@@ -23,6 +23,7 @@ from generate_ledger.ledger_types import (  # noqa: F401 (re-exported for backwa
     FeeConfig,
     MPTHolderConfig,
     MPTIssuanceConfig,
+    SponsorshipConfig,
 )
 from generate_ledger.trustlines import (
     TrustlineConfig,
@@ -48,6 +49,7 @@ class LedgerConfig(BaseSettings):
     gateway_cfg: GatewayConfig = Field(default_factory=GatewayConfig)
     amm_pools: list[AMMPoolConfig] = Field(default_factory=list)
     mpt_issuances: list[MPTIssuanceConfig] = Field(default_factory=list)
+    sponsorships: list[SponsorshipConfig] = Field(default_factory=list)
 
     base_dir: Path = Field(default=Path("testnet"))  # Override with env var GL_BASE_DIR
     ledger_state_json_file: str = "ledger_state.json"
@@ -214,8 +216,10 @@ def gen_ledger_state(config: LedgerConfig | None = None, *, write_accounts: bool
 
     # 5. Generate MPT objects
     from generate_ledger.mpt import generate_mpt_objects  # noqa: PLC0415
+    from generate_ledger.sponsor import generate_sponsorship_objects  # noqa: PLC0415
 
     mpt_objects = generate_mpt_objects(accounts=accounts, config=cfg)
+    sponsorship_objects = generate_sponsorship_objects(accounts=accounts, config=cfg)
 
     # 6. Get amendment hashes (profile-based or legacy)
     amendment_hashes = get_enabled_amendment_hashes(
@@ -228,6 +232,7 @@ def gen_ledger_state(config: LedgerConfig | None = None, *, write_accounts: bool
     # 7. Discover and invoke develop object builders (if develop/ is present)
     extra_objects = _load_develop_objects(cfg, accounts)
     extra_objects.extend(mpt_objects)
+    extra_objects.extend(sponsorship_objects)
 
     # 8. Assemble ledger with trustlines, AMMs, and extra objects
     ledger = ledger_builder.assemble_ledger_json(

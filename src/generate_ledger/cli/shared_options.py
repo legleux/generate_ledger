@@ -4,7 +4,13 @@ from pathlib import Path
 
 import typer
 
-from generate_ledger.cli.parsers import ParseError, build_amm_pool_config, parse_amm_pool, parse_trustline
+from generate_ledger.cli.parsers import (
+    ParseError,
+    build_amm_pool_config,
+    parse_amm_pool,
+    parse_sponsorship_spec,
+    parse_trustline,
+)
 
 
 def parse_specs(raw_specs: list[str] | None, parser, converter) -> list:
@@ -36,6 +42,24 @@ def parse_amm_pool_specs(raw_specs: list[str] | None):
     return parse_specs(raw_specs, parse_amm_pool, build_amm_pool_config)
 
 
+def parse_sponsorship_specs(raw_specs: list[str] | None):
+    """Parse --sponsorship CLI specs into SponsorshipConfig list."""
+    from generate_ledger.ledger import SponsorshipConfig  # noqa: PLC0415
+
+    return parse_specs(
+        raw_specs,
+        parse_sponsorship_spec,
+        lambda p: SponsorshipConfig(
+            owner=p.owner,
+            sponsee=p.sponsee,
+            fee_amount=p.fee_amount,
+            max_fee=p.max_fee,
+            reserve_count=p.reserve_count,
+            flags=p.flags,
+        ),
+    )
+
+
 def build_ledger_config(
     *,
     base_dir: Path,
@@ -60,6 +84,7 @@ def build_ledger_config(
     enable_amendments: list[str] | None = None,
     disable_amendments: list[str] | None = None,
     mpt_issuances: list | None = None,
+    sponsorships: list | None = None,
     base_fee: int = 121,
     reserve_base: int = 2_000_000,
     reserve_inc: int = 666,
@@ -112,6 +137,8 @@ def build_ledger_config(
         config_kwargs["disable_amendments"] = disable_amendments
     if mpt_issuances:
         config_kwargs["mpt_issuances"] = mpt_issuances
+    if sponsorships:
+        config_kwargs["sponsorships"] = sponsorships
 
     return LedgerConfig(**config_kwargs)
 

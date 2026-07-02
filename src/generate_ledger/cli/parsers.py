@@ -26,6 +26,9 @@ MIN_AMM_PARTS_WITH_CREATOR = 4
 MAX_FEE_BPS = 1000
 MIN_MPT_PARTS = 2
 MAX_MPT_TRANSFER_FEE = 50000
+MIN_SPONSORSHIP_PARTS = 2
+MAX_SPONSORSHIP_PARTS = 6
+SPONSORSHIP_FLAGS_MASK = 0x00030000
 
 
 @dataclass
@@ -75,6 +78,18 @@ class ParsedMPT:
     asset_scale: int | None = None  # Decimal scale (0-255)
     transfer_fee: int | None = None  # Transfer fee in 1/10 basis points (0-50000)
     metadata: str | None = None  # Hex-encoded metadata blob
+
+
+@dataclass
+class ParsedSponsorship:
+    """Parsed Sponsorship ledger object specification."""
+
+    owner: str
+    sponsee: str
+    fee_amount: str | None = None
+    max_fee: str | None = None
+    reserve_count: int | None = None
+    flags: int = 0
 
 
 def _validate_currency(currency: str, label: str = "currency") -> str:
@@ -211,6 +226,23 @@ def _parse_optional_int(
     return val
 
 
+def _parse_optional_uint(
+    parts: list[str], idx: int, name: str, *, hi: int | None = None, allow_hex: bool = False
+) -> int | None:
+    """Parse an optional unsigned integer field."""
+    if idx >= len(parts) or not parts[idx]:
+        return None
+    try:
+        val = int(parts[idx], 0 if allow_hex else 10)
+    except ValueError as e:
+        raise ParseError(f"Invalid {name} '{parts[idx]}': must be an integer") from e
+    if val < 0:
+        raise ParseError(f"{name} must be non-negative, got {val}")
+    if hi is not None and val > hi:
+        raise ParseError(f"{name} must be <= {hi}, got {val}")
+    return val
+
+
 def parse_amm_pool(spec: str) -> ParsedAMMPool:
     """
     Parse an AMM pool specification.
@@ -333,6 +365,49 @@ def parse_mpt_spec(spec: str) -> ParsedMPT:
         asset_scale=asset_scale,
         transfer_fee=transfer_fee,
         metadata=metadata,
+    )
+
+
+def parse_sponsorship_spec(spec: str) -> ParsedSponsorship:
+    """
+    Parse a Sponsorship ledger object specification.
+
+    Format: owner:sponsee[:fee_amount[:max_fee[:reserve_count[:flags]]]]
+
+    Examples:
+        "0:1"                         - Empty sponsorship relationship
+        "0:1:1000000:1000:5"          - Fee pool, max fee, and reserve count
+        "0:1:::5:0x00030000"          - Reserve-only relationship with both require-sign flags
+    """
+    parts = spec.split(":")
+    if len(parts) < MIN_SPONSORSHIP_PARTS or len(parts) > MAX_SPONSORSHIP_PARTS:
+        raise ParseError(
+            f"Invalid sponsorship format: '{spec}'. Expected "
+            "'owner:sponsee[:fee_amount[:max_fee[:reserve_count[:flags]]]]', got {len(parts)} parts"
+        )
+
+    owner, sponsee = parts[0], parts[1]
+    if not owner:
+        raise ParseError("owner cannot be empty")
+    if not sponsee:
+        raise ParseError("sponsee cannot be empty")
+    if owner == sponsee:
+        raise ParseError("owner and sponsee must be different accounts")
+
+    fee_amount_int = _parse_optional_uint(parts, 2, "fee_amount")
+    max_fee_int = _parse_optional_uint(parts, 3, "max_fee")
+    reserve_count = _parse_optional_uint(parts, 4, "reserve_count")
+    flags = _parse_optional_uint(parts, 5, "flags", hi=0xFFFFFFFF, allow_hex=True) or 0
+    if flags & ~SPONSORSHIP_FLAGS_MASK:
+        raise ParseError(f"Unsupported sponsorship flags: 0x{flags & ~SPONSORSHIP_FLAGS_MASK:08X}")
+
+    return ParsedSponsorship(
+        owner=owner,
+        sponsee=sponsee,
+        fee_amount=str(fee_amount_int) if fee_amount_int else None,
+        max_fee=str(max_fee_int) if max_fee_int else None,
+        reserve_count=reserve_count if reserve_count else None,
+        flags=flags,
     )
 
 

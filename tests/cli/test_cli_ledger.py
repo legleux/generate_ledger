@@ -140,3 +140,27 @@ class TestLedgerCliCommand:
         assert fee_entry["BaseFeeDrops"] == 10
         assert fee_entry["ReserveBaseDrops"] == 1_000_000
         assert fee_entry["ReserveIncrementDrops"] == 500
+
+    def test_with_sponsorship_flag(self, tmp_path):
+        outdir = tmp_path / "out"
+        result = runner.invoke(
+            app,
+            [
+                "--accounts",
+                "2",
+                "-o",
+                str(outdir),
+                "--sponsorship",
+                "0:1:1000:10:2:0x00030000",
+                "--enable-amendment",
+                "Sponsor",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        data = json.loads((outdir / "ledger.json").read_text())
+        state = data["ledger"]["accountState"]
+        sponsorship = next(e for e in state if e.get("LedgerEntryType") == "Sponsorship")
+        assert sponsorship["FeeAmount"] == "1000"
+        assert sponsorship["MaxFee"] == "10"
+        assert sponsorship["ReserveCount"] == 2
+        assert sponsorship["Flags"] == 0x00030000

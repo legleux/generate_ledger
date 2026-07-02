@@ -6,6 +6,7 @@ from generate_ledger.cli.parsers import (
     ParseError,
     parse_amm_pool,
     parse_mpt_spec,
+    parse_sponsorship_spec,
     parse_trustline,
 )
 
@@ -252,3 +253,39 @@ class TestParseMptSpec:
         result = parse_mpt_spec("0:1::64")
         assert result.max_amount is None
         assert result.flags == 64
+
+
+class TestParseSponsorshipSpec:
+    def test_minimal(self):
+        result = parse_sponsorship_spec("0:1")
+        assert result.owner == "0"
+        assert result.sponsee == "1"
+        assert result.fee_amount is None
+        assert result.max_fee is None
+        assert result.reserve_count is None
+        assert result.flags == 0
+
+    def test_with_fee_max_fee_reserve_and_flags(self):
+        result = parse_sponsorship_spec("0:1:1000000:10:5:0x00030000")
+        assert result.fee_amount == "1000000"
+        assert result.max_fee == "10"
+        assert result.reserve_count == 5
+        assert result.flags == 0x00030000
+
+    def test_zero_values_are_absent(self):
+        result = parse_sponsorship_spec("0:1:0:0:0")
+        assert result.fee_amount is None
+        assert result.max_fee is None
+        assert result.reserve_count is None
+
+    def test_missing_sponsee_raises(self):
+        with pytest.raises(ParseError, match="Expected"):
+            parse_sponsorship_spec("0")
+
+    def test_same_literal_account_raises(self):
+        with pytest.raises(ParseError, match="different"):
+            parse_sponsorship_spec("0:0")
+
+    def test_invalid_flags_raise(self):
+        with pytest.raises(ParseError, match="Unsupported"):
+            parse_sponsorship_spec("0:1::::0x00040000")

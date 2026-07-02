@@ -12,6 +12,7 @@ from generate_ledger.ledger_builder import (
     amendments_to_ledger_entry,
     assemble_ledger_json,
 )
+from generate_ledger.sponsor import _build_sponsorship_object
 from generate_ledger.trustlines import generate_trustline_objects
 from tests.conftest import (
     ALICE_ADDRESS,
@@ -198,3 +199,27 @@ class TestAssembleLedgerJson:
         assert len(dir_nodes) == 2
         for dn in dir_nodes:
             assert len(dn["Indexes"]) == 2  # Both trustline indices merged
+
+    def test_sponsorship_inserts_two_directories_but_counts_owner_only(self, alice, bob):
+        sponsorship = _build_sponsorship_object(
+            owner=ALICE_ADDRESS,
+            sponsee=BOB_ADDRESS,
+            fee_amount="1000",
+            reserve_count=3,
+        )
+        ledger = assemble_ledger_json(
+            accounts=[alice, bob],
+            amendment_hashes=[],
+            extra_objects=[sponsorship],
+        )
+        state = ledger["ledger"]["accountState"]
+
+        alice_entry = next(e for e in state if e.get("Account") == ALICE_ADDRESS)
+        bob_entry = next(e for e in state if e.get("Account") == BOB_ADDRESS)
+        assert alice_entry["OwnerCount"] == 1
+        assert bob_entry["OwnerCount"] == 0
+        assert alice_entry["Balance"] == str(100_000_000_000 - 1000)
+
+        dir_nodes = {e["Owner"]: e for e in state if e.get("LedgerEntryType") == "DirectoryNode"}
+        assert sponsorship["index"] in dir_nodes[ALICE_ADDRESS]["Indexes"]
+        assert sponsorship["index"] in dir_nodes[BOB_ADDRESS]["Indexes"]

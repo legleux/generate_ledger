@@ -27,6 +27,7 @@ The genesis ledger can include:
 | **Amendments**       | `Amendments`                  | Enabled amendments (release, develop, or custom profile)          |
 | **Directory nodes**  | `DirectoryNode`               | Per-account ownership directories (auto-generated)                |
 | **MPT**              | `MPTokenIssuance` + `MPToken` | Multi-Purpose Tokens (issuances and holder tokens)                |
+| **Sponsorships**     | `Sponsorship`                 | Sponsor amendment fee/reserve sponsorship relationships           |
 
 ### Output Files
 
@@ -67,6 +68,7 @@ All tiers fall back gracefully -- if a backend is not installed, the next tier d
 ## Next Steps
 
 - [Quick Start](quickstart.md) -- Install and generate your first ledger
+- [Project Guide](project-guide.md) -- Broad repository map and development orientation
 - [CLI Reference](cli.md) -- Full command documentation
 - [Library API](library.md) -- Use `generate_ledger` as a Python library
 - [Amendments](amendments.md) -- How amendment profiles work

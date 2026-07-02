@@ -76,6 +76,7 @@ def assemble_ledger_json(
     balances_total = 0
     state: list[dict] = []
     amm_issuers = amm_issuers or set()
+    balance_deltas: dict[str, int] = {}
 
     # Build AccountRoot entries
     for a in accounts:
@@ -100,15 +101,24 @@ def assemble_ledger_json(
         amm_objects=amm_objects,
         extra_objects=extra_objects,
     )
+    for obj in extra_state:
+        if obj.get("LedgerEntryType") == "Sponsorship" and "FeeAmount" in obj:
+            owner = obj["Owner"]
+            balance_deltas[owner] = balance_deltas.get(owner, 0) - int(obj["FeeAmount"])
     state.extend(extra_state)
     state.extend(directory_nodes.values())
 
-    # Update OwnerCount in AccountRoot entries
+    # Update AccountRoot entries with generated object ownership and escrowed balances.
     for entry in state:
         if entry.get("LedgerEntryType") == "AccountRoot":
             address = entry["Account"]
             if address in owner_counts:
                 entry["OwnerCount"] = owner_counts[address]
+            if address in balance_deltas:
+                balance = int(entry["Balance"]) + balance_deltas[address]
+                if balance < 0:
+                    raise ValueError(f"Account {address} has insufficient balance for generated ledger objects")
+                entry["Balance"] = str(balance)
 
     genesis_balance = max(total_coins_drops - balances_total, 0)
     state.insert(

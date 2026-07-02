@@ -26,6 +26,7 @@ from generate_ledger.models.namespace import (
     MPTOKEN,
     MPTOKEN_ISSUANCE,
     OWNER_DIR,
+    SPONSORSHIP,
     TRUST_LINE,
     NamespaceByte,
     ns_prefix,
@@ -146,6 +147,24 @@ def owner_dir(account: str) -> str:
     """Compute the owner directory index for an account."""
     preimage = ns_prefix(OWNER_DIR) + _decode_account_id(account)
     return sha512_half(preimage).hex().upper()
+
+
+# ---------------------------------------------------------------------------
+# Sponsorship indices
+# ---------------------------------------------------------------------------
+
+
+def sponsorship_index(sponsor_address: str, sponsee_address: str) -> str:
+    """Compute the Sponsorship ledger object index.
+
+    Formula (from xrpld keylet::sponsor):
+        SHA512Half(0x003E + sponsorAccountID + sponseeAccountID)
+
+    Namespace: SPONSORSHIP = '>' = 0x3E.
+    """
+    sponsor_bytes = _decode_account_id(sponsor_address)
+    sponsee_bytes = _decode_account_id(sponsee_address)
+    return compute_index(SPONSORSHIP, sponsor_bytes + sponsee_bytes)
 
 
 # ---------------------------------------------------------------------------

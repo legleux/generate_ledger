@@ -54,6 +54,17 @@ class MPTIssuanceConfig(BaseModel):
     holders: list[MPTHolderConfig] = Field(default_factory=list)
 
 
+class SponsorshipConfig(BaseModel):
+    """Configuration for a Sponsorship ledger object."""
+
+    owner: str  # Sponsor account index or classic address
+    sponsee: str  # Sponsee account index or classic address
+    fee_amount: str | None = None  # XRP drops held by the Sponsorship object for fees
+    max_fee: str | None = None  # Maximum sponsored fee per transaction, in drops
+    reserve_count: int | None = None  # Number of reserves made available to the sponsee
+    flags: int = 0  # lsfSponsorshipRequireSignForFee / lsfSponsorshipRequireSignForReserve
+
+
 class AMMPoolConfig(BaseSettings):
     """Configuration for a single AMM pool."""
 

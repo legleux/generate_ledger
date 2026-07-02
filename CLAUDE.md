@@ -74,11 +74,12 @@ The main data flow is in `ledger.py:gen_ledger_state()`:
 3. **`gateways.py`** — Generates gateway topology trustlines (star/mesh from issuer accounts). Imports `generate_trustline_objects_fast` from `trustlines.py`
 4. **`amm.py`** — Generates AMM pool objects (AMM entry, pseudo-account, LP tokens, asset trustlines). Uses shared builders from `trustlines.py` and constants from `constants.py`
 5. **`mpt.py`** — Generates MPTokenIssuance + MPToken objects (MPTokensV1 amendment, enabled on mainnet since 2025-10-01)
-6. **`amendments.py`** — Loads amendment hashes (profile-based with auto-fetch: release queries mainnet RPC, develop fetches features.macro from GitHub, custom loads user JSON)
-7. **`develop/`** — Optional package for pre-release objects (Vault stub); absent on `main` branch
-8. **`xrpld_cfg.py`** — Layered TOML config compositor for xrpld.cfg generation. Pydantic models (`XrpldNodeConfig` + sub-models) with role-based validation. Individual `gen_*` section generators registered in `SECTION_GENERATORS` produce `Section(name, lines)` objects; `build_sections()` collects them, `render_sections()` serializes to INI format. Two entry points: `XrpldConfigSpec` (programmatic, generates N validators + 1 node for CLI, reads defaults from TOML layers) and `build_config()` (file-based, loads TOML layers from `config/` — base → env → role → host). Bundled TOML layers in `src/generate_ledger/config/`
-9. **`ledger_builder.py:assemble_ledger_json()`** — Assembles all objects into final `ledger.json` structure; delegates DirectoryNode consolidation and OwnerCount tracking to `directory_nodes.py`
-10. **`directory_nodes.py`** — DirectoryNode consolidation: merges per-object directory entries into per-account directories with sorted Indexes
+6. **`sponsor.py`** — Generates `Sponsorship` ledger objects (XLS-68 Sponsor amendment): one account pre-funds fees/reserves for another. `generate_sponsorship_objects()` resolves owner/sponsee via `resolve_account_to_object()` and builds objects via `_build_sponsorship_object()`; index from `indices.py:sponsorship_index()` (namespace `0x3E`)
+7. **`amendments.py`** — Loads amendment hashes (profile-based with auto-fetch: release queries mainnet RPC, develop fetches features.macro from GitHub, custom loads user JSON)
+8. **`develop/`** — Optional package for pre-release objects (Vault stub); absent on `main` branch
+9. **`xrpld_cfg.py`** — Layered TOML config compositor for xrpld.cfg generation. Pydantic models (`XrpldNodeConfig` + sub-models) with role-based validation. Individual `gen_*` section generators registered in `SECTION_GENERATORS` produce `Section(name, lines)` objects; `build_sections()` collects them, `render_sections()` serializes to INI format. Two entry points: `XrpldConfigSpec` (programmatic, generates N validators + 1 node for CLI, reads defaults from TOML layers) and `build_config()` (file-based, loads TOML layers from `config/` — base → env → role → host). Bundled TOML layers in `src/generate_ledger/config/`
+10. **`ledger_builder.py:assemble_ledger_json()`** — Assembles all objects into final `ledger.json` structure; delegates DirectoryNode consolidation and OwnerCount tracking to `directory_nodes.py`
+11. **`directory_nodes.py`** — DirectoryNode consolidation: merges per-object directory entries into per-account directories with sorted Indexes. For `Sponsorship`, inserts into both owner's and sponsee's directories but increments `OwnerCount` only for the owner
 
 ### XRPL Crypto Primitives
 
@@ -172,8 +173,9 @@ See `docs/library-usage.md` for full usage guide.
 - Amendment system: profiles (release/develop/custom), features.macro parser, per-amendment overrides, auto-fetch from GitHub (develop) and mainnet RPC (release) with offline fallbacks
 - Gateway topology (star/mesh), fast trustline generation, lsfDefaultRipple on issuers
 - MPT (Multi-Purpose Tokens) — `mpt.py` (promoted from develop/, MPTokensV1 enabled on mainnet since 2025-10-01)
+- Sponsorship objects — `sponsor.py` (XLS-68 Sponsor amendment: pre-funded fees/reserves via `--sponsorship`), wired through config, indices, directory/owner-count accounting, and CLI
 - Fast ed25519 account generation via PyNaCl (~25k/sec), GPU backend via CuPy (~535k/sec with indices)
-- Test suite: ~548 unit/CLI/integration tests (GPU tests skip without CUDA) + 3 smoke tests (Docker, skipped by default)
+- Test suite: 584 unit/CLI/integration tests (GPU tests skip without CUDA) + smoke tests (Docker, skipped by default)
 - Smoke tests: Payment ring (100 accounts, async submit, balance verification), AMM CLOB (issued/issued pools cross OfferCreate), MPT transfer (issuance → authorize → fund → transfer)
 
 ### Planned (v2.0)
