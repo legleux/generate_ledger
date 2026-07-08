@@ -45,6 +45,8 @@ Remaining:
 - When ready for real releases: uncomment the PyPI `publish` job, remove the temporary TestPyPI job, register the **PyPI** trusted publisher (environment `release`), and add the `RELEASE_PAT` repo secret so merge→tag→`release.yml` fires.
 - Optional (solo): set `RELEASE_ACTORS` and required reviewers on the `release` environment.
 
+**Downstream consumer:** `ledger_tools` (sibling repo) now depends on `generate_ledger` via a git tag pin (`[tool.uv.sources]` → `tag = "v0.0.4-rc.2"`), since there's no PyPI release yet. When cutting new tags here, bump that pin in `ledger_tools/pyproject.toml` + `uv lock` if the new work is needed downstream (e.g. the sponsor feature isn't in `v0.0.4-rc.2`). Once real PyPI publishing lands, switch that pin to a version constraint instead.
+
 ### Refactor `consolidate_directory_nodes` → protocol-based
 
 Cognitive complexity 33 (threshold 15). Introduce `LedgerObjectGroup` protocol so each object type handles its own state entries, directory entries, and owner counts. New object types just implement the protocol instead of adding branches. Plan: `plans/consolidate_directory_nodes.md`.
